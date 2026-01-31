@@ -5,17 +5,13 @@ test('has title', async ({ page }) => {
   await expect(page).toHaveTitle(/talliofi/i);
 });
 
-test('displays Vite + React heading', async ({ page }) => {
+test('redirects to onboarding when no plan exists', async ({ page }) => {
   await page.goto('/');
-  await expect(
-    page.getByRole('heading', { name: 'Vite + React' }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/onboarding/);
 });
 
-test('counter increments on click', async ({ page }) => {
-  await page.goto('/');
-  const button = page.getByRole('button', { name: /count is/i });
-  await expect(button).toContainText('count is 0');
-  await button.click();
-  await expect(button).toContainText('count is 1');
+test('onboarding shows income step first', async ({ page }) => {
+  await page.goto('/onboarding');
+  await expect(page.getByRole('heading', { name: /income/i })).toBeVisible();
+  await expect(page.getByText('Step 1 of 5')).toBeVisible();
 });

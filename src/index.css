@@ -42,6 +42,15 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-surplus: var(--surplus);
+  --color-deficit: var(--deficit);
+  --color-neutral: var(--neutral);
+  --color-warning: var(--warning);
+  --color-bucket-1: var(--bucket-1);
+  --color-bucket-2: var(--bucket-2);
+  --color-bucket-3: var(--bucket-3);
+  --color-bucket-4: var(--bucket-4);
+  --color-bucket-5: var(--bucket-5);
 }
 
 :root {
@@ -77,6 +86,17 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Financial semantic colors */
+  --surplus: oklch(0.59 0.17 149);
+  --deficit: oklch(0.577 0.245 27.325);
+  --neutral: oklch(0.556 0 0);
+  --warning: oklch(0.75 0.18 75);
+  --bucket-1: oklch(0.646 0.222 41.116);
+  --bucket-2: oklch(0.6 0.118 184.704);
+  --bucket-3: oklch(0.398 0.07 227.392);
+  --bucket-4: oklch(0.828 0.189 84.429);
+  --bucket-5: oklch(0.769 0.188 70.08);
 }
 
 .dark {
@@ -111,6 +131,17 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Financial semantic colors */
+  --surplus: oklch(0.55 0.15 155);
+  --deficit: oklch(0.704 0.191 22.216);
+  --neutral: oklch(0.708 0 0);
+  --warning: oklch(0.8 0.16 80);
+  --bucket-1: oklch(0.488 0.243 264.376);
+  --bucket-2: oklch(0.696 0.17 162.48);
+  --bucket-3: oklch(0.769 0.188 70.08);
+  --bucket-4: oklch(0.627 0.265 303.9);
+  --bucket-5: oklch(0.645 0.246 16.439);
 }
 
 @layer base {
@@ -120,4 +151,9 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Financial value formatting */
+.money {
+  font-variant-numeric: tabular-nums;
 }
