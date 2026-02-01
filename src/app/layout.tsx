@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivePlan } from '@/hooks/use-active-plan';
+import { useAutoSnapshot } from '@/hooks/use-auto-snapshot';
 import { cn } from '@/lib/utils';
 import {
   Sidebar,
@@ -144,6 +145,7 @@ function MobileBottomNav() {
 
 export default function AppLayout() {
   const { data: plan, isLoading } = useActivePlan();
+  useAutoSnapshot();
 
   if (isLoading) {
     return (
