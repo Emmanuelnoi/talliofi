@@ -6,8 +6,9 @@ const envSchema = z.object({
   PROD: z.boolean(),
   DEV: z.boolean(),
   SSR: z.boolean(),
-  // Add app-specific env vars below, prefixed with VITE_
-  // VITE_API_URL: z.string().url(),
+  // Supabase — optional; cloud sync features degrade gracefully when absent
+  VITE_SUPABASE_URL: z.string().url().optional(),
+  VITE_SUPABASE_ANON_KEY: z.string().min(1).optional(),
 });
 
 const env = envSchema.parse(import.meta.env);
