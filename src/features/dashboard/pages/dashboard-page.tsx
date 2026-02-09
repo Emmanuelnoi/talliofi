@@ -1,7 +1,7 @@
 import { LayoutDashboard } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
-import { useBuckets } from '@/hooks/use-plan-data';
+import { useBuckets, useAssets, useLiabilities } from '@/hooks/use-plan-data';
 import { usePlanSummary } from '../hooks/use-plan-summary';
 import { DashboardSkeleton } from '../components/dashboard-skeleton';
 import { IncomeSummaryCard } from '../components/income-summary-card';
@@ -9,14 +9,22 @@ import { BucketDonutChart } from '../components/bucket-donut-chart';
 import { KeyNumbersGrid } from '../components/key-numbers-grid';
 import { ExpenseTrendChart } from '../components/expense-trend-chart';
 import { AlertsPanel } from '../components/alerts-panel';
+import { NetWorthCard } from '../components/net-worth-card';
+import { useNetWorthSummary } from '@/features/net-worth/hooks/use-net-worth';
 
 export default function DashboardPage() {
   const { summary, plan, isLoading } = usePlanSummary();
   const { data: buckets = [], isLoading: bucketsLoading } = useBuckets(
     plan?.id,
   );
+  const { data: assets = [], isLoading: assetsLoading } = useAssets(plan?.id);
+  const { data: liabilities = [], isLoading: liabilitiesLoading } =
+    useLiabilities(plan?.id);
 
-  if (isLoading || bucketsLoading) return <DashboardSkeleton />;
+  const netWorthSummary = useNetWorthSummary(assets, liabilities);
+
+  if (isLoading || bucketsLoading || assetsLoading || liabilitiesLoading)
+    return <DashboardSkeleton />;
 
   if (!plan || !summary) {
     return (
@@ -48,6 +56,11 @@ export default function DashboardPage() {
         />
       </div>
       <KeyNumbersGrid summary={summary} />
+      <NetWorthCard
+        totalAssets={netWorthSummary.totalAssets}
+        totalLiabilities={netWorthSummary.totalLiabilities}
+        netWorth={netWorthSummary.netWorth}
+      />
       <ExpenseTrendChart expensesByCategory={summary.expensesByCategory} />
       <AlertsPanel alerts={summary.alerts} />
     </div>

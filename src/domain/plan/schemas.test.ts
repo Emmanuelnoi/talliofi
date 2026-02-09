@@ -211,6 +211,186 @@ describe('ExpenseItemSchema', () => {
     };
     expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
   });
+
+  it('validates expense with transactionDate', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Rent',
+      amountCents: 150000,
+      frequency: 'monthly' as const,
+      category: 'housing' as const,
+      isFixed: true,
+      transactionDate: '2026-02-09',
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
+  });
+
+  it('allows undefined transactionDate for backwards compatibility', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Rent',
+      amountCents: 150000,
+      frequency: 'monthly' as const,
+      category: 'housing' as const,
+      isFixed: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
+  });
+
+  it('fails with invalid transactionDate format', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Rent',
+      amountCents: 150000,
+      frequency: 'monthly' as const,
+      category: 'housing' as const,
+      isFixed: true,
+      transactionDate: '02/09/2026', // Invalid format, should be YYYY-MM-DD
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).toThrow();
+  });
+
+  it('fails with invalid transactionDate string', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Rent',
+      amountCents: 150000,
+      frequency: 'monthly' as const,
+      category: 'housing' as const,
+      isFixed: true,
+      transactionDate: 'not-a-date',
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).toThrow();
+  });
+
+  // Split expense tests
+  it('validates a split expense with correct splits summing to total', () => {
+    const bucketId1 = validUUID();
+    const bucketId2 = validUUID();
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: bucketId1,
+      name: 'Grocery Run',
+      amountCents: 10000, // $100.00
+      frequency: 'monthly' as const,
+      category: 'groceries' as const,
+      isFixed: false,
+      isSplit: true,
+      splits: [
+        { bucketId: bucketId1, category: 'groceries' as const, amountCents: 6000 },
+        { bucketId: bucketId2, category: 'personal' as const, amountCents: 4000 },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
+  });
+
+  it('fails when split expense has only one split', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Invalid Split',
+      amountCents: 10000,
+      frequency: 'monthly' as const,
+      category: 'groceries' as const,
+      isFixed: false,
+      isSplit: true,
+      splits: [
+        { bucketId: validUUID(), category: 'groceries' as const, amountCents: 10000 },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).toThrow();
+  });
+
+  it('fails when split amounts do not sum to total', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Mismatched Split',
+      amountCents: 10000,
+      frequency: 'monthly' as const,
+      category: 'groceries' as const,
+      isFixed: false,
+      isSplit: true,
+      splits: [
+        { bucketId: validUUID(), category: 'groceries' as const, amountCents: 5000 },
+        { bucketId: validUUID(), category: 'personal' as const, amountCents: 3000 },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).toThrow();
+  });
+
+  it('allows non-split expense without splits array', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Regular Expense',
+      amountCents: 10000,
+      frequency: 'monthly' as const,
+      category: 'groceries' as const,
+      isFixed: false,
+      isSplit: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
+  });
+
+  it('allows split with notes on individual allocations', () => {
+    const expense = {
+      id: validUUID(),
+      planId: validUUID(),
+      bucketId: validUUID(),
+      name: 'Split with Notes',
+      amountCents: 10000,
+      frequency: 'monthly' as const,
+      category: 'groceries' as const,
+      isFixed: false,
+      isSplit: true,
+      splits: [
+        {
+          bucketId: validUUID(),
+          category: 'groceries' as const,
+          amountCents: 5000,
+          notes: 'Food items',
+        },
+        {
+          bucketId: validUUID(),
+          category: 'personal' as const,
+          amountCents: 5000,
+          notes: 'Toiletries',
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+    expect(() => ExpenseItemSchema.parse(expense)).not.toThrow();
+  });
 });
 
 describe('IncomeInputSchema', () => {

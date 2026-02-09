@@ -11,7 +11,7 @@ async function completeOnboarding(page: Page): Promise<void> {
   // Step 1: Income
   await page.locator('#grossIncomeDollars').fill('5000');
   await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly' }).click();
+  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   // Step 2: Taxes
@@ -71,9 +71,7 @@ test.describe('Export and Import', () => {
     await page.getByRole('button', { name: 'Delete All Data' }).click();
 
     // Confirm the dialog
-    await expect(
-      page.getByRole('heading', { name: 'Are you sure?' }),
-    ).toBeVisible();
+    await expect(page.getByText('Are you sure?')).toBeVisible();
 
     await page.getByRole('button', { name: 'Delete Everything' }).click();
 
@@ -107,8 +105,6 @@ test.describe('Export and Import', () => {
 
     // Verify we are back at onboarding
     await page.waitForURL('**/onboarding');
-    await expect(
-      page.getByRole('heading', { name: 'What is your gross income?' }),
-    ).toBeVisible();
+    await expect(page.getByText('What is your gross income?')).toBeVisible();
   });
 });

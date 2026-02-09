@@ -12,6 +12,23 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   };
 }
 
+// Mock window.matchMedia for useIsMobile hook (jsdom doesn't support it)
+if (typeof window.matchMedia === 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 beforeEach(async () => {
   await clearAllData();
 });

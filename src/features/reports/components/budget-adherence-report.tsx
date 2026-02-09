@@ -1,0 +1,311 @@
+import { useMemo, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
+import {
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  Target,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { centsToDollars, formatMoney } from '@/domain/money';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { EmptyState } from '@/components/feedback/empty-state';
+import type { BudgetAdherenceReport as ReportData } from '../types';
+import {
+  exportBudgetAdherenceCSV,
+  exportBudgetAdherencePDF,
+  downloadReportCSV,
+  downloadReportPDF,
+} from '../utils/report-export';
+
+interface BudgetAdherenceReportProps {
+  report: ReportData | null;
+}
+
+/** Status colors */
+const STATUS_COLORS = {
+  under: '#10B981', // Green - under budget
+  on_target: '#3B82F6', // Blue - on target
+  over: '#EF4444', // Red - over budget
+};
+
+const STATUS_LABELS = {
+  under: 'Under Budget',
+  on_target: 'On Target',
+  over: 'Over Budget',
+};
+
+export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+
+  const chartData = useMemo(() => {
+    if (!report) return [];
+    return report.data.map((item) => ({
+      name: item.bucketName,
+      target: centsToDollars(item.targetCents),
+      actual: centsToDollars(item.actualCents),
+      targetCents: item.targetCents,
+      actualCents: item.actualCents,
+      adherence: item.adherencePercent,
+      status: item.status,
+      color: item.bucketColor,
+    }));
+  }, [report]);
+
+  const handleExport = async (format: 'csv' | 'pdf') => {
+    if (!report) return;
+    setExporting(format);
+
+    try {
+      if (format === 'csv') {
+        const csv = exportBudgetAdherenceCSV(report);
+        downloadReportCSV(csv, 'budget-adherence');
+        toast.success('CSV exported successfully');
+      } else {
+        const blob = exportBudgetAdherencePDF(report);
+        downloadReportPDF(blob, 'budget-adherence');
+        toast.success('PDF exported successfully');
+      }
+    } catch {
+      toast.error('Failed to export report');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  if (!report || report.data.length === 0) {
+    return (
+      <Card className="print:shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Budget Adherence</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EmptyState
+            icon={Target}
+            title="No budget data"
+            description="No buckets configured or no expenses in this date range."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calculate status counts
+  const statusCounts = report.data.reduce(
+    (acc, item) => {
+      acc[item.status]++;
+      return acc;
+    },
+    { under: 0, on_target: 0, over: 0 } as Record<string, number>,
+  );
+
+  return (
+    <Card className="print:shadow-none print:break-inside-avoid">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div>
+          <CardTitle>Budget Adherence</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            How well spending matches allocations
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exporting !== null}
+              className="print:hidden"
+            >
+              {exporting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleExport('csv')}>
+              <FileSpreadsheet className="size-4" />
+              Export CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('pdf')}>
+              <FileText className="size-4" />
+              Export PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+      <CardContent>
+        {/* Overall Score */}
+        <div className="mb-6 rounded-lg border p-4 text-center">
+          <p className="text-muted-foreground text-sm">Overall Adherence Score</p>
+          <p
+            className={`text-3xl font-bold ${
+              report.overallAdherencePercent >= 80
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : report.overallAdherencePercent >= 60
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-red-600 dark:text-red-400'
+            }`}
+          >
+            {report.overallAdherencePercent.toFixed(0)}%
+          </p>
+          <div className="mt-2 flex justify-center gap-4 text-xs">
+            <span className="flex items-center gap-1">
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: STATUS_COLORS.under }}
+              />
+              {statusCounts.under} under
+            </span>
+            <span className="flex items-center gap-1">
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: STATUS_COLORS.on_target }}
+              />
+              {statusCounts.on_target} on target
+            </span>
+            <span className="flex items-center gap-1">
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: STATUS_COLORS.over }}
+              />
+              {statusCounts.over} over
+            </span>
+          </div>
+        </div>
+
+        {/* Bar Chart */}
+        <ChartContainer
+          config={{
+            target: { label: 'Target', color: 'var(--color-muted)' },
+            actual: { label: 'Actual' },
+          }}
+          className="h-[300px] w-full"
+          role="img"
+          aria-label="Budget adherence bar chart comparing target vs actual spending by bucket"
+        >
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ left: 80 }}
+            accessibilityLayer
+          >
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tickLine={false}
+              axisLine={false}
+              width={75}
+              tick={{ fontSize: 12 }}
+            />
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const data = payload[0].payload as (typeof chartData)[0];
+                return (
+                  <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
+                    <p className="mb-1 font-medium">{data.name}</p>
+                    <p className="text-muted-foreground">
+                      Target: {formatMoney(data.targetCents)}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Actual: {formatMoney(data.actualCents)}
+                    </p>
+                    <p className="text-muted-foreground">
+                      Adherence: {data.adherence.toFixed(0)}%
+                    </p>
+                  </div>
+                );
+              }}
+            />
+            <Bar dataKey="target" fill="var(--color-muted)" radius={[0, 4, 4, 0]} maxBarSize={20} />
+            <Bar dataKey="actual" radius={[0, 4, 4, 0]} maxBarSize={20}>
+              {chartData.map((entry) => (
+                <Cell
+                  key={entry.name}
+                  fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+
+        {/* Data Table */}
+        <div className="mt-6 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left font-medium">Bucket</th>
+                <th className="py-2 text-right font-medium">Target</th>
+                <th className="py-2 text-right font-medium">Actual</th>
+                <th className="py-2 text-right font-medium">Variance</th>
+                <th className="py-2 text-center font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.data.map((item) => (
+                <tr key={item.bucketId} className="border-b last:border-0">
+                  <td className="py-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: item.bucketColor }}
+                      />
+                      {item.bucketName}
+                    </div>
+                  </td>
+                  <td className="py-2 text-right tabular-nums">
+                    {formatMoney(item.targetCents)}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">
+                    {formatMoney(item.actualCents)}
+                  </td>
+                  <td
+                    className={`py-2 text-right tabular-nums ${
+                      item.varianceCents > 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : item.varianceCents < 0
+                          ? 'text-red-600 dark:text-red-400'
+                          : ''
+                    }`}
+                  >
+                    {item.varianceCents > 0 ? '+' : ''}
+                    {formatMoney(item.varianceCents)}
+                  </td>
+                  <td className="py-2 text-center">
+                    <Badge
+                      variant={
+                        item.status === 'over'
+                          ? 'destructive'
+                          : item.status === 'under'
+                            ? 'default'
+                            : 'secondary'
+                      }
+                      className="text-xs"
+                    >
+                      {STATUS_LABELS[item.status]}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

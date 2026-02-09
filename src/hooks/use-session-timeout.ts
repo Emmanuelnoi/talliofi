@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { SESSION_TIMEOUT_MS, SESSION_WARNING_MS } from '@/lib/constants';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useSyncStore } from '@/stores/sync-store';
-
-/** Inactivity timeout in milliseconds (15 minutes) */
-const TIMEOUT_MS = 15 * 60 * 1000;
-
-/** Warning shown 1 minute before timeout */
-const WARNING_MS = TIMEOUT_MS - 60 * 1000;
 
 /** Events that count as user activity */
 const ACTIVITY_EVENTS: readonly string[] = [
@@ -64,11 +59,11 @@ export function useSessionTimeout(): void {
     warningRef.current = setTimeout(() => {
       warningShownRef.current = true;
       toast.warning('Session expiring in 1 minute due to inactivity...');
-    }, WARNING_MS);
+    }, SESSION_WARNING_MS);
 
     timeoutRef.current = setTimeout(() => {
       void handleSignOut();
-    }, TIMEOUT_MS);
+    }, SESSION_TIMEOUT_MS);
   }, [clearTimers, handleSignOut]);
 
   useEffect(() => {

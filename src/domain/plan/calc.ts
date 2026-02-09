@@ -106,6 +106,10 @@ export function computeTax(
   return percentOf(grossMonthly, totalRate);
 }
 
+/**
+ * Aggregates expenses by category and bucket, properly handling split transactions.
+ * For split expenses, each split is aggregated separately to its respective bucket/category.
+ */
 function aggregateExpenses(expenses: readonly ExpenseItem[]) {
   const byCategory = new Map<ExpenseCategory, Cents>();
   const byBucket = new Map<string, Cents>();
@@ -115,11 +119,31 @@ function aggregateExpenses(expenses: readonly ExpenseItem[]) {
     const monthly = normalizeToMonthly(expense.amountCents, expense.frequency);
     total = addMoney(total, monthly);
 
-    const catCurrent = byCategory.get(expense.category) ?? cents(0);
-    byCategory.set(expense.category, addMoney(catCurrent, monthly));
+    // Handle split expenses: aggregate each split separately
+    if (expense.isSplit && expense.splits && expense.splits.length > 0) {
+      for (const split of expense.splits) {
+        // Calculate the monthly equivalent of this split's amount
+        const splitMonthly = normalizeToMonthly(
+          split.amountCents,
+          expense.frequency,
+        );
 
-    const bucketCurrent = byBucket.get(expense.bucketId) ?? cents(0);
-    byBucket.set(expense.bucketId, addMoney(bucketCurrent, monthly));
+        // Aggregate by category
+        const catCurrent = byCategory.get(split.category) ?? cents(0);
+        byCategory.set(split.category, addMoney(catCurrent, splitMonthly));
+
+        // Aggregate by bucket
+        const bucketCurrent = byBucket.get(split.bucketId) ?? cents(0);
+        byBucket.set(split.bucketId, addMoney(bucketCurrent, splitMonthly));
+      }
+    } else {
+      // Non-split expense: use the expense's own category and bucket
+      const catCurrent = byCategory.get(expense.category) ?? cents(0);
+      byCategory.set(expense.category, addMoney(catCurrent, monthly));
+
+      const bucketCurrent = byBucket.get(expense.bucketId) ?? cents(0);
+      byBucket.set(expense.bucketId, addMoney(bucketCurrent, monthly));
+    }
   }
 
   return {

@@ -46,7 +46,7 @@ describe('OnboardingPage', () => {
 
     expect(screen.getByText('What is your gross income?')).toBeInTheDocument();
     expect(screen.getByLabelText('Gross income ($)')).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
   });
 
   it('shows income frequency select', () => {
@@ -65,7 +65,7 @@ describe('OnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(await screen.findByText('Estimate your taxes')).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 6')).toBeInTheDocument();
   });
 
   it('navigates back from tax step to income step', async () => {
@@ -87,15 +87,23 @@ describe('OnboardingPage', () => {
   it('shows progress indicator with correct step count', () => {
     renderOnboarding();
 
-    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('shows the summary step title in header', () => {
-    useUIStore.setState({ onboardingStep: 4 });
+    useUIStore.setState({ onboardingStep: 5 });
     renderOnboarding();
 
     expect(screen.getByText('Summary')).toBeInTheDocument();
-    expect(screen.getByText('Step 5 of 5')).toBeInTheDocument();
+    expect(screen.getByText('Step 6 of 6')).toBeInTheDocument();
+  });
+
+  it('shows the template step', () => {
+    useUIStore.setState({ onboardingStep: 2 });
+    renderOnboarding();
+
+    expect(screen.getByText('Choose a starting point')).toBeInTheDocument();
+    expect(screen.getByText('Step 3 of 6')).toBeInTheDocument();
   });
 });

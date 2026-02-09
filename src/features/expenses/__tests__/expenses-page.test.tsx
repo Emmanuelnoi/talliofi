@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { planRepo } from '@/data/repos/plan-repo';
@@ -60,11 +61,48 @@ async function seedData() {
     frequency: 'monthly',
     category: 'housing',
     isFixed: true,
+    transactionDate: '2026-01-15',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
 
   return { plan, bucket, expense };
+}
+
+async function seedMultipleExpenses() {
+  const { plan, bucket } = await seedData();
+
+  // Add more expenses for filter testing
+  await expenseRepo.create({
+    id: crypto.randomUUID(),
+    planId: plan.id,
+    bucketId: bucket.id,
+    name: 'Groceries Shopping',
+    amountCents: cents(40000) as Cents,
+    frequency: 'monthly',
+    category: 'groceries',
+    isFixed: false,
+    notes: 'Weekly grocery run',
+    transactionDate: '2026-01-20',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  await expenseRepo.create({
+    id: crypto.randomUUID(),
+    planId: plan.id,
+    bucketId: bucket.id,
+    name: 'Electric Bill',
+    amountCents: cents(15000) as Cents,
+    frequency: 'monthly',
+    category: 'utilities',
+    isFixed: true,
+    transactionDate: '2026-01-10',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  return { plan, bucket };
 }
 
 describe('ExpensesPage', () => {
@@ -174,6 +212,160 @@ describe('ExpensesPage', () => {
       // "Insurance" appears in both the expense card and filter dropdown
       // so we check for the normalized monthly amount which is unique
       expect(screen.getByText('$200.00/mo')).toBeInTheDocument();
+    });
+  });
+
+  it('displays search input when expenses exist', async () => {
+    await seedData();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Search expenses')).toBeInTheDocument();
+    });
+  });
+
+  it('shows filters toggle button', async () => {
+    await seedData();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /filters/i }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('shows expense count summary', async () => {
+    await seedData();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/1 expense/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows multiple expenses count', async () => {
+    await seedMultipleExpenses();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 expenses/)).toBeInTheDocument();
+    });
+  });
+
+  it('filters expenses by search query', async () => {
+    await seedMultipleExpenses();
+    const user = userEvent.setup();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    // Wait for expenses to load
+    await waitFor(() => {
+      expect(screen.getByText('Rent')).toBeInTheDocument();
+    });
+
+    // Type in search
+    const searchInput = screen.getByLabelText('Search expenses');
+    await user.type(searchInput, 'Groceries');
+
+    // Wait for debounce (300ms) and filtering
+    await waitFor(
+      () => {
+        expect(screen.getByText('Groceries Shopping')).toBeInTheDocument();
+        expect(screen.queryByText('Electric Bill')).not.toBeInTheDocument();
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  it('shows no matching expenses message when search has no results', async () => {
+    await seedData();
+    const user = userEvent.setup();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Rent')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByLabelText('Search expenses');
+    await user.type(searchInput, 'nonexistent');
+
+    await waitFor(
+      () => {
+        expect(screen.getByText('No matching expenses')).toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
+  });
+
+  it('displays filter chips when filters are active', async () => {
+    await seedData();
+    const user = userEvent.setup();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Rent')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByLabelText('Search expenses');
+    await user.type(searchInput, 'Rent');
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Search: "Rent"/)).toBeInTheDocument();
+      },
+      { timeout: 500 },
+    );
+  });
+
+  it('shows clear search button when typing', async () => {
+    await seedData();
+    const user = userEvent.setup();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Rent')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByLabelText('Search expenses');
+    // Type a single character
+    await user.type(searchInput, 'a');
+
+    // The Clear search X button appears immediately in the input field
+    await waitFor(() => {
+      expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
+    });
+  });
+
+  it('clears search input when clear button is clicked', async () => {
+    await seedData();
+    const user = userEvent.setup();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Rent')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByLabelText('Search expenses');
+    await user.type(searchInput, 'test');
+
+    // The Clear search button appears immediately when there's input
+    await waitFor(() => {
+      expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText('Clear search'));
+
+    await waitFor(() => {
+      expect(searchInput).toHaveValue('');
+    });
+  });
+
+  it('displays transaction date in expense card', async () => {
+    await seedData();
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Jan 15, 2026')).toBeInTheDocument();
     });
   });
 });

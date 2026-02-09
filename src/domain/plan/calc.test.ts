@@ -443,4 +443,214 @@ describe('computePlanSummary()', () => {
     // Surplus = 250000, savingsRate = (250000 / 500000) * 100 = 50
     expect(summary.savingsRate).toBe(50);
   });
+
+  // Split transaction tests
+  describe('split expense aggregation', () => {
+    it('aggregates split expenses by individual split categories', () => {
+      const plan = makePlan({
+        grossIncomeCents: cents(500000),
+        taxMode: 'simple',
+        taxEffectiveRate: 0,
+      });
+
+      const bucket1 = crypto.randomUUID();
+      const bucket2 = crypto.randomUUID();
+
+      // A $100 expense split between groceries ($60) and personal ($40)
+      const splitExpense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Costco Run',
+        amountCents: cents(10000), // $100
+        category: 'groceries',
+        isSplit: true,
+        splits: [
+          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
+          { bucketId: bucket2, category: 'personal', amountCents: cents(4000) },
+        ],
+      });
+
+      const input: PlanComputeInput = {
+        plan,
+        buckets: [],
+        expenses: [splitExpense],
+        taxComponents: [],
+      };
+
+      const summary = computePlanSummary(input, '2026-01');
+
+      // Total should still be $100
+      expect(summary.totalMonthlyExpenses).toBe(10000);
+      // Categories should be split
+      expect(summary.expensesByCategory.get('groceries')).toBe(6000);
+      expect(summary.expensesByCategory.get('personal')).toBe(4000);
+    });
+
+    it('aggregates split expenses by individual split buckets', () => {
+      const plan = makePlan({
+        grossIncomeCents: cents(500000),
+        taxMode: 'simple',
+        taxEffectiveRate: 0,
+      });
+
+      const bucket1 = crypto.randomUUID();
+      const bucket2 = crypto.randomUUID();
+
+      const splitExpense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Split Expense',
+        amountCents: cents(10000),
+        category: 'groceries',
+        isSplit: true,
+        splits: [
+          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
+          { bucketId: bucket2, category: 'groceries', amountCents: cents(4000) },
+        ],
+      });
+
+      const input: PlanComputeInput = {
+        plan,
+        buckets: [],
+        expenses: [splitExpense],
+        taxComponents: [],
+      };
+
+      const summary = computePlanSummary(input, '2026-01');
+
+      // Buckets should be split
+      expect(summary.expensesByBucket.get(bucket1)).toBe(6000);
+      expect(summary.expensesByBucket.get(bucket2)).toBe(4000);
+    });
+
+    it('combines split and non-split expenses correctly', () => {
+      const plan = makePlan({
+        grossIncomeCents: cents(500000),
+        taxMode: 'simple',
+        taxEffectiveRate: 0,
+      });
+
+      const bucket1 = crypto.randomUUID();
+      const bucket2 = crypto.randomUUID();
+
+      // Regular expense: $50 groceries
+      const regularExpense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Regular Groceries',
+        amountCents: cents(5000),
+        category: 'groceries',
+        isSplit: false,
+      });
+
+      // Split expense: $100 total, $60 groceries + $40 personal
+      const splitExpense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Costco Run',
+        amountCents: cents(10000),
+        category: 'groceries',
+        isSplit: true,
+        splits: [
+          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
+          { bucketId: bucket2, category: 'personal', amountCents: cents(4000) },
+        ],
+      });
+
+      const input: PlanComputeInput = {
+        plan,
+        buckets: [],
+        expenses: [regularExpense, splitExpense],
+        taxComponents: [],
+      };
+
+      const summary = computePlanSummary(input, '2026-01');
+
+      // Total: $50 + $100 = $150
+      expect(summary.totalMonthlyExpenses).toBe(15000);
+      // Groceries: $50 (regular) + $60 (split) = $110
+      expect(summary.expensesByCategory.get('groceries')).toBe(11000);
+      // Personal: $40 (split only)
+      expect(summary.expensesByCategory.get('personal')).toBe(4000);
+      // Bucket1: $50 (regular) + $60 (split) = $110
+      expect(summary.expensesByBucket.get(bucket1)).toBe(11000);
+      // Bucket2: $40 (split only)
+      expect(summary.expensesByBucket.get(bucket2)).toBe(4000);
+    });
+
+    it('handles non-monthly split expenses with correct normalization', () => {
+      const plan = makePlan({
+        grossIncomeCents: cents(500000),
+        taxMode: 'simple',
+        taxEffectiveRate: 0,
+      });
+
+      const bucket1 = crypto.randomUUID();
+      const bucket2 = crypto.randomUUID();
+
+      // Annual $1200 expense split $800 / $400
+      const annualSplitExpense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Annual Insurance',
+        amountCents: cents(120000), // $1200 annual
+        frequency: 'annual',
+        category: 'insurance',
+        isSplit: true,
+        splits: [
+          { bucketId: bucket1, category: 'insurance', amountCents: cents(80000) },
+          { bucketId: bucket2, category: 'healthcare', amountCents: cents(40000) },
+        ],
+      });
+
+      const input: PlanComputeInput = {
+        plan,
+        buckets: [],
+        expenses: [annualSplitExpense],
+        taxComponents: [],
+      };
+
+      const summary = computePlanSummary(input, '2026-01');
+
+      // Monthly total: $1200 / 12 = $100
+      expect(summary.totalMonthlyExpenses).toBe(10000);
+      // Insurance: $800 / 12 = $66.67 (rounded to 6667 cents)
+      expect(summary.expensesByCategory.get('insurance')).toBe(6667);
+      // Healthcare: $400 / 12 = $33.33 (rounded to 3333 cents)
+      expect(summary.expensesByCategory.get('healthcare')).toBe(3333);
+    });
+
+    it('treats non-split expense with isSplit=false normally', () => {
+      const plan = makePlan({
+        grossIncomeCents: cents(500000),
+        taxMode: 'simple',
+        taxEffectiveRate: 0,
+      });
+
+      const bucket1 = crypto.randomUUID();
+
+      const expense = makeExpense({
+        planId: plan.id,
+        bucketId: bucket1,
+        name: 'Regular Expense',
+        amountCents: cents(10000),
+        category: 'groceries',
+        isSplit: false,
+        splits: undefined,
+      });
+
+      const input: PlanComputeInput = {
+        plan,
+        buckets: [],
+        expenses: [expense],
+        taxComponents: [],
+      };
+
+      const summary = computePlanSummary(input, '2026-01');
+
+      expect(summary.totalMonthlyExpenses).toBe(10000);
+      expect(summary.expensesByCategory.get('groceries')).toBe(10000);
+      expect(summary.expensesByBucket.get(bucket1)).toBe(10000);
+    });
+  });
 });

@@ -1,5 +1,11 @@
 import { Toaster as Sonner } from 'sonner';
 
+/**
+ * Toast notification container with ARIA live region support.
+ *
+ * Sonner automatically manages ARIA live regions for announcements.
+ * We configure it with appropriate styling and accessibility settings.
+ */
 function Toaster({ ...props }: React.ComponentProps<typeof Sonner>) {
   return (
     <Sonner
@@ -11,6 +17,20 @@ function Toaster({ ...props }: React.ComponentProps<typeof Sonner>) {
           '--normal-border': 'var(--border)',
         } as React.CSSProperties
       }
+      // Sonner uses role="status" and aria-live="polite" by default
+      // For error toasts, it uses role="alert" automatically
+      toastOptions={{
+        // Ensure toast content is accessible
+        classNames: {
+          toast: 'group toast',
+          title: 'font-semibold',
+          description: 'text-sm text-muted-foreground',
+          actionButton: 'bg-primary text-primary-foreground',
+          cancelButton: 'bg-muted text-muted-foreground',
+        },
+      }}
+      // Close button is accessible by default with proper aria-label
+      closeButton
       {...props}
     />
   );

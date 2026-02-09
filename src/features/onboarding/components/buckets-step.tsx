@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
-import { BucketInputSchema } from '@/domain/plan/schemas';
+import { BucketsFormSchema } from '@/domain/plan/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,10 +22,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
-
-const BucketsFormSchema = z.object({
-  buckets: z.array(BucketInputSchema).min(1, 'Add at least one bucket'),
-});
 
 type BucketsFormData = z.infer<typeof BucketsFormSchema>;
 

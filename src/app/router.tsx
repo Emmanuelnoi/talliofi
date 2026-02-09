@@ -16,10 +16,16 @@ const ExpensesPage = lazy(
   () => import('@/features/expenses/pages/expenses-page'),
 );
 const BucketsPage = lazy(() => import('@/features/buckets/pages/buckets-page'));
+const GoalsPage = lazy(() => import('@/features/goals/pages/goals-page'));
+const NetWorthPage = lazy(
+  () => import('@/features/net-worth/pages/net-worth-page'),
+);
 const HistoryPage = lazy(() => import('@/features/history/pages/history-page'));
+const ReportsPage = lazy(() => import('@/features/reports/pages/reports-page'));
 const SettingsPage = lazy(
   () => import('@/features/settings/pages/settings-page'),
 );
+const PlansPage = lazy(() => import('@/features/plans/pages/plans-page'));
 
 function PageLoading() {
   return (
@@ -69,12 +75,28 @@ export const router = createBrowserRouter([
         element: <BucketsPage />,
       },
       {
+        path: 'goals',
+        element: <GoalsPage />,
+      },
+      {
+        path: 'net-worth',
+        element: <NetWorthPage />,
+      },
+      {
         path: 'history',
         element: <HistoryPage />,
       },
       {
+        path: 'reports',
+        element: <ReportsPage />,
+      },
+      {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'plans',
+        element: <PlansPage />,
       },
     ],
   },

@@ -11,6 +11,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartDataTable } from '@/components/accessibility';
 import { TrendingUp } from 'lucide-react';
 
 interface TrendChartProps {
@@ -45,8 +46,31 @@ export function TrendChart({ snapshots }: TrendChartProps) {
       month: formatShortMonth(s.yearMonth),
       netIncome: centsToDollars(s.netIncomeCents),
       expenses: centsToDollars(s.totalExpensesCents),
+      netIncomeFormatted: formatMoney(s.netIncomeCents),
+      expensesFormatted: formatMoney(s.totalExpensesCents),
     }));
   }, [snapshots]);
+
+  // Generate accessible description for screen readers
+  const accessibleDescription = useMemo(() => {
+    if (chartData.length === 0) return '';
+    const dataPoints = chartData.map(
+      (d) =>
+        `${d.month}: net income ${d.netIncomeFormatted}, expenses ${d.expensesFormatted}`,
+    );
+    return `Monthly income vs expenses trend chart showing ${chartData.length} months. ${dataPoints.join('. ')}.`;
+  }, [chartData]);
+
+  // Data for accessible table alternative
+  const tableData = useMemo(
+    () =>
+      chartData.map((d) => ({
+        label: d.month,
+        value: d.netIncomeFormatted,
+        secondaryValue: d.expensesFormatted,
+      })),
+    [chartData],
+  );
 
   if (snapshots.length < 2) {
     return (
@@ -75,7 +99,7 @@ export function TrendChart({ snapshots }: TrendChartProps) {
           config={chartConfig}
           className="h-[300px] w-full"
           role="img"
-          aria-label="Line chart showing net income versus expenses over time"
+          aria-label={accessibleDescription}
         >
           <LineChart data={chartData} accessibilityLayer>
             <CartesianGrid strokeDasharray="3 3" />
@@ -116,6 +140,15 @@ export function TrendChart({ snapshots }: TrendChartProps) {
             />
           </LineChart>
         </ChartContainer>
+
+        {/* Accessible data table alternative */}
+        <ChartDataTable
+          title="Income vs. Expenses Trend Data"
+          labelHeader="Month"
+          valueHeader="Net Income"
+          secondaryValueHeader="Expenses"
+          data={tableData}
+        />
       </CardContent>
     </Card>
   );

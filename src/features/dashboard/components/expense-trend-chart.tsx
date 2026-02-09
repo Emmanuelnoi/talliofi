@@ -14,6 +14,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { ChartDataTable } from '@/components/accessibility';
 
 interface ExpenseTrendChartProps {
   expensesByCategory: ReadonlyMap<ExpenseCategory, Cents>;
@@ -77,6 +78,16 @@ export function ExpenseTrendChart({
 
   const ariaLabel = `Spending by category bar chart: ${data.map((d) => `${d.label} ${d.formatted}`).join(', ')}`;
 
+  // Data for accessible table alternative
+  const tableData = useMemo(
+    () =>
+      data.map((d) => ({
+        label: d.label,
+        value: d.formatted,
+      })),
+    [data],
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -122,6 +133,14 @@ export function ExpenseTrendChart({
             ))}
           </ul>
         </div>
+
+        {/* Accessible data table alternative */}
+        <ChartDataTable
+          title="Spending by Category Data"
+          labelHeader="Category"
+          valueHeader="Amount"
+          data={tableData}
+        />
       </CardContent>
     </Card>
   );

@@ -5,6 +5,8 @@
  * All operations are async because SubtleCrypto is entirely promise-based.
  */
 
+import { PBKDF2_ITERATIONS } from '@/lib/constants';
+
 export interface EncryptedPayload {
   /** Base64-encoded initialisation vector */
   iv: string;
@@ -13,8 +15,6 @@ export interface EncryptedPayload {
   /** Base64-encoded salt used for key derivation */
   salt: string;
 }
-
-const PBKDF2_ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12; // 96-bit IV recommended for AES-GCM
 

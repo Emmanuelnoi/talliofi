@@ -11,17 +11,19 @@ import type { Plan, BucketAllocation, ExpenseItem } from '@/domain/plan';
 import type { Frequency } from '@/domain/plan';
 import { IncomeStep } from '../components/income-step';
 import { TaxStep } from '../components/tax-step';
+import { TemplateStep } from '../components/template-step';
 import { BucketsStep } from '../components/buckets-step';
 import { ExpensesStep } from '../components/expenses-step';
 import { SummaryStep } from '../components/summary-step';
 import { OnboardingProgress } from '../components/onboarding-progress';
 import type { OnboardingData } from '../types';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const STEP_TITLES = [
   'Income',
   'Taxes',
+  'Template',
   'Buckets',
   'Expenses',
   'Summary',
@@ -130,12 +132,15 @@ export default function OnboardingPage() {
           {step === 0 && <IncomeStep onNext={handleNext} />}
           {step === 1 && <TaxStep onNext={handleNext} onBack={handleBack} />}
           {step === 2 && (
-            <BucketsStep onNext={handleNext} onBack={handleBack} />
+            <TemplateStep onNext={handleNext} onBack={handleBack} />
           )}
           {step === 3 && (
-            <ExpensesStep onNext={handleNext} onBack={handleBack} />
+            <BucketsStep onNext={handleNext} onBack={handleBack} />
           )}
           {step === 4 && (
+            <ExpensesStep onNext={handleNext} onBack={handleBack} />
+          )}
+          {step === 5 && (
             <SummaryStep onBack={handleBack} onComplete={handleComplete} />
           )}
         </div>

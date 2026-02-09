@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { snapshotRepo } from '@/data/repos/snapshot-repo';
+import { PLAN_DATA_STALE_TIME_MS } from '@/lib/constants';
 
 export const SNAPSHOTS_QUERY_KEY = (planId: string | undefined) =>
   ['snapshots', planId] as const;
@@ -9,6 +10,6 @@ export function useSnapshots(planId: string | undefined) {
     queryKey: SNAPSHOTS_QUERY_KEY(planId),
     queryFn: () => snapshotRepo.getByPlanId(planId!),
     enabled: !!planId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: PLAN_DATA_STALE_TIME_MS,
   });
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -11,9 +11,54 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AUTH_MAX_ATTEMPTS, AUTH_RATE_LIMIT_WINDOW_MS } from '@/lib/constants';
 import { useAuth } from '../hooks/use-auth';
 
 type AuthMode = 'login' | 'signup';
+
+/**
+ * Simple client-side rate limiter for auth attempts.
+ * Tracks timestamps of recent attempts and enforces a limit.
+ */
+function useRateLimiter(maxAttempts: number, windowMs: number) {
+  const attemptsRef = useRef<number[]>([]);
+
+  const checkRateLimit = useCallback((): boolean => {
+    const now = Date.now();
+    // Remove attempts outside the window
+    attemptsRef.current = attemptsRef.current.filter(
+      (timestamp) => now - timestamp < windowMs,
+    );
+
+    return attemptsRef.current.length < maxAttempts;
+  }, [maxAttempts, windowMs]);
+
+  const recordAttempt = useCallback(() => {
+    attemptsRef.current.push(Date.now());
+  }, []);
+
+  const getTimeUntilReset = useCallback((): number => {
+    if (attemptsRef.current.length === 0) return 0;
+    const oldestAttempt = attemptsRef.current[0];
+    const timeUntilReset = windowMs - (Date.now() - oldestAttempt);
+    return Math.max(0, Math.ceil(timeUntilReset / 1000));
+  }, [windowMs]);
+
+  const getRemainingAttempts = useCallback((): number => {
+    const now = Date.now();
+    const recentAttempts = attemptsRef.current.filter(
+      (timestamp) => now - timestamp < windowMs,
+    );
+    return Math.max(0, maxAttempts - recentAttempts.length);
+  }, [maxAttempts, windowMs]);
+
+  return {
+    checkRateLimit,
+    recordAttempt,
+    getTimeUntilReset,
+    getRemainingAttempts,
+  };
+}
 
 export function AuthForm() {
   const { signIn, signUp } = useAuth();
@@ -21,9 +66,26 @@ export function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
+
+  const rateLimiter = useRateLimiter(
+    AUTH_MAX_ATTEMPTS,
+    AUTH_RATE_LIMIT_WINDOW_MS,
+  );
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    // Check rate limit before attempting auth
+    if (!rateLimiter.checkRateLimit()) {
+      const secondsUntilReset = rateLimiter.getTimeUntilReset();
+      const message = `Too many attempts. Please wait ${secondsUntilReset} seconds before trying again.`;
+      setRateLimitError(message);
+      toast.error(message);
+      return;
+    }
+
+    setRateLimitError(null);
     setIsSubmitting(true);
 
     try {
@@ -35,9 +97,20 @@ export function AuthForm() {
         toast.success('Account created. Check your email to confirm.');
       }
     } catch (error) {
+      // Record failed attempt for rate limiting
+      rateLimiter.recordAttempt();
+
       const message =
         error instanceof Error ? error.message : 'Authentication failed.';
       toast.error(message);
+
+      // Show remaining attempts warning after failure
+      const remaining = rateLimiter.getRemainingAttempts();
+      if (remaining > 0 && remaining <= 2) {
+        toast.warning(
+          `${remaining} attempt${remaining === 1 ? '' : 's'} remaining before rate limit.`,
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -87,6 +160,11 @@ export function AuthForm() {
               </p>
             )}
           </div>
+          {rateLimitError && (
+            <p className="text-destructive text-sm" role="alert">
+              {rateLimitError}
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
             {isLogin ? 'Sign In' : 'Sign Up'}

@@ -7,16 +7,14 @@ test.describe('Onboarding wizard', () => {
 
       // Step 1: Income
       await expect(page.getByText('Step 1 of 5')).toBeVisible();
-      await expect(
-        page.getByRole('heading', { name: 'What is your gross income?' }),
-      ).toBeVisible();
+      await expect(page.getByText('What is your gross income?')).toBeVisible();
 
       // Fill gross income
       await page.locator('#grossIncomeDollars').fill('5000');
 
       // Select monthly frequency via Radix Select
       await page.locator('#incomeFrequency').click();
-      await page.getByRole('option', { name: 'Monthly' }).click();
+      await page.getByRole('option', { name: 'Monthly', exact: true }).click();
 
       // Advance
       await page.getByRole('button', { name: 'Continue' }).click();
@@ -29,14 +27,12 @@ test.describe('Onboarding wizard', () => {
       // Complete step 1 first
       await page.locator('#grossIncomeDollars').fill('5000');
       await page.locator('#incomeFrequency').click();
-      await page.getByRole('option', { name: 'Monthly' }).click();
+      await page.getByRole('option', { name: 'Monthly', exact: true }).click();
       await page.getByRole('button', { name: 'Continue' }).click();
 
       // Step 2: Taxes
       await expect(page.getByText('Step 2 of 5')).toBeVisible();
-      await expect(
-        page.getByRole('heading', { name: 'Estimate your taxes' }),
-      ).toBeVisible();
+      await expect(page.getByText('Estimate your taxes')).toBeVisible();
 
       await page.locator('#effectiveRate').fill('25');
       await page.getByRole('button', { name: 'Continue' }).click();
@@ -50,7 +46,7 @@ test.describe('Onboarding wizard', () => {
       // Complete steps 1-2
       await page.locator('#grossIncomeDollars').fill('5000');
       await page.locator('#incomeFrequency').click();
-      await page.getByRole('option', { name: 'Monthly' }).click();
+      await page.getByRole('option', { name: 'Monthly', exact: true }).click();
       await page.getByRole('button', { name: 'Continue' }).click();
 
       await page.locator('#effectiveRate').fill('25');
@@ -58,9 +54,7 @@ test.describe('Onboarding wizard', () => {
 
       // Step 3: Buckets
       await expect(page.getByText('Step 3 of 5')).toBeVisible();
-      await expect(
-        page.getByRole('heading', { name: 'Set up your buckets' }),
-      ).toBeVisible();
+      await expect(page.getByText('Set up your buckets')).toBeVisible();
 
       // Fill the first bucket name
       await page.locator('#buckets\\.0\\.name').fill('Essentials');
@@ -78,7 +72,7 @@ test.describe('Onboarding wizard', () => {
       // Complete steps 1-3
       await page.locator('#grossIncomeDollars').fill('5000');
       await page.locator('#incomeFrequency').click();
-      await page.getByRole('option', { name: 'Monthly' }).click();
+      await page.getByRole('option', { name: 'Monthly', exact: true }).click();
       await page.getByRole('button', { name: 'Continue' }).click();
 
       await page.locator('#effectiveRate').fill('25');
@@ -90,9 +84,7 @@ test.describe('Onboarding wizard', () => {
 
       // Step 4: Expenses - skip
       await expect(page.getByText('Step 4 of 5')).toBeVisible();
-      await expect(
-        page.getByRole('heading', { name: 'Add recurring expenses' }),
-      ).toBeVisible();
+      await expect(page.getByText('Add recurring expenses')).toBeVisible();
 
       await page.getByRole('button', { name: 'Skip' }).click();
       await expect(page.getByText('Step 5 of 5')).toBeVisible();
@@ -105,7 +97,7 @@ test.describe('Onboarding wizard', () => {
     // Step 1: Income
     await page.locator('#grossIncomeDollars').fill('5000');
     await page.locator('#incomeFrequency').click();
-    await page.getByRole('option', { name: 'Monthly' }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     // Step 2: Taxes
@@ -122,9 +114,7 @@ test.describe('Onboarding wizard', () => {
 
     // Step 5: Summary - verify data
     await expect(page.getByText('Step 5 of 5')).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Review your plan' }),
-    ).toBeVisible();
+    await expect(page.getByText('Review your plan')).toBeVisible();
 
     // Verify income summary
     await expect(page.getByText('$5,000')).toBeVisible();
@@ -148,8 +138,9 @@ test.describe('Onboarding wizard', () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     // Verify dashboard loaded
+    // Check page title (h1) specifically
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible();
   });
 
@@ -159,7 +150,7 @@ test.describe('Onboarding wizard', () => {
     // Step 1: Income
     await page.locator('#grossIncomeDollars').fill('5000');
     await page.locator('#incomeFrequency').click();
-    await page.getByRole('option', { name: 'Monthly' }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
 
     // Step 2: Verify and go back
@@ -168,8 +159,6 @@ test.describe('Onboarding wizard', () => {
 
     // Should be back on step 1
     await expect(page.getByText('Step 1 of 5')).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'What is your gross income?' }),
-    ).toBeVisible();
+    await expect(page.getByText('What is your gross income?')).toBeVisible();
   });
 });

@@ -11,7 +11,7 @@ async function completeOnboarding(page: Page): Promise<void> {
   // Step 1: Income
   await page.locator('#grossIncomeDollars').fill('5000');
   await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly' }).click();
+  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   // Step 2: Taxes
@@ -29,8 +29,11 @@ async function completeOnboarding(page: Page): Promise<void> {
   // Step 5: Create plan
   await page.getByRole('button', { name: 'Create plan' }).click();
 
-  // Wait for dashboard
+  // Wait for dashboard to be fully loaded
   await page.waitForURL('**/dashboard');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Dashboard' }),
+  ).toBeVisible();
 }
 
 test.describe('Expenses page', () => {
@@ -40,6 +43,11 @@ test.describe('Expenses page', () => {
     // Navigate to expenses
     await page.getByRole('link', { name: 'Expenses' }).click();
     await page.waitForURL('**/expenses');
+
+    // Wait for page to load with proper content (not the "complete onboarding" state)
+    await expect(
+      page.getByText('Track and manage your recurring expenses'),
+    ).toBeVisible({ timeout: 10000 });
 
     // Verify empty state
     await expect(page.getByText('No expenses yet')).toBeVisible();
@@ -55,6 +63,11 @@ test.describe('Expenses page', () => {
     await page.getByRole('link', { name: 'Expenses' }).click();
     await page.waitForURL('**/expenses');
 
+    // Wait for page to be ready
+    await expect(
+      page.getByText('Track and manage your recurring expenses'),
+    ).toBeVisible({ timeout: 10000 });
+
     // Click "Add expense" button in page header
     await page.getByRole('button', { name: 'Add expense' }).click();
 
@@ -67,7 +80,7 @@ test.describe('Expenses page', () => {
 
     // Select frequency
     await page.locator('#expense-frequency').click();
-    await page.getByRole('option', { name: 'Monthly' }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
 
     // Select category
     await page.locator('#expense-category').click();
@@ -80,9 +93,13 @@ test.describe('Expenses page', () => {
     // Submit the form
     await page.getByRole('button', { name: 'Add expense' }).click();
 
-    // Wait for the sheet to close and the expense to appear
-    await expect(page.getByText('Rent')).toBeVisible();
-    await expect(page.getByText('Housing')).toBeVisible();
+    // Wait for the sheet to close and the expense to appear in the list
+    await expect(
+      page.locator('.truncate.font-medium', { hasText: 'Rent' }),
+    ).toBeVisible();
+    await expect(
+      page.locator('span', { hasText: 'Housing' }).first(),
+    ).toBeVisible();
   });
 
   test('adds expense from empty state action button', async ({ page }) => {
@@ -91,6 +108,11 @@ test.describe('Expenses page', () => {
     // Navigate to expenses
     await page.getByRole('link', { name: 'Expenses' }).click();
     await page.waitForURL('**/expenses');
+
+    // Wait for page to be ready
+    await expect(
+      page.getByText('Track and manage your recurring expenses'),
+    ).toBeVisible({ timeout: 10000 });
 
     // Click action in empty state
     await page.getByRole('button', { name: 'Add your first expense' }).click();
@@ -101,7 +123,7 @@ test.describe('Expenses page', () => {
 
     // Select frequency
     await page.locator('#expense-frequency').click();
-    await page.getByRole('option', { name: 'Monthly' }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
 
     // Select category
     await page.locator('#expense-category').click();
@@ -114,8 +136,10 @@ test.describe('Expenses page', () => {
     // Submit
     await page.getByRole('button', { name: 'Add expense' }).click();
 
-    // Verify it appears
-    await expect(page.getByText('Groceries')).toBeVisible();
+    // Verify it appears in the list
+    await expect(
+      page.locator('.truncate.font-medium', { hasText: 'Groceries' }),
+    ).toBeVisible();
   });
 
   test('expense is reflected on the dashboard', async ({ page }) => {
@@ -125,12 +149,17 @@ test.describe('Expenses page', () => {
     await page.getByRole('link', { name: 'Expenses' }).click();
     await page.waitForURL('**/expenses');
 
+    // Wait for page to be ready
+    await expect(
+      page.getByText('Track and manage your recurring expenses'),
+    ).toBeVisible({ timeout: 10000 });
+
     await page.getByRole('button', { name: 'Add expense' }).click();
     await page.locator('#expense-name').fill('Internet');
     await page.locator('#expense-amount').fill('80');
 
     await page.locator('#expense-frequency').click();
-    await page.getByRole('option', { name: 'Monthly' }).click();
+    await page.getByRole('option', { name: 'Monthly', exact: true }).click();
 
     await page.locator('#expense-category').click();
     await page.getByRole('option', { name: 'Utilities' }).click();
@@ -149,7 +178,7 @@ test.describe('Expenses page', () => {
 
     // Dashboard should reflect the expense data
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible();
   });
 });

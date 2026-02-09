@@ -53,10 +53,13 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "date-fns": "^4.1.0",
     "dexie": "^4.3.0",
+    "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
     "nuqs": "^2.8.7",
     "react": "^19.2.0",
+    "react-day-picker": "^9.13.1",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.1",
     "react-router": "^7.13.0",
@@ -95,6 +98,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18"
   }
 }

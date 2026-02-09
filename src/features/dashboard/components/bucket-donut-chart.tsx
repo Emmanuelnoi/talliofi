@@ -11,6 +11,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { ChartDataTable } from '@/components/accessibility';
 
 interface BucketDonutChartProps {
   bucketAnalysis: readonly BucketAnalysis[];
@@ -92,6 +93,17 @@ export function BucketDonutChart({
 
   const ariaLabel = `Bucket allocation donut chart showing ${data.length} buckets: ${data.map((d) => `${d.name} ${d.actualFormatted}`).join(', ')}`;
 
+  // Data for accessible table alternative
+  const tableData = useMemo(
+    () =>
+      data.map((d) => ({
+        label: d.name,
+        value: d.actualFormatted,
+        secondaryValue: d.targetFormatted,
+      })),
+    [data],
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -159,12 +171,22 @@ export function BucketDonutChart({
               <span className="flex-1 truncate">{d.name}</span>
               <span className="text-muted-foreground tabular-nums">
                 {d.actualFormatted}
-                <span className="mx-1">/</span>
+                <span className="mx-1" aria-hidden="true">/</span>
+                <span className="sr-only">target</span>
                 {d.targetFormatted}
               </span>
             </li>
           ))}
         </ul>
+
+        {/* Accessible data table alternative */}
+        <ChartDataTable
+          title="Bucket Allocation Data"
+          labelHeader="Bucket"
+          valueHeader="Actual"
+          secondaryValueHeader="Target"
+          data={tableData}
+        />
       </CardContent>
     </Card>
   );

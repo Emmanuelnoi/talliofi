@@ -10,7 +10,7 @@ async function completeOnboarding(page: Page): Promise<void> {
   // Step 1: Income
   await page.locator('#grossIncomeDollars').fill('5000');
   await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly' }).click();
+  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   // Step 2: Taxes
@@ -53,8 +53,9 @@ test.describe('Responsive layout (mobile)', () => {
 
     // Should be on dashboard
     await expect(page).toHaveURL(/\/dashboard/);
+    // Check page title (h1) specifically
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible();
   });
 
@@ -85,23 +86,29 @@ test.describe('Responsive layout (mobile)', () => {
     // Navigate to Expenses
     await mobileNav.getByText('Expenses').click();
     await page.waitForURL('**/expenses');
-    await expect(page.getByRole('heading', { name: 'Expenses' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Expenses' }),
+    ).toBeVisible();
 
     // Navigate to Buckets
     await mobileNav.getByText('Buckets').click();
     await page.waitForURL('**/buckets');
-    await expect(page.getByRole('heading', { name: 'Buckets' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Buckets' }),
+    ).toBeVisible();
 
     // Navigate to Settings
     await mobileNav.getByText('Settings').click();
     await page.waitForURL('**/settings');
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Settings' }),
+    ).toBeVisible();
 
     // Navigate back to Dashboard
     await mobileNav.getByText('Dashboard').click();
     await page.waitForURL('**/dashboard');
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible();
   });
 
@@ -121,11 +128,10 @@ test.describe('Responsive layout (mobile)', () => {
     await mobileNav.getByText('Expenses').click();
     await page.waitForURL('**/expenses');
 
-    // Page header should be visible and not clipped
-    await expect(page.getByRole('heading', { name: 'Expenses' })).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Expenses' }),
-    ).toBeInViewport();
+    // Page header (h1) should be visible and not clipped
+    const pageTitle = page.getByRole('heading', { level: 1, name: 'Expenses' });
+    await expect(pageTitle).toBeVisible();
+    await expect(pageTitle).toBeInViewport();
   });
 });
 

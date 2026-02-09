@@ -1,9 +1,13 @@
 import { useCallback } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
-import { ExpenseCategorySchema, FrequencySchema } from '@/domain/plan/schemas';
+import {
+  ExpensesFormSchema,
+  FrequencySchema,
+  ExpenseCategorySchema,
+} from '@/domain/plan/schemas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,21 +27,6 @@ import {
 } from '@/components/ui/card';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 import { CATEGORY_LABELS, FREQUENCY_LABELS } from '../constants';
-
-/** Use a schema where isFixed is required (not defaulted) to align input/output types */
-const ExpenseEntrySchema = z.object({
-  name: z.string().min(1).max(100),
-  amountDollars: z.number().positive(),
-  frequency: FrequencySchema,
-  category: ExpenseCategorySchema,
-  bucketId: z.string(),
-  isFixed: z.boolean(),
-  notes: z.string().max(500).optional(),
-});
-
-const ExpensesFormSchema = z.object({
-  expenses: z.array(ExpenseEntrySchema),
-});
 
 type ExpensesFormData = z.infer<typeof ExpensesFormSchema>;
 
