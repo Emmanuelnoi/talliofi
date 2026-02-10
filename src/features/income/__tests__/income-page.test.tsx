@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect } from 'vitest';
-import { createElement } from 'react';
+import React, { createElement } from 'react';
 import type { ReactNode } from 'react';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { planRepo } from '@/data/repos/plan-repo';
 import { cents } from '@/domain/money';
 import IncomePage from '../pages/income-page';
@@ -15,10 +16,15 @@ function createWrapper() {
   });
 
   return function Wrapper({ children }: { children: ReactNode }) {
+    const router = createMemoryRouter(
+      [{ path: '/', element: children as React.ReactElement }],
+      { initialEntries: ['/'] },
+    );
+
     return createElement(
       QueryClientProvider,
       { client: queryClient },
-      children,
+      createElement(RouterProvider, { router }),
     );
   };
 }

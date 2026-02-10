@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import { AssetFormSchema } from '@/domain/plan/schemas';
 import { dollarsToCents, centsToDollars, formatMoney } from '@/domain/money';
 import type { Asset, AssetCategory } from '@/domain/plan';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { EmptyState } from '@/components/feedback/empty-state';
 import { MoneyInput } from '@/components/forms/money-input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +74,7 @@ export function AssetList({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const handleOpenAdd = useCallback(() => {
     setEditingAsset(null);
@@ -201,7 +203,9 @@ export function AssetList({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                            {formatMoney(asset.valueCents)}
+                            {formatMoney(asset.valueCents, {
+                              currency: currencyCode,
+                            })}
                           </span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

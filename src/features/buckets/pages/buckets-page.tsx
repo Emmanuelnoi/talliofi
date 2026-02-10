@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -15,6 +15,7 @@ import type { Cents } from '@/domain/money';
 import type { BucketAllocation } from '@/domain/plan';
 import { normalizeToMonthly } from '@/domain/plan';
 import { cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
 import { MoneyInput } from '@/components/forms/money-input';
@@ -54,6 +55,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
 import { useActivePlan } from '@/hooks/use-active-plan';
 import { useBuckets, useExpenses } from '@/hooks/use-plan-data';
 import {
@@ -61,9 +63,11 @@ import {
   useUpdateBucket,
   useDeleteBucket,
 } from '@/hooks/use-plan-mutations';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
 import { BUCKET_COLORS } from '@/lib/constants';
 
-type BucketFormData = z.infer<typeof BucketInputSchema>;
+type BucketFormData = z.input<typeof BucketInputSchema>;
 
 export default function BucketsPage() {
   const { data: plan, isLoading: planLoading } = useActivePlan();
@@ -71,18 +75,24 @@ export default function BucketsPage() {
     plan?.id,
   );
   const { data: expenses = [] } = useExpenses(plan?.id);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const createBucket = useCreateBucket();
   const updateBucket = useUpdateBucket();
   const deleteBucket = useDeleteBucket();
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetDirty, setSheetDirty] = useState(false);
   const [editingBucket, setEditingBucket] = useState<BucketAllocation | null>(
     null,
   );
   const [deletingBucket, setDeletingBucket] = useState<BucketAllocation | null>(
     null,
   );
+
+  const { blocker, confirmNavigation, cancelNavigation } = useUnsavedChanges({
+    isDirty: sheetOpen && sheetDirty,
+  });
 
   // Compute spending per bucket
   const spendingByBucket = useMemo(() => {
@@ -106,11 +116,13 @@ export default function BucketsPage() {
 
   const handleOpenAdd = () => {
     setEditingBucket(null);
+    setSheetDirty(false);
     setSheetOpen(true);
   };
 
   const handleOpenEdit = (bucket: BucketAllocation) => {
     setEditingBucket(bucket);
+    setSheetDirty(false);
     setSheetOpen(true);
   };
 
@@ -130,6 +142,7 @@ export default function BucketsPage() {
             data.mode === 'fixed' && data.targetAmountDollars != null
               ? dollarsToCents(data.targetAmountDollars)
               : undefined,
+          rolloverEnabled: data.rolloverEnabled ?? false,
         };
         await updateBucket.mutateAsync(updated);
         toast.success('Bucket updated');
@@ -146,6 +159,7 @@ export default function BucketsPage() {
             data.mode === 'fixed' && data.targetAmountDollars != null
               ? dollarsToCents(data.targetAmountDollars)
               : undefined,
+          rolloverEnabled: data.rolloverEnabled ?? false,
           sortOrder: buckets.length,
           createdAt: new Date().toISOString(),
         };
@@ -286,6 +300,11 @@ export default function BucketsPage() {
                         aria-hidden="true"
                       />
                       <CardTitle className="text-base">{bucket.name}</CardTitle>
+                      {bucket.rolloverEnabled && (
+                        <Badge variant="secondary" className="text-xs">
+                          Rollover
+                        </Badge>
+                      )}
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -321,10 +340,12 @@ export default function BucketsPage() {
                     <Badge variant="outline">
                       {bucket.mode === 'percentage'
                         ? `${bucket.targetPercentage}%`
-                        : formatMoney(bucket.targetAmountCents ?? cents(0))}
+                        : formatMoney(bucket.targetAmountCents ?? cents(0), {
+                            currency: currencyCode,
+                          })}
                     </Badge>
                     <span className="text-muted-foreground text-sm tabular-nums">
-                      {formatMoney(spent)} spent/mo
+                      {formatMoney(spent, { currency: currencyCode })} spent/mo
                     </span>
                   </div>
                 </CardContent>
@@ -360,6 +381,7 @@ export default function BucketsPage() {
             )}
             onSave={handleSave}
             onCancel={() => setSheetOpen(false)}
+            onDirtyChange={setSheetDirty}
           />
         </SheetContent>
       </Sheet>
@@ -392,6 +414,12 @@ export default function BucketsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UnsavedChangesDialog
+        open={blocker.state === 'blocked'}
+        onStay={cancelNavigation}
+        onLeave={confirmNavigation}
+      />
     </div>
   );
 }
@@ -404,6 +432,7 @@ interface BucketFormProps {
   otherBucketsPercentage: number;
   onSave: (data: BucketFormData) => Promise<void>;
   onCancel: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 function BucketForm({
@@ -412,6 +441,7 @@ function BucketForm({
   otherBucketsPercentage,
   onSave,
   onCancel,
+  onDirtyChange,
 }: BucketFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -426,12 +456,14 @@ function BucketForm({
           targetAmountDollars: bucket.targetAmountCents
             ? centsToDollars(bucket.targetAmountCents)
             : 0,
+          rolloverEnabled: bucket.rolloverEnabled ?? false,
         }
       : {
           name: '',
           color: BUCKET_COLORS[nextColorIndex % BUCKET_COLORS.length],
           mode: 'percentage',
           targetPercentage: 0,
+          rolloverEnabled: false,
         },
   });
 
@@ -443,6 +475,11 @@ function BucketForm({
     setValue,
     formState: { errors },
   } = form;
+
+  useEffect(() => {
+    if (!onDirtyChange) return;
+    onDirtyChange(form.formState.isDirty);
+  }, [form.formState.isDirty, onDirtyChange, form]);
 
   const mode = watch('mode');
   const currentPercentage = watch('targetPercentage') ?? 0;
@@ -502,6 +539,28 @@ function BucketForm({
             <SelectItem value="fixed">Fixed dollar amount</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div className="space-y-0.5">
+          <Label htmlFor="bucket-rollover" className="font-medium">
+            Enable rollover
+          </Label>
+          <p className="text-muted-foreground text-xs">
+            Carry unused budget into the next month.
+          </p>
+        </div>
+        <Controller
+          control={control}
+          name="rolloverEnabled"
+          render={({ field }) => (
+            <Switch
+              id="bucket-rollover"
+              checked={field.value ?? false}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
       </div>
 
       {mode === 'percentage' ? (

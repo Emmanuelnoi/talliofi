@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
@@ -155,6 +156,17 @@ describe('DashboardPage', () => {
 
     expect(screen.getByText('Savings Rate')).toBeInTheDocument();
     expect(screen.getByText('Expenses')).toBeInTheDocument();
+  });
+
+  it('renders yearly expense donut chart', async () => {
+    await seedFullDashboard();
+    render(<DashboardPage />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('Yearly Expense')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Breakdown by Category')).toBeInTheDocument();
   });
 
   it('renders spending by category chart', async () => {

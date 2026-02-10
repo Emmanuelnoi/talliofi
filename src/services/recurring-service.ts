@@ -102,6 +102,7 @@ export const recurringService = {
       amountCents: template.amountCents,
       frequency: template.frequency,
       category: template.category,
+      currencyCode: template.currencyCode,
       isFixed: template.isFixed,
       notes: template.notes
         ? `${template.notes} (auto-generated)`
@@ -153,9 +154,11 @@ export const recurringService = {
 
     for (const expense of expenses) {
       const normalizedName = normalizeExpenseName(expense.name);
-      const existing = groups.get(normalizedName) ?? [];
+      const currencyKey = expense.currencyCode ?? 'default';
+      const groupKey = `${normalizedName}::${currencyKey}`;
+      const existing = groups.get(groupKey) ?? [];
       existing.push(expense);
-      groups.set(normalizedName, existing);
+      groups.set(groupKey, existing);
     }
 
     const suggestions: TemplateSuggestion[] = [];
@@ -199,6 +202,7 @@ export const recurringService = {
       frequency: suggestion.frequency,
       category: suggestion.category,
       bucketId,
+      currencyCode: suggestion.currencyCode,
       isActive: true,
       isFixed: true,
       notes: `Created from pattern detection (${suggestion.matchingExpenseIds.length} matching expenses)`,
@@ -231,6 +235,7 @@ export const recurringService = {
       frequency: expense.frequency,
       category: expense.category,
       bucketId: expense.bucketId,
+      currencyCode: expense.currencyCode,
       dayOfMonth,
       isActive: true,
       isFixed: expense.isFixed,
@@ -377,6 +382,7 @@ function analyzeExpenseGroup(
     amountCents: cents(avgAmount) as Cents,
     frequency,
     category: mostCommonCategory,
+    currencyCode: mostRecent.currencyCode,
     confidence,
     matchingExpenseIds: expenses.map((e) => e.id),
   };

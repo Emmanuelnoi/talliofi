@@ -84,7 +84,10 @@ export function ReportsSkeleton() {
           <div className="bg-muted h-[350px] animate-pulse rounded" />
           <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-muted h-[60px] animate-pulse rounded-lg" />
+              <div
+                key={i}
+                className="bg-muted h-[60px] animate-pulse rounded-lg"
+              />
             ))}
           </div>
         </CardContent>
@@ -103,7 +106,10 @@ export function ReportsSkeleton() {
           </div>
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-muted h-[72px] animate-pulse rounded-lg" />
+              <div
+                key={i}
+                className="bg-muted h-[72px] animate-pulse rounded-lg"
+              />
             ))}
           </div>
         </CardContent>

@@ -1,6 +1,6 @@
 import { Copy, MoreVertical, Pencil, Trash2, Check } from 'lucide-react';
 import type { Plan } from '@/domain/plan/types';
-import { formatMoney, type Cents } from '@/domain/money';
+import { DEFAULT_CURRENCY, formatMoney, type Cents } from '@/domain/money';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,7 @@ export function PlanCard({
     month: 'short',
     day: 'numeric',
   });
+  const currencyCode = plan.currencyCode ?? DEFAULT_CURRENCY;
 
   return (
     <Card
@@ -116,7 +117,10 @@ export function PlanCard({
         <div className="text-muted-foreground space-y-1 text-sm">
           <p>
             <span className="font-medium">Income:</span>{' '}
-            {formatMoney(plan.grossIncomeCents as Cents)} / {plan.incomeFrequency}
+            {formatMoney(plan.grossIncomeCents as Cents, {
+              currency: currencyCode,
+            })}{' '}
+            / {plan.incomeFrequency}
           </p>
           <p>
             <span className="font-medium">Created:</span> {createdDate}

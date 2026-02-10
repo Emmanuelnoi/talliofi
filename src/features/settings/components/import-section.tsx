@@ -25,6 +25,7 @@ import {
   importData,
 } from '@/data/export/import-service';
 import type { ExportPayload } from '@/data/export/import-service';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
 
 interface ImportPreview {
   planName: string;
@@ -46,6 +47,7 @@ function buildPreview(payload: ExportPayload): ImportPreview {
 
 export function ImportSection() {
   const queryClient = useQueryClient();
+  const { scheduleVaultSave } = useLocalEncryption();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [pendingPayload, setPendingPayload] = useState<ExportPayload | null>(
@@ -101,6 +103,7 @@ export function ImportSection() {
     try {
       await importData(pendingPayload);
       await queryClient.invalidateQueries();
+      scheduleVaultSave();
       toast.success('Data imported successfully.');
       resetState();
     } catch (error) {

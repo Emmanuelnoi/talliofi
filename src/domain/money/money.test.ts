@@ -74,13 +74,16 @@ describe('centsToDollars()', () => {
 });
 
 describe('formatMoney()', () => {
-  it('formats with default locale and currency (en-US, USD)', () => {
-    const result = formatMoney(cents(150099));
+  it('formats with default locale (en-US) when currency is provided', () => {
+    const result = formatMoney(cents(150099), { currency: 'USD' });
     expect(result).toBe('$1,500.99');
   });
 
   it('accepts a custom locale', () => {
-    const result = formatMoney(cents(150099), { locale: 'de-DE' });
+    const result = formatMoney(cents(150099), {
+      currency: 'USD',
+      locale: 'de-DE',
+    });
     // German locale uses period for thousands and comma for decimals
     expect(result).toContain('1.500,99');
   });

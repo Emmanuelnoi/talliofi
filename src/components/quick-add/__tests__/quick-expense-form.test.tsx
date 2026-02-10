@@ -24,7 +24,7 @@ vi.mock('@/hooks/use-plan-data', () => ({
   useBuckets: () => ({
     data: [
       {
-        id: 'bucket-1',
+        id: '11111111-1111-4111-8111-111111111111',
         planId: 'plan-1',
         name: 'Essentials',
         color: '#4A90D9',
@@ -34,7 +34,7 @@ vi.mock('@/hooks/use-plan-data', () => ({
         createdAt: new Date().toISOString(),
       },
       {
-        id: 'bucket-2',
+        id: '22222222-2222-4222-8222-222222222222',
         planId: 'plan-1',
         name: 'Savings',
         color: '#50C878',
@@ -162,7 +162,7 @@ describe('QuickExpenseForm', () => {
           name: 'Coffee',
           amountCents: 550,
           category: 'other',
-          bucketId: 'bucket-1',
+          bucketId: '11111111-1111-4111-8111-111111111111',
         }),
       );
     });

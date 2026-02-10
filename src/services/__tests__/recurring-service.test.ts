@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { cents } from '@/domain/money';
 import type { RecurringTemplate, ExpenseItem } from '@/domain/plan/types';
 import { recurringService } from '../recurring-service';
@@ -48,7 +48,8 @@ describe('recurringService', () => {
       const template = makeValidTemplate();
       await recurringTemplateRepo.create(template);
 
-      const expense = await recurringService.generateExpenseFromTemplate(template);
+      const expense =
+        await recurringService.generateExpenseFromTemplate(template);
 
       expect(expense.name).toBe(template.name);
       expect(expense.amountCents).toBe(template.amountCents);
@@ -113,7 +114,8 @@ describe('recurringService', () => {
       });
       await expenseRepo.create(expense);
 
-      const template = await recurringService.createTemplateFromExpense(expense);
+      const template =
+        await recurringService.createTemplateFromExpense(expense);
 
       expect(template.isFixed).toBe(true);
       expect(template.notes).toBe('Monthly rent payment');
@@ -167,7 +169,8 @@ describe('recurringService', () => {
         );
       }
 
-      const suggestions = await recurringService.detectRecurringPatterns(planId);
+      const suggestions =
+        await recurringService.detectRecurringPatterns(planId);
 
       expect(suggestions.length).toBeGreaterThan(0);
       expect(suggestions[0].name).toBe('Netflix Subscription');
@@ -209,7 +212,8 @@ describe('recurringService', () => {
         );
       }
 
-      const suggestions = await recurringService.detectRecurringPatterns(planId);
+      const suggestions =
+        await recurringService.detectRecurringPatterns(planId);
 
       expect(suggestions.length).toBeGreaterThan(0);
       expect(suggestions[0].confidence).toBeGreaterThan(0.5);

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 
-type KeyboardModifier = 'meta' | 'ctrl' | 'alt' | 'shift';
+export type KeyboardModifier = 'meta' | 'ctrl' | 'alt' | 'shift';
 
 interface UseKeyboardShortcutOptions {
   /** The key to listen for (e.g., 'n', 'Enter', 'Escape') */
@@ -13,6 +13,19 @@ interface UseKeyboardShortcutOptions {
   enabled?: boolean;
   /** Prevent default browser behavior when shortcut is triggered */
   preventDefault?: boolean;
+  /** Allow triggering even when focus is in an input/textarea */
+  allowInInput?: boolean;
+}
+
+export function isMacPlatform(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if ('userAgentData' in navigator) {
+    return (
+      (navigator as Navigator & { userAgentData?: { platform?: string } })
+        .userAgentData?.platform === 'macOS'
+    );
+  }
+  return /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 }
 
 /**
@@ -43,6 +56,7 @@ export function useKeyboardShortcut({
   onTrigger,
   enabled = true,
   preventDefault = true,
+  allowInInput = false,
 }: UseKeyboardShortcutOptions): void {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -59,10 +73,7 @@ export function useKeyboardShortcut({
         switch (mod) {
           case 'meta':
             // On Mac, metaKey is Cmd. On Windows/Linux, use ctrlKey as fallback
-            return (
-              event.metaKey ||
-              (navigator.platform.indexOf('Mac') === -1 && event.ctrlKey)
-            );
+            return event.metaKey || (!isMacPlatform() && event.ctrlKey);
           case 'ctrl':
             return event.ctrlKey;
           case 'alt':
@@ -76,14 +87,17 @@ export function useKeyboardShortcut({
 
       if (!hasAllModifiers) return;
 
-      // Don't trigger if user is typing in an input/textarea (unless it's Escape)
+      // Don't trigger if user is typing in an input/textarea
+      // (unless it's Escape or allowInInput is set)
       const target = event.target as HTMLElement;
       const isInInput =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
-      if (isInInput && key.toLowerCase() !== 'escape') return;
+      if (isInInput && key.toLowerCase() !== 'escape' && !allowInInput) {
+        return;
+      }
 
       if (preventDefault) {
         event.preventDefault();
@@ -91,7 +105,7 @@ export function useKeyboardShortcut({
 
       onTrigger();
     },
-    [key, modifiers, onTrigger, enabled, preventDefault],
+    [key, modifiers, onTrigger, enabled, preventDefault, allowInInput],
   );
 
   useEffect(() => {
@@ -107,10 +121,7 @@ export function useKeyboardShortcut({
  * Mac: Cmd symbol, Others: Ctrl
  */
 export function getModifierKeySymbol(): string {
-  if (
-    typeof navigator !== 'undefined' &&
-    navigator.platform.indexOf('Mac') !== -1
-  ) {
+  if (isMacPlatform()) {
     return '\u2318'; // Cmd symbol
   }
   return 'Ctrl';
@@ -126,9 +137,7 @@ export function formatShortcut(
   key: string,
   modifiers: KeyboardModifier[] = [],
 ): string {
-  const isMac =
-    typeof navigator !== 'undefined' &&
-    navigator.platform.indexOf('Mac') !== -1;
+  const isMac = isMacPlatform();
   const parts: string[] = [];
 
   for (const mod of modifiers) {
@@ -152,3 +161,70 @@ export function formatShortcut(
 
   return isMac ? parts.join('') : parts.join('+');
 }
+
+/** A registered keyboard shortcut definition for display in the help dialog. */
+export interface ShortcutDefinition {
+  /** Human-readable label for the shortcut action */
+  label: string;
+  /** The key (e.g., 'N', 'S', 'Escape') */
+  key: string;
+  /** Modifier keys */
+  modifiers: KeyboardModifier[];
+  /** Category grouping for the help dialog */
+  group: 'general' | 'navigation' | 'editing';
+}
+
+/**
+ * All registered keyboard shortcuts in the application.
+ * Used by the KeyboardShortcutsDialog to display available shortcuts.
+ */
+export const KEYBOARD_SHORTCUTS: readonly ShortcutDefinition[] = [
+  {
+    label: 'Quick add expense',
+    key: 'N',
+    modifiers: ['meta'],
+    group: 'general',
+  },
+  {
+    label: 'Show keyboard shortcuts',
+    key: '?',
+    modifiers: [],
+    group: 'general',
+  },
+  {
+    label: 'Show keyboard shortcuts (Cmd+/)',
+    key: '/',
+    modifiers: ['meta'],
+    group: 'general',
+  },
+  {
+    label: 'Close dialog / sheet',
+    key: 'Escape',
+    modifiers: [],
+    group: 'general',
+  },
+  {
+    label: 'Save current form',
+    key: 'S',
+    modifiers: ['meta'],
+    group: 'editing',
+  },
+  {
+    label: 'Focus search (expenses)',
+    key: 'F',
+    modifiers: ['meta'],
+    group: 'editing',
+  },
+  {
+    label: 'Go to dashboard',
+    key: 'D',
+    modifiers: ['meta'],
+    group: 'navigation',
+  },
+  {
+    label: 'Go to expenses',
+    key: 'E',
+    modifiers: ['meta'],
+    group: 'navigation',
+  },
+] as const;

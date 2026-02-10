@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/card';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 
-type BucketsFormData = z.infer<typeof BucketsFormSchema>;
+type BucketsFormData = z.input<typeof BucketsFormSchema>;
 
 const BUCKET_COLORS = [
   '#4A90D9',
@@ -49,7 +49,6 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<BucketsFormData>({
@@ -70,10 +69,11 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
       color: BUCKET_COLORS[fields.length % BUCKET_COLORS.length],
       mode: 'percentage',
       targetPercentage: 0,
+      rolloverEnabled: false,
     });
   }, [append, fields.length]);
 
-  const watchedBuckets = watch('buckets');
+  const watchedBuckets = useWatch({ control, name: 'buckets' }) ?? [];
   const totalPercentage = watchedBuckets.reduce(
     (sum, b) =>
       b.mode === 'percentage' ? sum + (b.targetPercentage ?? 0) : sum,
@@ -98,7 +98,12 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-4">
             {fields.map((field, index) => {
-              const mode = watch(`buckets.${index}.mode`);
+              const bucketValues = watchedBuckets[index];
+              const mode = bucketValues?.mode ?? 'percentage';
+              const colorValue =
+                bucketValues?.color ??
+                field.color ??
+                BUCKET_COLORS[index % BUCKET_COLORS.length];
               return (
                 <div
                   key={field.id}
@@ -114,7 +119,7 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                           type="color"
                           tabIndex={0}
                           className="h-9 w-9 shrink-0 cursor-pointer rounded-md border"
-                          value={watch(`buckets.${index}.color`)}
+                          value={colorValue}
                           onChange={(e) =>
                             setValue(`buckets.${index}.color`, e.target.value)
                           }

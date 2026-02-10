@@ -1,5 +1,6 @@
 import type { RollingAverages } from '@/domain/plan/types';
 import { formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ export function RollingAverageSummary({
   averages,
   months,
 }: RollingAverageSummaryProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   return (
     <Card>
       <CardHeader>
@@ -50,7 +52,9 @@ export function RollingAverageSummary({
                 Avg. Monthly Expenses
               </p>
               <p className="money text-xl font-semibold">
-                {formatMoney(averages.avgTotalExpenses)}
+                {formatMoney(averages.avgTotalExpenses, {
+                  currency: currencyCode,
+                })}
               </p>
             </div>
             <TrendIndicator trend={averages.trend} />

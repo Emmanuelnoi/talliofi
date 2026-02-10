@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { CATEGORY_LABELS, FREQUENCY_LABELS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ interface TopExpensesReportProps {
 
 export function TopExpensesReport({ report }: TopExpensesReportProps) {
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const handleExport = async (formatType: 'csv' | 'pdf') => {
     if (!report) return;
@@ -41,11 +43,11 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
 
     try {
       if (formatType === 'csv') {
-        const csv = exportTopExpensesCSV(report);
+        const csv = exportTopExpensesCSV(report, currencyCode);
         downloadReportCSV(csv, 'top-expenses');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportTopExpensesPDF(report);
+        const blob = exportTopExpensesPDF(report, currencyCode);
         downloadReportPDF(blob, 'top-expenses');
         toast.success('PDF exported successfully');
       }
@@ -117,7 +119,7 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
             Total (Top {report.data.length}):
           </p>
           <p className="text-2xl font-bold tabular-nums">
-            {formatMoney(report.totalCents)}
+            {formatMoney(report.totalCents, { currency: currencyCode })}
           </p>
           <p className="text-muted-foreground text-xs">per month</p>
         </div>
@@ -175,12 +177,16 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
                 {/* Amount */}
                 <div className="shrink-0 text-right">
                   <div className="font-medium tabular-nums">
-                    {formatMoney(monthlyAmountCents)}
+                    {formatMoney(monthlyAmountCents, {
+                      currency: currencyCode,
+                    })}
                     <span className="text-muted-foreground text-xs">/mo</span>
                   </div>
                   {showNormalized && (
                     <div className="text-muted-foreground text-xs tabular-nums">
-                      {formatMoney(expense.amountCents)}{' '}
+                      {formatMoney(expense.amountCents, {
+                        currency: currencyCode,
+                      })}{' '}
                       {FREQUENCY_LABELS[expense.frequency].toLowerCase()}
                     </div>
                   )}
@@ -197,8 +203,10 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
             {report.data.map((item, index) => (
               <li key={item.expense.id}>
                 {index + 1}. {item.expense.name}:{' '}
-                {formatMoney(item.monthlyAmountCents)} per month (
-                {CATEGORY_LABELS[item.expense.category]})
+                {formatMoney(item.monthlyAmountCents, {
+                  currency: currencyCode,
+                })}{' '}
+                per month ({CATEGORY_LABELS[item.expense.category]})
               </li>
             ))}
           </ol>

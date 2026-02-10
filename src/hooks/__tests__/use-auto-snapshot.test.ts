@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { useAutoSnapshot } from '../use-auto-snapshot';
@@ -57,18 +57,22 @@ describe('useAutoSnapshot', () => {
     const before = await snapshotRepo.getByPlanAndMonth(plan.id, yearMonth);
     expect(before).toBeUndefined();
 
-    renderHook(() => useAutoSnapshot(), {
+    const getByPlanAndMonthSpy = vi.spyOn(snapshotRepo, 'getByPlanAndMonth');
+
+    const { result } = renderHook(() => useAutoSnapshot(), {
       wrapper: createWrapper(),
     });
 
-    // Wait for the hook to fetch plan data and create the snapshot
-    await waitFor(
-      async () => {
-        const after = await snapshotRepo.getByPlanAndMonth(plan.id, yearMonth);
-        expect(after).toBeDefined();
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      expect(getByPlanAndMonthSpy).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(result.current.isCreating).toBe(false);
+    });
+    getByPlanAndMonthSpy.mockRestore();
+
+    const after = await snapshotRepo.getByPlanAndMonth(plan.id, yearMonth);
+    expect(after).toBeDefined();
 
     const snapshot = await snapshotRepo.getByPlanAndMonth(plan.id, yearMonth);
     expect(snapshot?.planId).toBe(plan.id);
@@ -94,19 +98,23 @@ describe('useAutoSnapshot', () => {
     };
     await snapshotRepo.upsert(existingSnapshot);
 
-    renderHook(() => useAutoSnapshot(), {
+    const getByPlanAndMonthSpy = vi.spyOn(snapshotRepo, 'getByPlanAndMonth');
+
+    const { result } = renderHook(() => useAutoSnapshot(), {
       wrapper: createWrapper(),
     });
 
-    // Give the hook time to run
-    await waitFor(
-      async () => {
-        const all = await snapshotRepo.getByPlanId(plan.id);
-        // Should still have exactly 1 snapshot, not 2
-        expect(all).toHaveLength(1);
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      expect(getByPlanAndMonthSpy).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(result.current.isCreating).toBe(false);
+    });
+    getByPlanAndMonthSpy.mockRestore();
+
+    const all = await snapshotRepo.getByPlanId(plan.id);
+    // Should still have exactly 1 snapshot, not 2
+    expect(all).toHaveLength(1);
 
     // Verify it's the same snapshot (not overwritten)
     const snapshot = await snapshotRepo.getByPlanAndMonth(plan.id, yearMonth);

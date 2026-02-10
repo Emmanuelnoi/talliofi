@@ -18,6 +18,17 @@ import type {
   RecurringTemplate,
 } from '@/domain/plan';
 import { ACTIVE_PLAN_QUERY_KEY } from './use-active-plan';
+import {
+  CHANGELOG_QUERY_KEY,
+  recordChange,
+  recordBulkChange,
+  useCreateEntity,
+  useUpdateEntity,
+  useDeleteEntity,
+  useVaultSaveOnSuccess,
+} from '@/hooks/create-crud-mutations';
+
+export { CHANGELOG_QUERY_KEY } from '@/hooks/create-crud-mutations';
 
 // --- Query Keys ---
 const bucketsKey = (planId: string) => ['buckets', planId] as const;
@@ -34,6 +45,7 @@ const recurringTemplatesKey = (planId: string) =>
 
 export function useUpdatePlan() {
   const queryClient = useQueryClient();
+  const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: (plan: Plan) => planRepo.update(plan),
     onMutate: async (newPlan) => {
@@ -56,84 +68,43 @@ export function useUpdatePlan() {
         queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, context.previousPlan);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, error, variables) => {
       // Always refetch to ensure consistency
       void queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      if (!error) {
+        scheduleVaultSave();
+        recordChange(
+          variables.id,
+          'plan',
+          variables.id,
+          'update',
+          variables.name,
+        );
+      }
     },
   });
 }
 
 // --- Buckets ---
 
-export function useCreateBucket() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (bucket: BucketAllocation) => bucketRepo.create(bucket),
-    onMutate: async (newBucket) => {
-      const key = bucketsKey(newBucket.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousBuckets = queryClient.getQueryData<BucketAllocation[]>(key);
-
-      // Optimistically add the new bucket
-      queryClient.setQueryData<BucketAllocation[]>(key, (old = []) => [
-        ...old,
-        newBucket,
-      ]);
-
-      return { previousBuckets, planId: newBucket.planId };
-    },
-    onError: (_err, _newBucket, context) => {
-      if (context?.previousBuckets !== undefined) {
-        queryClient.setQueryData(
-          bucketsKey(context.planId),
-          context.previousBuckets,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: bucketsKey(variables.planId),
-      });
-    },
+export const useCreateBucket = () =>
+  useCreateEntity<BucketAllocation>({
+    entityType: 'bucket',
+    queryKey: bucketsKey,
+    repo: bucketRepo,
   });
-}
 
-export function useUpdateBucket() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (bucket: BucketAllocation) => bucketRepo.update(bucket),
-    onMutate: async (updatedBucket) => {
-      const key = bucketsKey(updatedBucket.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousBuckets = queryClient.getQueryData<BucketAllocation[]>(key);
-
-      // Optimistically update the bucket
-      queryClient.setQueryData<BucketAllocation[]>(key, (old = []) =>
-        old.map((b) => (b.id === updatedBucket.id ? updatedBucket : b)),
-      );
-
-      return { previousBuckets, planId: updatedBucket.planId };
-    },
-    onError: (_err, _bucket, context) => {
-      if (context?.previousBuckets !== undefined) {
-        queryClient.setQueryData(
-          bucketsKey(context.planId),
-          context.previousBuckets,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: bucketsKey(variables.planId),
-      });
-    },
+export const useUpdateBucket = () =>
+  useUpdateEntity<BucketAllocation>({
+    entityType: 'bucket',
+    queryKey: bucketsKey,
+    repo: bucketRepo,
   });
-}
 
 export function useDeleteBucket() {
   const queryClient = useQueryClient();
+  const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: ({ id }: { id: string; planId: string }) =>
       bucketRepo.delete(id),
@@ -158,101 +129,112 @@ export function useDeleteBucket() {
         );
       }
     },
-    onSettled: (_data, _err, variables) => {
+    onSettled: (_data, error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: bucketsKey(variables.planId),
       });
+      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
       // Expenses may have been reassigned, invalidate them too
       void queryClient.invalidateQueries({
         queryKey: expensesKey(variables.planId),
       });
+      if (!error) {
+        scheduleVaultSave();
+        recordChange(variables.planId, 'bucket', variables.id, 'delete');
+      }
     },
   });
 }
 
 // --- Expenses ---
 
-export function useCreateExpense() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (expense: ExpenseItem) => expenseRepo.create(expense),
-    onMutate: async (newExpense) => {
-      const key = expensesKey(newExpense.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousExpenses = queryClient.getQueryData<ExpenseItem[]>(key);
-
-      // Optimistically add the new expense
-      queryClient.setQueryData<ExpenseItem[]>(key, (old = []) => [
-        ...old,
-        newExpense,
-      ]);
-
-      return { previousExpenses, planId: newExpense.planId };
-    },
-    onError: (_err, _newExpense, context) => {
-      if (context?.previousExpenses !== undefined) {
-        queryClient.setQueryData(
-          expensesKey(context.planId),
-          context.previousExpenses,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: expensesKey(variables.planId),
-      });
-    },
+export const useCreateExpense = () =>
+  useCreateEntity<ExpenseItem>({
+    entityType: 'expense',
+    queryKey: expensesKey,
+    repo: expenseRepo,
   });
-}
 
-export function useUpdateExpense() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (expense: ExpenseItem) => expenseRepo.update(expense),
-    onMutate: async (updatedExpense) => {
-      const key = expensesKey(updatedExpense.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousExpenses = queryClient.getQueryData<ExpenseItem[]>(key);
-
-      // Optimistically update the expense
-      queryClient.setQueryData<ExpenseItem[]>(key, (old = []) =>
-        old.map((e) => (e.id === updatedExpense.id ? updatedExpense : e)),
-      );
-
-      return { previousExpenses, planId: updatedExpense.planId };
-    },
-    onError: (_err, _expense, context) => {
-      if (context?.previousExpenses !== undefined) {
-        queryClient.setQueryData(
-          expensesKey(context.planId),
-          context.previousExpenses,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: expensesKey(variables.planId),
-      });
-    },
+export const useUpdateExpense = () =>
+  useUpdateEntity<ExpenseItem>({
+    entityType: 'expense',
+    queryKey: expensesKey,
+    repo: expenseRepo,
   });
-}
 
-export function useDeleteExpense() {
+export const useDeleteExpense = () =>
+  useDeleteEntity<ExpenseItem>({
+    entityType: 'expense',
+    queryKey: expensesKey,
+    repo: expenseRepo,
+  });
+
+export function useBulkUpdateExpenses() {
   const queryClient = useQueryClient();
+  const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) =>
-      expenseRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
+    mutationFn: (expenses: ExpenseItem[]) => expenseRepo.bulkUpdate(expenses),
+    onMutate: async (updatedExpenses) => {
+      const planId = updatedExpenses[0]?.planId;
+      if (!planId) return { previousExpenses: undefined, planId: '' };
       const key = expensesKey(planId);
       await queryClient.cancelQueries({ queryKey: key });
 
       const previousExpenses = queryClient.getQueryData<ExpenseItem[]>(key);
 
-      // Optimistically remove the expense
+      const updates = new Map(updatedExpenses.map((e) => [e.id, e]));
       queryClient.setQueryData<ExpenseItem[]>(key, (old = []) =>
-        old.filter((e) => e.id !== id),
+        old.map((expense) => updates.get(expense.id) ?? expense),
+      );
+
+      return { previousExpenses, planId };
+    },
+    onError: (_err, _expenses, context) => {
+      if (context?.previousExpenses !== undefined) {
+        queryClient.setQueryData(
+          expensesKey(context.planId),
+          context.previousExpenses,
+        );
+      }
+    },
+    onSettled: (_data, error, variables) => {
+      const planId = variables[0]?.planId;
+      if (!planId) return;
+      void queryClient.invalidateQueries({
+        queryKey: expensesKey(planId),
+      });
+      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      if (!error) {
+        scheduleVaultSave();
+        recordBulkChange(
+          planId,
+          'expense',
+          variables.map((expense) => ({
+            id: expense.id,
+            name: expense.name,
+          })),
+          'update',
+        );
+      }
+    },
+  });
+}
+
+export function useBulkDeleteExpenses() {
+  const queryClient = useQueryClient();
+  const scheduleVaultSave = useVaultSaveOnSuccess();
+  return useMutation({
+    mutationFn: ({ ids }: { ids: string[]; planId: string }) =>
+      expenseRepo.bulkDelete(ids),
+    onMutate: async ({ ids, planId }) => {
+      const key = expensesKey(planId);
+      await queryClient.cancelQueries({ queryKey: key });
+
+      const previousExpenses = queryClient.getQueryData<ExpenseItem[]>(key);
+      const idSet = new Set(ids);
+
+      queryClient.setQueryData<ExpenseItem[]>(key, (old = []) =>
+        old.filter((expense) => !idSet.has(expense.id)),
       );
 
       return { previousExpenses, planId };
@@ -265,529 +247,142 @@ export function useDeleteExpense() {
         );
       }
     },
-    onSettled: (_data, _err, variables) => {
+    onSettled: (_data, error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: expensesKey(variables.planId),
       });
+      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      if (!error) {
+        scheduleVaultSave();
+        recordBulkChange(
+          variables.planId,
+          'expense',
+          variables.ids.map((id) => ({ id })),
+          'delete',
+        );
+      }
     },
   });
 }
 
 // --- Tax Components ---
 
-export function useCreateTaxComponent() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (component: TaxComponent) => taxComponentRepo.create(component),
-    onMutate: async (newComponent) => {
-      const key = taxComponentsKey(newComponent.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousComponents = queryClient.getQueryData<TaxComponent[]>(key);
-
-      // Optimistically add the new component
-      queryClient.setQueryData<TaxComponent[]>(key, (old = []) => [
-        ...old,
-        newComponent,
-      ]);
-
-      return { previousComponents, planId: newComponent.planId };
-    },
-    onError: (_err, _newComponent, context) => {
-      if (context?.previousComponents !== undefined) {
-        queryClient.setQueryData(
-          taxComponentsKey(context.planId),
-          context.previousComponents,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: taxComponentsKey(variables.planId),
-      });
-    },
+export const useCreateTaxComponent = () =>
+  useCreateEntity<TaxComponent>({
+    entityType: 'tax_component',
+    queryKey: taxComponentsKey,
+    repo: taxComponentRepo,
   });
-}
 
-export function useUpdateTaxComponent() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (component: TaxComponent) => taxComponentRepo.update(component),
-    onMutate: async (updatedComponent) => {
-      const key = taxComponentsKey(updatedComponent.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousComponents = queryClient.getQueryData<TaxComponent[]>(key);
-
-      // Optimistically update the component
-      queryClient.setQueryData<TaxComponent[]>(key, (old = []) =>
-        old.map((c) => (c.id === updatedComponent.id ? updatedComponent : c)),
-      );
-
-      return { previousComponents, planId: updatedComponent.planId };
-    },
-    onError: (_err, _component, context) => {
-      if (context?.previousComponents !== undefined) {
-        queryClient.setQueryData(
-          taxComponentsKey(context.planId),
-          context.previousComponents,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: taxComponentsKey(variables.planId),
-      });
-    },
+export const useUpdateTaxComponent = () =>
+  useUpdateEntity<TaxComponent>({
+    entityType: 'tax_component',
+    queryKey: taxComponentsKey,
+    repo: taxComponentRepo,
   });
-}
 
-export function useDeleteTaxComponent() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) =>
-      taxComponentRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
-      const key = taxComponentsKey(planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousComponents = queryClient.getQueryData<TaxComponent[]>(key);
-
-      // Optimistically remove the component
-      queryClient.setQueryData<TaxComponent[]>(key, (old = []) =>
-        old.filter((c) => c.id !== id),
-      );
-
-      return { previousComponents, planId };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousComponents !== undefined) {
-        queryClient.setQueryData(
-          taxComponentsKey(context.planId),
-          context.previousComponents,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: taxComponentsKey(variables.planId),
-      });
-    },
+export const useDeleteTaxComponent = () =>
+  useDeleteEntity<TaxComponent>({
+    entityType: 'tax_component',
+    queryKey: taxComponentsKey,
+    repo: taxComponentRepo,
   });
-}
 
 // --- Goals ---
 
-export function useCreateGoal() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (goal: Goal) => goalRepo.create(goal),
-    onMutate: async (newGoal) => {
-      const key = goalsKey(newGoal.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousGoals = queryClient.getQueryData<Goal[]>(key);
-
-      // Optimistically add the new goal
-      queryClient.setQueryData<Goal[]>(key, (old = []) => [...old, newGoal]);
-
-      return { previousGoals, planId: newGoal.planId };
-    },
-    onError: (_err, _newGoal, context) => {
-      if (context?.previousGoals !== undefined) {
-        queryClient.setQueryData(
-          goalsKey(context.planId),
-          context.previousGoals,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: goalsKey(variables.planId),
-      });
-    },
+export const useCreateGoal = () =>
+  useCreateEntity<Goal>({
+    entityType: 'goal',
+    queryKey: goalsKey,
+    repo: goalRepo,
   });
-}
 
-export function useUpdateGoal() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (goal: Goal) => goalRepo.update(goal),
-    onMutate: async (updatedGoal) => {
-      const key = goalsKey(updatedGoal.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousGoals = queryClient.getQueryData<Goal[]>(key);
-
-      // Optimistically update the goal
-      queryClient.setQueryData<Goal[]>(key, (old = []) =>
-        old.map((g) => (g.id === updatedGoal.id ? updatedGoal : g)),
-      );
-
-      return { previousGoals, planId: updatedGoal.planId };
-    },
-    onError: (_err, _goal, context) => {
-      if (context?.previousGoals !== undefined) {
-        queryClient.setQueryData(
-          goalsKey(context.planId),
-          context.previousGoals,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: goalsKey(variables.planId),
-      });
-    },
+export const useUpdateGoal = () =>
+  useUpdateEntity<Goal>({
+    entityType: 'goal',
+    queryKey: goalsKey,
+    repo: goalRepo,
   });
-}
 
-export function useDeleteGoal() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) => goalRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
-      const key = goalsKey(planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousGoals = queryClient.getQueryData<Goal[]>(key);
-
-      // Optimistically remove the goal
-      queryClient.setQueryData<Goal[]>(key, (old = []) =>
-        old.filter((g) => g.id !== id),
-      );
-
-      return { previousGoals, planId };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousGoals !== undefined) {
-        queryClient.setQueryData(
-          goalsKey(context.planId),
-          context.previousGoals,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: goalsKey(variables.planId),
-      });
-    },
+export const useDeleteGoal = () =>
+  useDeleteEntity<Goal>({
+    entityType: 'goal',
+    queryKey: goalsKey,
+    repo: goalRepo,
   });
-}
 
 // --- Assets ---
 
-export function useCreateAsset() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (asset: Asset) => assetRepo.create(asset),
-    onMutate: async (newAsset) => {
-      const key = assetsKey(newAsset.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousAssets = queryClient.getQueryData<Asset[]>(key);
-
-      // Optimistically add the new asset
-      queryClient.setQueryData<Asset[]>(key, (old = []) => [...old, newAsset]);
-
-      return { previousAssets, planId: newAsset.planId };
-    },
-    onError: (_err, _newAsset, context) => {
-      if (context?.previousAssets !== undefined) {
-        queryClient.setQueryData(
-          assetsKey(context.planId),
-          context.previousAssets,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: assetsKey(variables.planId),
-      });
-    },
+export const useCreateAsset = () =>
+  useCreateEntity<Asset>({
+    entityType: 'asset',
+    queryKey: assetsKey,
+    repo: assetRepo,
   });
-}
 
-export function useUpdateAsset() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (asset: Asset) => assetRepo.update(asset),
-    onMutate: async (updatedAsset) => {
-      const key = assetsKey(updatedAsset.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousAssets = queryClient.getQueryData<Asset[]>(key);
-
-      // Optimistically update the asset
-      queryClient.setQueryData<Asset[]>(key, (old = []) =>
-        old.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)),
-      );
-
-      return { previousAssets, planId: updatedAsset.planId };
-    },
-    onError: (_err, _asset, context) => {
-      if (context?.previousAssets !== undefined) {
-        queryClient.setQueryData(
-          assetsKey(context.planId),
-          context.previousAssets,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: assetsKey(variables.planId),
-      });
-    },
+export const useUpdateAsset = () =>
+  useUpdateEntity<Asset>({
+    entityType: 'asset',
+    queryKey: assetsKey,
+    repo: assetRepo,
   });
-}
 
-export function useDeleteAsset() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) =>
-      assetRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
-      const key = assetsKey(planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousAssets = queryClient.getQueryData<Asset[]>(key);
-
-      // Optimistically remove the asset
-      queryClient.setQueryData<Asset[]>(key, (old = []) =>
-        old.filter((a) => a.id !== id),
-      );
-
-      return { previousAssets, planId };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousAssets !== undefined) {
-        queryClient.setQueryData(
-          assetsKey(context.planId),
-          context.previousAssets,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: assetsKey(variables.planId),
-      });
-    },
+export const useDeleteAsset = () =>
+  useDeleteEntity<Asset>({
+    entityType: 'asset',
+    queryKey: assetsKey,
+    repo: assetRepo,
   });
-}
 
 // --- Liabilities ---
 
-export function useCreateLiability() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (liability: Liability) => liabilityRepo.create(liability),
-    onMutate: async (newLiability) => {
-      const key = liabilitiesKey(newLiability.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousLiabilities = queryClient.getQueryData<Liability[]>(key);
-
-      // Optimistically add the new liability
-      queryClient.setQueryData<Liability[]>(key, (old = []) => [
-        ...old,
-        newLiability,
-      ]);
-
-      return { previousLiabilities, planId: newLiability.planId };
-    },
-    onError: (_err, _newLiability, context) => {
-      if (context?.previousLiabilities !== undefined) {
-        queryClient.setQueryData(
-          liabilitiesKey(context.planId),
-          context.previousLiabilities,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: liabilitiesKey(variables.planId),
-      });
-    },
+export const useCreateLiability = () =>
+  useCreateEntity<Liability>({
+    entityType: 'liability',
+    queryKey: liabilitiesKey,
+    repo: liabilityRepo,
   });
-}
 
-export function useUpdateLiability() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (liability: Liability) => liabilityRepo.update(liability),
-    onMutate: async (updatedLiability) => {
-      const key = liabilitiesKey(updatedLiability.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousLiabilities = queryClient.getQueryData<Liability[]>(key);
-
-      // Optimistically update the liability
-      queryClient.setQueryData<Liability[]>(key, (old = []) =>
-        old.map((l) => (l.id === updatedLiability.id ? updatedLiability : l)),
-      );
-
-      return { previousLiabilities, planId: updatedLiability.planId };
-    },
-    onError: (_err, _liability, context) => {
-      if (context?.previousLiabilities !== undefined) {
-        queryClient.setQueryData(
-          liabilitiesKey(context.planId),
-          context.previousLiabilities,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: liabilitiesKey(variables.planId),
-      });
-    },
+export const useUpdateLiability = () =>
+  useUpdateEntity<Liability>({
+    entityType: 'liability',
+    queryKey: liabilitiesKey,
+    repo: liabilityRepo,
   });
-}
 
-export function useDeleteLiability() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) =>
-      liabilityRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
-      const key = liabilitiesKey(planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousLiabilities = queryClient.getQueryData<Liability[]>(key);
-
-      // Optimistically remove the liability
-      queryClient.setQueryData<Liability[]>(key, (old = []) =>
-        old.filter((l) => l.id !== id),
-      );
-
-      return { previousLiabilities, planId };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousLiabilities !== undefined) {
-        queryClient.setQueryData(
-          liabilitiesKey(context.planId),
-          context.previousLiabilities,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: liabilitiesKey(variables.planId),
-      });
-    },
+export const useDeleteLiability = () =>
+  useDeleteEntity<Liability>({
+    entityType: 'liability',
+    queryKey: liabilitiesKey,
+    repo: liabilityRepo,
   });
-}
 
 // --- Recurring Templates ---
 
-export function useCreateRecurringTemplate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (template: RecurringTemplate) =>
-      recurringTemplateRepo.create(template),
-    onMutate: async (newTemplate) => {
-      const key = recurringTemplatesKey(newTemplate.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousTemplates =
-        queryClient.getQueryData<RecurringTemplate[]>(key);
-
-      // Optimistically add the new template
-      queryClient.setQueryData<RecurringTemplate[]>(key, (old = []) => [
-        ...old,
-        newTemplate,
-      ]);
-
-      return { previousTemplates, planId: newTemplate.planId };
-    },
-    onError: (_err, _newTemplate, context) => {
-      if (context?.previousTemplates !== undefined) {
-        queryClient.setQueryData(
-          recurringTemplatesKey(context.planId),
-          context.previousTemplates,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: recurringTemplatesKey(variables.planId),
-      });
-    },
+export const useCreateRecurringTemplate = () =>
+  useCreateEntity<RecurringTemplate>({
+    entityType: 'recurring_template',
+    queryKey: recurringTemplatesKey,
+    repo: recurringTemplateRepo,
   });
-}
 
-export function useUpdateRecurringTemplate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (template: RecurringTemplate) =>
-      recurringTemplateRepo.update(template),
-    onMutate: async (updatedTemplate) => {
-      const key = recurringTemplatesKey(updatedTemplate.planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousTemplates =
-        queryClient.getQueryData<RecurringTemplate[]>(key);
-
-      // Optimistically update the template
-      queryClient.setQueryData<RecurringTemplate[]>(key, (old = []) =>
-        old.map((t) => (t.id === updatedTemplate.id ? updatedTemplate : t)),
-      );
-
-      return { previousTemplates, planId: updatedTemplate.planId };
-    },
-    onError: (_err, _template, context) => {
-      if (context?.previousTemplates !== undefined) {
-        queryClient.setQueryData(
-          recurringTemplatesKey(context.planId),
-          context.previousTemplates,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: recurringTemplatesKey(variables.planId),
-      });
-    },
+export const useUpdateRecurringTemplate = () =>
+  useUpdateEntity<RecurringTemplate>({
+    entityType: 'recurring_template',
+    queryKey: recurringTemplatesKey,
+    repo: recurringTemplateRepo,
   });
-}
 
-export function useDeleteRecurringTemplate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: { id: string; planId: string }) =>
-      recurringTemplateRepo.delete(id),
-    onMutate: async ({ id, planId }) => {
-      const key = recurringTemplatesKey(planId);
-      await queryClient.cancelQueries({ queryKey: key });
-
-      const previousTemplates =
-        queryClient.getQueryData<RecurringTemplate[]>(key);
-
-      // Optimistically remove the template
-      queryClient.setQueryData<RecurringTemplate[]>(key, (old = []) =>
-        old.filter((t) => t.id !== id),
-      );
-
-      return { previousTemplates, planId };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousTemplates !== undefined) {
-        queryClient.setQueryData(
-          recurringTemplatesKey(context.planId),
-          context.previousTemplates,
-        );
-      }
-    },
-    onSettled: (_data, _err, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: recurringTemplatesKey(variables.planId),
-      });
-    },
+export const useDeleteRecurringTemplate = () =>
+  useDeleteEntity<RecurringTemplate>({
+    entityType: 'recurring_template',
+    queryKey: recurringTemplatesKey,
+    repo: recurringTemplateRepo,
   });
-}
 
 export function useToggleRecurringTemplate() {
   const queryClient = useQueryClient();
+  const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: ({ id }: { id: string; planId: string }) =>
       recurringTemplateRepo.toggleActive(id),
@@ -813,10 +408,20 @@ export function useToggleRecurringTemplate() {
         );
       }
     },
-    onSettled: (_data, _err, variables) => {
+    onSettled: (_data, error, variables) => {
       void queryClient.invalidateQueries({
         queryKey: recurringTemplatesKey(variables.planId),
       });
+      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      if (!error) {
+        scheduleVaultSave();
+        recordChange(
+          variables.planId,
+          'recurring_template',
+          variables.id,
+          'update',
+        );
+      }
     },
   });
 }

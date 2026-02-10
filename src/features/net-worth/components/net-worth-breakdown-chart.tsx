@@ -4,6 +4,7 @@ import { PieChart as PieChartIcon } from 'lucide-react';
 import type { AssetCategory, LiabilityCategory } from '@/domain/plan';
 import { formatMoney, centsToDollars } from '@/domain/money';
 import type { Cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
@@ -37,6 +38,7 @@ export function NetWorthBreakdownChart({
   assetsByCategory,
   liabilitiesByCategory,
 }: NetWorthBreakdownChartProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const assetData: ChartDatum[] = useMemo(() => {
     const data: ChartDatum[] = [];
     for (const [category, amount] of assetsByCategory) {
@@ -46,12 +48,12 @@ export function NetWorthBreakdownChart({
           name: ASSET_CATEGORY_LABELS[category],
           value: centsToDollars(amount),
           fill: ASSET_CATEGORY_COLORS[category],
-          formatted: formatMoney(amount),
+          formatted: formatMoney(amount, { currency: currencyCode }),
         });
       }
     }
     return data.sort((a, b) => b.value - a.value);
-  }, [assetsByCategory]);
+  }, [assetsByCategory, currencyCode]);
 
   const liabilityData: ChartDatum[] = useMemo(() => {
     const data: ChartDatum[] = [];
@@ -62,12 +64,12 @@ export function NetWorthBreakdownChart({
           name: LIABILITY_CATEGORY_LABELS[category],
           value: centsToDollars(amount),
           fill: LIABILITY_CATEGORY_COLORS[category],
-          formatted: formatMoney(amount),
+          formatted: formatMoney(amount, { currency: currencyCode }),
         });
       }
     }
     return data.sort((a, b) => b.value - a.value);
-  }, [liabilitiesByCategory]);
+  }, [liabilitiesByCategory, currencyCode]);
 
   const assetChartConfig: ChartConfig = useMemo(() => {
     const config: ChartConfig = {};

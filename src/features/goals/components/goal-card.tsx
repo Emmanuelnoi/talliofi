@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { MoreHorizontal, Pencil, Trash2, Target, Check } from 'lucide-react';
 import type { Goal } from '@/domain/plan';
 import { formatMoney, cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,7 @@ export function GoalCard({
   onDelete,
   onComplete,
 }: GoalCardProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const percentage = useMemo(() => {
     if (goal.targetAmountCents <= 0) return 0;
     return Math.min(
@@ -156,10 +158,15 @@ export function GoalCard({
             {/* Amount details */}
             <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-medium tabular-nums">
-                {formatMoney(cents(goal.currentAmountCents))}
+                {formatMoney(cents(goal.currentAmountCents), {
+                  currency: currencyCode,
+                })}
               </span>
               <span className="text-muted-foreground text-sm">
-                of {formatMoney(cents(goal.targetAmountCents))}
+                of{' '}
+                {formatMoney(cents(goal.targetAmountCents), {
+                  currency: currencyCode,
+                })}
               </span>
               <span className="text-muted-foreground ml-auto text-sm tabular-nums">
                 {percentage.toFixed(0)}%
@@ -169,7 +176,12 @@ export function GoalCard({
             {/* Additional info */}
             <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               {!isComplete && remainingAmount > 0 && (
-                <span>{formatMoney(cents(remainingAmount))} remaining</span>
+                <span>
+                  {formatMoney(cents(remainingAmount), {
+                    currency: currencyCode,
+                  })}{' '}
+                  remaining
+                </span>
               )}
               {goal.targetDate && (
                 <>

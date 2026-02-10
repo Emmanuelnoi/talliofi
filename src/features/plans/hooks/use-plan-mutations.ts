@@ -4,12 +4,14 @@ import { toast } from 'sonner';
 import { planRepo } from '@/data/repos/plan-repo';
 import { bucketRepo } from '@/data/repos/bucket-repo';
 import { dollarsToCents } from '@/domain/money';
+import { DEFAULT_CURRENCY } from '@/domain/money';
 import {
   ACTIVE_PLAN_QUERY_KEY,
   ALL_PLANS_QUERY_KEY,
 } from '@/hooks/use-active-plan';
 import { useUIStore } from '@/stores/ui-store';
 import { getTemplateById } from '@/lib/budget-templates';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import type { Plan, BucketAllocation } from '@/domain/plan/types';
 import type { CreatePlanInput, UpdatePlanInput } from '../types';
 
@@ -28,6 +30,7 @@ const DEFAULT_BUCKETS = [
 export function usePlanMutations() {
   const queryClient = useQueryClient();
   const incrementVersion = useUIStore((s) => s.incrementPlanListVersion);
+  const { scheduleVaultSave } = useLocalEncryption();
 
   const invalidateQueries = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
@@ -47,6 +50,7 @@ export function usePlanMutations() {
         incomeFrequency: input.incomeFrequency ?? 'monthly',
         taxMode: 'simple',
         taxEffectiveRate: input.taxEffectiveRate ?? 25,
+        currencyCode: DEFAULT_CURRENCY,
         createdAt: now,
         updatedAt: now,
         version: 0,
@@ -66,6 +70,7 @@ export function usePlanMutations() {
             color: b.color,
             mode: 'percentage',
             targetPercentage: b.targetPercentage,
+            rolloverEnabled: false,
             sortOrder: i,
             createdAt: now,
           };
@@ -84,6 +89,7 @@ export function usePlanMutations() {
               color: b.color,
               mode: 'percentage',
               targetPercentage: b.targetPercentage,
+              rolloverEnabled: false,
               sortOrder: i,
               createdAt: now,
             };
@@ -97,6 +103,7 @@ export function usePlanMutations() {
     onSuccess: () => {
       toast.success('Plan created successfully');
       void invalidateQueries();
+      scheduleVaultSave();
     },
     onError: (error) => {
       toast.error(`Failed to create plan: ${error.message}`);
@@ -121,6 +128,7 @@ export function usePlanMutations() {
     onSuccess: () => {
       toast.success('Plan updated successfully');
       void invalidateQueries();
+      scheduleVaultSave();
     },
     onError: (error) => {
       toast.error(`Failed to update plan: ${error.message}`);
@@ -139,6 +147,7 @@ export function usePlanMutations() {
     onSuccess: () => {
       toast.success('Plan deleted successfully');
       void invalidateQueries();
+      scheduleVaultSave();
     },
     onError: (error) => {
       toast.error(`Failed to delete plan: ${error.message}`);
@@ -158,6 +167,7 @@ export function usePlanMutations() {
     onSuccess: () => {
       toast.success('Plan duplicated successfully');
       void invalidateQueries();
+      scheduleVaultSave();
     },
     onError: (error) => {
       toast.error(`Failed to duplicate plan: ${error.message}`);

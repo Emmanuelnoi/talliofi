@@ -7,7 +7,7 @@
 
 import type { ExpenseItem, ExpenseCategory } from '@/domain/plan/types';
 import type { Frequency } from '@/domain/plan/normalize';
-import type { Cents } from '@/domain/money';
+import type { Cents, CurrencyCode } from '@/domain/money';
 import { dollarsToCents } from '@/domain/money';
 
 // ============================================================================
@@ -802,6 +802,7 @@ export interface ImportOptions {
   readonly planId: string;
   readonly defaultBucketId: string;
   readonly defaultFrequency?: Frequency;
+  readonly currencyCode?: CurrencyCode;
 }
 
 /**
@@ -811,7 +812,12 @@ export function convertToExpenseItems(
   transactions: ImportableTransaction[],
   options: ImportOptions,
 ): Omit<ExpenseItem, 'id'>[] {
-  const { planId, defaultBucketId, defaultFrequency = 'monthly' } = options;
+  const {
+    planId,
+    defaultBucketId,
+    defaultFrequency = 'monthly',
+    currencyCode,
+  } = options;
   const now = new Date().toISOString();
 
   return transactions
@@ -821,6 +827,7 @@ export function convertToExpenseItems(
       bucketId: tx.bucketId || defaultBucketId,
       name: tx.description.slice(0, 100), // Respect max length
       amountCents: tx.amountCents,
+      currencyCode,
       frequency: defaultFrequency,
       category: tx.mappedCategory,
       isFixed: false,

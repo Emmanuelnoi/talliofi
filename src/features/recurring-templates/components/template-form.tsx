@@ -4,7 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { RecurringTemplateFormSchema } from '@/domain/plan/schemas';
-import { centsToDollars } from '@/domain/money';
+import {
+  centsToDollars,
+  SUPPORTED_CURRENCIES,
+  type CurrencyCode,
+} from '@/domain/money';
 import type { RecurringTemplate, BucketAllocation } from '@/domain/plan';
 import { MoneyInput } from '@/components/forms/money-input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FREQUENCY_LABELS, CATEGORY_LABELS } from '@/lib/constants';
+import { useCurrencyStore } from '@/stores/currency-store';
 
 export type TemplateFormData = z.infer<typeof RecurringTemplateFormSchema>;
 
@@ -51,6 +56,8 @@ export function TemplateForm({
   onCancel,
 }: TemplateFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const baseCurrency = useCurrencyStore((s) => s.currencyCode);
+  const defaultCurrency = template?.currencyCode ?? baseCurrency;
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(RecurringTemplateFormSchema),
@@ -61,6 +68,7 @@ export function TemplateForm({
           frequency: template.frequency,
           category: template.category,
           bucketId: template.bucketId,
+          currencyCode: template.currencyCode ?? defaultCurrency,
           dayOfMonth: template.dayOfMonth,
           isActive: template.isActive,
           isFixed: template.isFixed,
@@ -72,6 +80,7 @@ export function TemplateForm({
           frequency: 'monthly',
           category: 'other',
           bucketId: buckets[0]?.id ?? '',
+          currencyCode: defaultCurrency,
           dayOfMonth: undefined,
           isActive: true,
           isFixed: true,
@@ -83,8 +92,10 @@ export function TemplateForm({
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = form;
+  const selectedCurrency = watch('currencyCode') ?? defaultCurrency;
 
   const onSubmit = async (data: TemplateFormData) => {
     setIsSubmitting(true);
@@ -118,7 +129,7 @@ export function TemplateForm({
       </div>
 
       {/* Amount and Frequency */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="template-amount">Amount</Label>
           <Controller
@@ -132,6 +143,7 @@ export function TemplateForm({
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   min={0}
+                  currencyCode={selectedCurrency as CurrencyCode}
                 />
                 {fieldState.error && (
                   <p className="text-destructive text-sm">
@@ -139,6 +151,31 @@ export function TemplateForm({
                   </p>
                 )}
               </>
+            )}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="template-currency">Currency</Label>
+          <Controller
+            control={control}
+            name="currencyCode"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? defaultCurrency}
+                onValueChange={(value) => field.onChange(value as CurrencyCode)}
+              >
+                <SelectTrigger id="template-currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
         </div>
@@ -245,7 +282,13 @@ export function TemplateForm({
                 {dayOptions.map((day) => (
                   <SelectItem key={day} value={day.toString()}>
                     {day}
-                    {day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                    {day === 1
+                      ? 'st'
+                      : day === 2
+                        ? 'nd'
+                        : day === 3
+                          ? 'rd'
+                          : 'th'}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -253,9 +296,9 @@ export function TemplateForm({
           )}
         />
         <p className="text-muted-foreground text-xs">
-          The day each month when an expense will be automatically generated.
-          If the day doesn&apos;t exist in a month (e.g., 31st in February),
-          the last day of that month will be used.
+          The day each month when an expense will be automatically generated. If
+          the day doesn&apos;t exist in a month (e.g., 31st in February), the
+          last day of that month will be used.
         </p>
       </div>
 

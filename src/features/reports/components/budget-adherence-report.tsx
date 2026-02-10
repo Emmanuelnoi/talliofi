@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import {
   Download,
@@ -7,8 +7,11 @@ import {
   Loader2,
   Target,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { centsToDollars, formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,11 +49,14 @@ const STATUS_LABELS = {
 };
 
 export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
+  const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const chartData = useMemo(() => {
     if (!report) return [];
     return report.data.map((item) => ({
+      bucketId: item.bucketId,
       name: item.bucketName,
       target: centsToDollars(item.targetCents),
       actual: centsToDollars(item.actualCents),
@@ -62,17 +68,29 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
     }));
   }, [report]);
 
+  const handleBucketClick = useCallback(
+    (bucketId: string) => {
+      if (!report) return;
+      const dateFrom = format(report.dateRange.start, 'yyyy-MM-dd');
+      const dateTo = format(report.dateRange.end, 'yyyy-MM-dd');
+      void navigate(
+        `/expenses?buckets=${encodeURIComponent(bucketId)}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+      );
+    },
+    [navigate, report],
+  );
+
   const handleExport = async (format: 'csv' | 'pdf') => {
     if (!report) return;
     setExporting(format);
 
     try {
       if (format === 'csv') {
-        const csv = exportBudgetAdherenceCSV(report);
+        const csv = exportBudgetAdherenceCSV(report, currencyCode);
         downloadReportCSV(csv, 'budget-adherence');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportBudgetAdherencePDF(report);
+        const blob = exportBudgetAdherencePDF(report, currencyCode);
         downloadReportPDF(blob, 'budget-adherence');
         toast.success('PDF exported successfully');
       }
@@ -149,7 +167,9 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
       <CardContent>
         {/* Overall Score */}
         <div className="mb-6 rounded-lg border p-4 text-center">
-          <p className="text-muted-foreground text-sm">Overall Adherence Score</p>
+          <p className="text-muted-foreground text-sm">
+            Overall Adherence Score
+          </p>
           <p
             className={`text-3xl font-bold ${
               report.overallAdherencePercent >= 80
@@ -189,7 +209,7 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
         {/* Bar Chart */}
         <ChartContainer
           config={{
-            target: { label: 'Target', color: 'var(--color-muted)' },
+            target: { label: 'Available', color: 'var(--color-muted)' },
             actual: { label: 'Actual' },
           }}
           className="h-[300px] w-full"
@@ -220,10 +240,16 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
                   <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
                     <p className="mb-1 font-medium">{data.name}</p>
                     <p className="text-muted-foreground">
-                      Target: {formatMoney(data.targetCents)}
+                      Target:{' '}
+                      {formatMoney(data.targetCents, {
+                        currency: currencyCode,
+                      })}
                     </p>
                     <p className="text-muted-foreground">
-                      Actual: {formatMoney(data.actualCents)}
+                      Actual:{' '}
+                      {formatMoney(data.actualCents, {
+                        currency: currencyCode,
+                      })}
                     </p>
                     <p className="text-muted-foreground">
                       Adherence: {data.adherence.toFixed(0)}%
@@ -232,12 +258,28 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
                 );
               }}
             />
-            <Bar dataKey="target" fill="var(--color-muted)" radius={[0, 4, 4, 0]} maxBarSize={20} />
-            <Bar dataKey="actual" radius={[0, 4, 4, 0]} maxBarSize={20}>
+            <Bar
+              dataKey="target"
+              fill="var(--color-muted)"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={20}
+            />
+            <Bar
+              dataKey="actual"
+              radius={[0, 4, 4, 0]}
+              maxBarSize={20}
+              onClick={(_: unknown, index: number) => {
+                const item = report.data[index];
+                if (item) handleBucketClick(item.bucketId);
+              }}
+              className="cursor-pointer"
+            >
               {chartData.map((entry) => (
                 <Cell
                   key={entry.name}
-                  fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]}
+                  fill={
+                    STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS]
+                  }
                 />
               ))}
             </Bar>
@@ -258,7 +300,11 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
             </thead>
             <tbody>
               {report.data.map((item) => (
-                <tr key={item.bucketId} className="border-b last:border-0">
+                <tr
+                  key={item.bucketId}
+                  className="border-b last:border-0 cursor-pointer hover:bg-muted/40"
+                  onClick={() => handleBucketClick(item.bucketId)}
+                >
                   <td className="py-2">
                     <div className="flex items-center gap-2">
                       <span
@@ -269,10 +315,10 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
                     </div>
                   </td>
                   <td className="py-2 text-right tabular-nums">
-                    {formatMoney(item.targetCents)}
+                    {formatMoney(item.targetCents, { currency: currencyCode })}
                   </td>
                   <td className="py-2 text-right tabular-nums">
-                    {formatMoney(item.actualCents)}
+                    {formatMoney(item.actualCents, { currency: currencyCode })}
                   </td>
                   <td
                     className={`py-2 text-right tabular-nums ${
@@ -284,7 +330,9 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
                     }`}
                   >
                     {item.varianceCents > 0 ? '+' : ''}
-                    {formatMoney(item.varianceCents)}
+                    {formatMoney(item.varianceCents, {
+                      currency: currencyCode,
+                    })}
                   </td>
                   <td className="py-2 text-center">
                     <Badge

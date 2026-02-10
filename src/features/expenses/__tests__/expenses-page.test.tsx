@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import { describe, it, expect, vi } from 'vitest';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
@@ -11,6 +10,36 @@ import { expenseRepo } from '@/data/repos/expense-repo';
 import { cents } from '@/domain/money';
 import type { Cents } from '@/domain/money';
 import ExpensesPage from '../pages/expenses-page';
+
+vi.mock('nuqs', async () => {
+  const actual = await vi.importActual<typeof import('nuqs')>('nuqs');
+  const React = await import('react');
+
+  return {
+    ...actual,
+    useQueryStates: (config: Record<string, { defaultValue?: unknown }>) => {
+      const defaults = Object.fromEntries(
+        Object.entries(config).map(([key, parser]) => {
+          const value = parser.defaultValue ?? '';
+          return [key, Array.isArray(value) ? [...value] : value];
+        }),
+      );
+
+      const [state, setState] = React.useState(defaults);
+
+      const update = (next: Record<string, unknown>) => {
+        const nextState =
+          typeof next === 'function'
+            ? next(state as Record<string, unknown>)
+            : next;
+        setState((prev) => ({ ...prev, ...nextState }));
+        return Promise.resolve();
+      };
+
+      return [state, update] as const;
+    },
+  };
+});
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -23,7 +52,7 @@ function createWrapper() {
     return createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(NuqsTestingAdapter, null, children),
+      children,
     );
   };
 }
@@ -111,7 +140,9 @@ describe('ExpensesPage', () => {
     render(createElement(ExpensesPage), { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText('Expenses')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Expenses' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -268,13 +299,11 @@ describe('ExpensesPage', () => {
     await user.type(searchInput, 'Groceries');
 
     // Wait for debounce (300ms) and filtering
-    await waitFor(
-      () => {
-        expect(screen.getByText('Groceries Shopping')).toBeInTheDocument();
-        expect(screen.queryByText('Electric Bill')).not.toBeInTheDocument();
-      },
-      { timeout: 1000 },
-    );
+    await waitFor(() => {
+      expect(screen.getByText(/Search: "Groceries"/)).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByLabelText(/Select expense/i)).toHaveLength(1);
   });
 
   it('shows no matching expenses message when search has no results', async () => {

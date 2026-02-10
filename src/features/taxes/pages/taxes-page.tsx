@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,6 +41,8 @@ import {
   useDeleteTaxComponent,
 } from '@/hooks/use-plan-mutations';
 import { useAutoSave } from '@/hooks/use-auto-save';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
 
 type TaxSimpleFormData = z.infer<typeof TaxSimpleInputSchema>;
 
@@ -68,7 +70,9 @@ export default function TaxesPage() {
     }
   }, [plan, isItemized, simpleForm]);
 
-  const simpleData = simpleForm.watch();
+  const simpleData =
+    useWatch({ control: simpleForm.control }) ??
+    ({ effectiveRate: 0 } as const);
 
   const { status: simpleStatus } = useAutoSave({
     data: simpleData,
@@ -142,6 +146,10 @@ export default function TaxesPage() {
     },
     [plan, deleteTaxComponent],
   );
+
+  const { blocker, confirmNavigation, cancelNavigation } = useUnsavedChanges({
+    isDirty: simpleStatus === 'saving',
+  });
 
   const totalRate = taxComponents.reduce((sum, c) => sum + c.ratePercent, 0);
 
@@ -305,6 +313,12 @@ export default function TaxesPage() {
           </CardContent>
         </Card>
       )}
+
+      <UnsavedChangesDialog
+        open={blocker.state === 'blocked'}
+        onStay={cancelNavigation}
+        onLeave={confirmNavigation}
+      />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/tooltip';
 import { FREQUENCY_LABELS, CATEGORY_LABELS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from '@/stores/currency-store';
 
 interface TemplateCardProps {
   /** The recurring template to display */
@@ -68,6 +69,8 @@ export function TemplateCard({
     () => normalizeToMonthly(template.amountCents, template.frequency),
     [template.amountCents, template.frequency],
   );
+  const baseCurrency = useCurrencyStore((s) => s.currencyCode);
+  const templateCurrency = template.currencyCode ?? baseCurrency;
 
   const nextGenerationDate = useMemo(
     () => recurringService.getNextGenerationDate(template),
@@ -101,7 +104,10 @@ export function TemplateCard({
               </Badge>
             )}
             {!template.isActive && (
-              <Badge variant="outline" className="shrink-0 text-muted-foreground">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-muted-foreground"
+              >
                 Paused
               </Badge>
             )}
@@ -126,7 +132,7 @@ export function TemplateCard({
         {/* Amount */}
         <div className="shrink-0 text-right">
           <div className="font-medium tabular-nums">
-            {formatMoney(template.amountCents)}
+            {formatMoney(template.amountCents, { currency: templateCurrency })}
             {showNormalized && (
               <span className="text-muted-foreground text-xs">
                 /
@@ -146,7 +152,7 @@ export function TemplateCard({
           </div>
           {showNormalized && (
             <div className="text-muted-foreground text-xs tabular-nums">
-              {formatMoney(monthlyAmount)}/mo
+              {formatMoney(monthlyAmount, { currency: templateCurrency })}/mo
             </div>
           )}
         </div>
@@ -161,7 +167,10 @@ export function TemplateCard({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Next generation: {format(parseISO(nextGenerationDate), 'MMMM d, yyyy')}</p>
+              <p>
+                Next generation:{' '}
+                {format(parseISO(nextGenerationDate), 'MMMM d, yyyy')}
+              </p>
             </TooltipContent>
           </Tooltip>
         )}
@@ -174,12 +183,18 @@ export function TemplateCard({
                 checked={template.isActive}
                 onCheckedChange={onToggleActive}
                 disabled={isLoading}
-                aria-label={template.isActive ? 'Pause template' : 'Activate template'}
+                aria-label={
+                  template.isActive ? 'Pause template' : 'Activate template'
+                }
               />
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{template.isActive ? 'Pause auto-generation' : 'Enable auto-generation'}</p>
+            <p>
+              {template.isActive
+                ? 'Pause auto-generation'
+                : 'Enable auto-generation'}
+            </p>
           </TooltipContent>
         </Tooltip>
 
@@ -215,4 +230,3 @@ export function TemplateCard({
     </Card>
   );
 }
-

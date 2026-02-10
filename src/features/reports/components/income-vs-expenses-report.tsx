@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import {
   Download,
@@ -7,9 +7,12 @@ import {
   Loader2,
   TrendingUp,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import type { Cents } from '@/domain/money';
 import { centsToDollars, formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,13 +51,18 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) {
+export function IncomeVsExpensesReport({
+  report,
+}: IncomeVsExpensesReportProps) {
+  const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const chartData = useMemo(() => {
     if (!report) return [];
     return report.data.map((item) => ({
       month: item.label,
+      yearMonth: item.yearMonth,
       income: centsToDollars(item.incomeCents),
       expenses: centsToDollars(item.expensesCents),
       incomeCents: item.incomeCents,
@@ -63,17 +71,30 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
     }));
   }, [report]);
 
+  const handleMonthClick = useCallback(
+    (yearMonth: string) => {
+      const [year, month] = yearMonth.split('-').map(Number);
+      if (!year || !month) return;
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+      const dateFrom = format(start, 'yyyy-MM-dd');
+      const dateTo = format(end, 'yyyy-MM-dd');
+      void navigate(`/expenses?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+    },
+    [navigate],
+  );
+
   const handleExport = async (format: 'csv' | 'pdf') => {
     if (!report) return;
     setExporting(format);
 
     try {
       if (format === 'csv') {
-        const csv = exportIncomeVsExpensesCSV(report);
+        const csv = exportIncomeVsExpensesCSV(report, currencyCode);
         downloadReportCSV(csv, 'income-vs-expenses');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportIncomeVsExpensesPDF(report);
+        const blob = exportIncomeVsExpensesPDF(report, currencyCode);
         downloadReportPDF(blob, 'income-vs-expenses');
         toast.success('PDF exported successfully');
       }
@@ -101,8 +122,7 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
     );
   }
 
-  const netStatus =
-    report.totalSurplusCents >= 0 ? 'surplus' : 'deficit';
+  const netStatus = report.totalSurplusCents >= 0 ? 'surplus' : 'deficit';
   const netLabel = netStatus === 'surplus' ? 'Net Surplus' : 'Net Deficit';
 
   return (
@@ -150,7 +170,9 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
               Total Income
             </p>
             <p className="text-lg font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-              {formatMoney(report.totalIncomeCents)}
+              {formatMoney(report.totalIncomeCents, {
+                currency: currencyCode,
+              })}
             </p>
           </div>
           <div className="rounded-lg border p-3">
@@ -158,7 +180,9 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
               Total Expenses
             </p>
             <p className="text-lg font-semibold tabular-nums text-red-600 dark:text-red-400">
-              {formatMoney(report.totalExpensesCents)}
+              {formatMoney(report.totalExpensesCents, {
+                currency: currencyCode,
+              })}
             </p>
           </div>
           <div className="rounded-lg border p-3">
@@ -172,7 +196,9 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
                   : 'text-red-600 dark:text-red-400'
               }`}
             >
-              {formatMoney(report.totalSurplusCents)}
+              {formatMoney(report.totalSurplusCents, {
+                currency: currencyCode,
+              })}
             </p>
           </div>
         </div>
@@ -196,15 +222,20 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) =>
-                formatMoney(Math.round(value * 100) as Cents)
+                formatMoney(Math.round(value * 100) as Cents, {
+                  currency: currencyCode,
+                })
               }
             />
             <ChartTooltip
               content={
                 <ChartTooltipContent
                   formatter={(value) => {
-                    const dollars = typeof value === 'number' ? value : Number(value);
-                    return `${formatMoney(Math.round(dollars * 100) as Cents)}`;
+                    const dollars =
+                      typeof value === 'number' ? value : Number(value);
+                    return `${formatMoney(Math.round(dollars * 100) as Cents, {
+                      currency: currencyCode,
+                    })}`;
                   }}
                 />
               }
@@ -215,12 +246,22 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
               fill="var(--color-income)"
               radius={[4, 4, 0, 0]}
               maxBarSize={50}
+              onClick={(_: unknown, index: number) => {
+                const item = report.data[index];
+                if (item) handleMonthClick(item.yearMonth);
+              }}
+              className="cursor-pointer"
             />
             <Bar
               dataKey="expenses"
               fill="var(--color-expenses)"
               radius={[4, 4, 0, 0]}
               maxBarSize={50}
+              onClick={(_: unknown, index: number) => {
+                const item = report.data[index];
+                if (item) handleMonthClick(item.yearMonth);
+              }}
+              className="cursor-pointer"
             />
           </BarChart>
         </ChartContainer>
@@ -241,10 +282,14 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
                 <tr key={item.yearMonth} className="border-b last:border-0">
                   <td className="py-2">{item.label}</td>
                   <td className="py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {formatMoney(item.incomeCents)}
+                    {formatMoney(item.incomeCents, {
+                      currency: currencyCode,
+                    })}
                   </td>
                   <td className="py-2 text-right tabular-nums text-red-600 dark:text-red-400">
-                    {formatMoney(item.expensesCents)}
+                    {formatMoney(item.expensesCents, {
+                      currency: currencyCode,
+                    })}
                   </td>
                   <td
                     className={`py-2 text-right tabular-nums ${
@@ -253,7 +298,9 @@ export function IncomeVsExpensesReport({ report }: IncomeVsExpensesReportProps) 
                         : 'text-red-600 dark:text-red-400'
                     }`}
                   >
-                    {formatMoney(item.surplusCents)}
+                    {formatMoney(item.surplusCents, {
+                      currency: currencyCode,
+                    })}
                   </td>
                 </tr>
               ))}

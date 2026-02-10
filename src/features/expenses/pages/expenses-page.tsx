@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format, parseISO } from 'date-fns';
@@ -10,6 +10,7 @@ import {
   Loader2,
   MoreHorizontal,
   Pencil,
+  Paperclip,
   Plus,
   Receipt,
   RefreshCw,
@@ -21,7 +22,6 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAnnouncer } from '@/hooks/use-announcer';
 import {
   useQueryStates,
   parseAsString,
@@ -32,14 +32,24 @@ import type { z } from 'zod';
 import { ExpenseFormSchema } from '@/domain/plan/schemas';
 import {
   type Cents,
+  type CurrencyCode,
   dollarsToCents,
   centsToDollars,
   formatMoney,
   cents,
   addMoney,
+  SUPPORTED_CURRENCIES,
+  DEFAULT_CURRENCY,
+  getCurrencySymbol,
 } from '@/domain/money';
 import { normalizeToMonthly } from '@/domain/plan';
-import type { ExpenseItem, ExpenseSplit, BucketAllocation } from '@/domain/plan';
+import type {
+  ExpenseItem,
+  ExpenseSplit,
+  BucketAllocation,
+  ExpenseCategory,
+  Frequency,
+} from '@/domain/plan';
 import { recurringService } from '@/services/recurring-service';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
@@ -76,6 +86,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -96,18 +114,31 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useActivePlan } from '@/hooks/use-active-plan';
-import { useBuckets, useExpenses, useRecurringTemplates } from '@/hooks/use-plan-data';
+import {
+  useBuckets,
+  useExpenses,
+  useExchangeRates,
+  useRecurringTemplates,
+  useExpenseAttachments,
+} from '@/hooks/use-plan-data';
 import {
   useCreateExpense,
   useUpdateExpense,
   useDeleteExpense,
+  useBulkDeleteExpenses,
+  useBulkUpdateExpenses,
 } from '@/hooks/use-plan-mutations';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
+import { useQueryClient } from '@tanstack/react-query';
 import { FREQUENCY_LABELS, CATEGORY_LABELS } from '@/lib/constants';
 import { highlightText, matchesSearch } from '@/lib/highlight-text';
+import { convertExpenseToBase } from '@/lib/currency-conversion';
 import { cn } from '@/lib/utils';
 import { TemplatesSection } from '@/features/recurring-templates';
+import { attachmentRepo } from '@/data/repos/attachment-repo';
+import { useCurrencyStore } from '@/stores/currency-store';
 
 type ExpenseFormData = z.infer<typeof ExpenseFormSchema>;
 
@@ -118,6 +149,21 @@ type SortField =
   | 'transactionDate'
   | 'createdAt';
 
+type BulkEditFixedOption = 'no_change' | 'fixed' | 'variable';
+type BulkEditValue<T extends string> = T | 'no_change';
+
+interface BulkEditValues {
+  category: BulkEditValue<ExpenseCategory>;
+  bucketId: BulkEditValue<string>;
+  frequency: BulkEditValue<Frequency>;
+  fixed: BulkEditFixedOption;
+}
+
+interface ExpenseAttachmentPayload {
+  newFiles: File[];
+  removedIds: string[];
+}
+
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'name', label: 'Name' },
   { value: 'amount', label: 'Amount' },
@@ -125,6 +171,14 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'transactionDate', label: 'Transaction date' },
   { value: 'createdAt', label: 'Date added' },
 ];
+
+const DEFAULT_BULK_EDIT_VALUES: BulkEditValues = {
+  category: 'no_change',
+  bucketId: 'no_change',
+  frequency: 'no_change',
+  fixed: 'no_change',
+};
+const EMPTY_SPLITS: ExpenseFormData['splits'] = [];
 
 /** Search debounce delay in milliseconds */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -160,19 +214,36 @@ function formatTransactionDate(date: string | undefined): string {
  * - Enhanced no-results state with suggestions
  */
 export default function ExpensesPage() {
+  const queryClient = useQueryClient();
   const { data: plan, isLoading: planLoading } = useActivePlan();
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses(
     plan?.id,
   );
   const { data: buckets = [] } = useBuckets(plan?.id);
   const { data: templates = [] } = useRecurringTemplates(plan?.id);
+  const { data: exchangeRates } = useExchangeRates(plan?.id);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
-  const { announce } = useAnnouncer();
-
+  const bulkUpdateExpenses = useBulkUpdateExpenses();
+  const bulkDeleteExpenses = useBulkDeleteExpenses();
+  const { scheduleVaultSave } = useLocalEncryption();
   const isMobile = useIsMobile();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for global Cmd+F to focus the search input
+  useEffect(() => {
+    const handleFocusSearch = () => {
+      searchInputRef.current?.focus();
+    };
+    document.addEventListener('app:focus-search', handleFocusSearch);
+    return () => {
+      document.removeEventListener('app:focus-search', handleFocusSearch);
+    };
+  }, []);
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(
     null,
@@ -181,11 +252,21 @@ export default function ExpensesPage() {
     null,
   );
   const [activeTab, setActiveTab] = useState<string>('expenses');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkEditValues, setBulkEditValues] = useState<BulkEditValues>(
+    DEFAULT_BULK_EDIT_VALUES,
+  );
   // Start collapsed on mobile, expanded on desktop
   const [filtersExpanded, setFiltersExpanded] = useState(() => !isMobile);
-  // Track previous filtered count for announcement
-  const prevFilteredCountRef = useRef<number | null>(null);
 
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    if (value !== 'expenses') {
+      setSelectedIds(new Set());
+    }
+  }, []);
   // URL-based filter/sort state with nuqs
   const [filters, setFilters] = useQueryStates({
     q: parseAsString.withDefault(''),
@@ -202,6 +283,8 @@ export default function ExpensesPage() {
 
   // Debounce search query for performance
   const debouncedSearch = useDebounce(filters.q, SEARCH_DEBOUNCE_MS);
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   // Calculate active filter count (excluding search and sort)
   const activeFilterCount = useMemo(() => {
@@ -397,7 +480,83 @@ export default function ExpensesPage() {
     return result;
   }, [expenses, debouncedSearch, filters, bucketMap]);
 
+  const validSelectedIds = useMemo(() => {
+    if (selectedIds.size === 0) return selectedIds;
+    const validIds = new Set(expenses.map((expense) => expense.id));
+    const next = new Set<string>();
+    for (const id of selectedIds) {
+      if (validIds.has(id)) next.add(id);
+    }
+    return next.size === selectedIds.size ? selectedIds : next;
+  }, [expenses, selectedIds]);
+
+  const selectedExpenses = useMemo(
+    () => expenses.filter((expense) => validSelectedIds.has(expense.id)),
+    [expenses, validSelectedIds],
+  );
+
+  const visibleIds = useMemo(
+    () => filteredExpenses.map((expense) => expense.id),
+    [filteredExpenses],
+  );
+
+  const selectedVisibleCount = useMemo(
+    () => visibleIds.filter((id) => validSelectedIds.has(id)).length,
+    [visibleIds, validSelectedIds],
+  );
+
+  const selectedCount = validSelectedIds.size;
+  const allVisibleSelected =
+    visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  const hasSelection = selectedCount > 0;
+
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate =
+      selectedVisibleCount > 0 && !allVisibleSelected;
+  }, [selectedVisibleCount, allVisibleSelected]);
+
   // --- Handlers ---
+  const handleToggleSelect = useCallback(
+    (expenseId: string, checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (checked) {
+          next.add(expenseId);
+        } else {
+          next.delete(expenseId);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleToggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const id of visibleIds) {
+          next.delete(id);
+        }
+      } else {
+        for (const id of visibleIds) {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }, [allVisibleSelected, visibleIds]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleOpenBulkEdit = useCallback(() => {
+    setBulkEditValues(DEFAULT_BULK_EDIT_VALUES);
+    setBulkEditOpen(true);
+  }, []);
+
   const handleOpenAdd = useCallback(() => {
     setEditingExpense(null);
     setSheetOpen(true);
@@ -409,7 +568,10 @@ export default function ExpensesPage() {
   }, []);
 
   const handleSave = useCallback(
-    async (data: ExpenseFormData) => {
+    async (
+      data: ExpenseFormData,
+      attachmentPayload: ExpenseAttachmentPayload,
+    ) => {
       if (!plan) return;
       const now = new Date().toISOString();
 
@@ -434,8 +596,11 @@ export default function ExpensesPage() {
         primaryBucketId = largestSplit.bucketId;
         primaryCategory = largestSplit.category;
       }
+      const resolvedCurrency =
+        data.currencyCode ?? plan.currencyCode ?? DEFAULT_CURRENCY;
 
       try {
+        let expenseId: string;
         if (editingExpense) {
           const updated: ExpenseItem = {
             ...editingExpense,
@@ -444,6 +609,7 @@ export default function ExpensesPage() {
             frequency: data.frequency,
             category: primaryCategory,
             bucketId: primaryBucketId,
+            currencyCode: resolvedCurrency,
             isFixed: data.isFixed ?? false,
             notes: data.notes,
             transactionDate: data.transactionDate,
@@ -453,15 +619,18 @@ export default function ExpensesPage() {
           };
           await updateExpense.mutateAsync(updated);
           toast.success('Expense updated');
+          expenseId = updated.id;
         } else {
+          const newExpenseId = crypto.randomUUID();
           const expense: ExpenseItem = {
-            id: crypto.randomUUID(),
+            id: newExpenseId,
             planId: plan.id,
             name: data.name,
             amountCents: dollarsToCents(data.amountDollars),
             frequency: data.frequency,
             category: primaryCategory,
             bucketId: primaryBucketId,
+            currencyCode: resolvedCurrency,
             isFixed: data.isFixed ?? false,
             notes: data.notes,
             transactionDate: data.transactionDate ?? getTodayISODate(),
@@ -472,14 +641,47 @@ export default function ExpensesPage() {
           };
           await createExpense.mutateAsync(expense);
           toast.success('Expense added');
+          expenseId = newExpenseId;
         }
+
+        if (attachmentPayload.removedIds.length > 0) {
+          await Promise.all(
+            attachmentPayload.removedIds.map((id) => attachmentRepo.delete(id)),
+          );
+        }
+
+        if (attachmentPayload.newFiles.length > 0) {
+          const attachments = attachmentPayload.newFiles.map((file) => ({
+            id: crypto.randomUUID(),
+            planId: plan.id,
+            expenseId,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size,
+            blob: file,
+            createdAt: now,
+          }));
+          await attachmentRepo.bulkCreate(attachments);
+        }
+
+        await queryClient.invalidateQueries({
+          queryKey: ['expense-attachments', expenseId],
+        });
+        scheduleVaultSave();
         setSheetOpen(false);
         setEditingExpense(null);
       } catch {
         toast.error('Failed to save expense');
       }
     },
-    [plan, editingExpense, createExpense, updateExpense],
+    [
+      plan,
+      editingExpense,
+      createExpense,
+      updateExpense,
+      queryClient,
+      scheduleVaultSave,
+    ],
   );
 
   const handleDelete = useCallback(async () => {
@@ -496,6 +698,77 @@ export default function ExpensesPage() {
     }
   }, [deletingExpense, plan, deleteExpense]);
 
+  const selectedSplitCount = useMemo(
+    () => selectedExpenses.filter((expense) => expense.isSplit).length,
+    [selectedExpenses],
+  );
+
+  const bulkEditHasChanges = useMemo(() => {
+    return (
+      bulkEditValues.category !== 'no_change' ||
+      bulkEditValues.bucketId !== 'no_change' ||
+      bulkEditValues.frequency !== 'no_change' ||
+      bulkEditValues.fixed !== 'no_change'
+    );
+  }, [bulkEditValues]);
+
+  const handleBulkEditApply = useCallback(async () => {
+    if (!plan || selectedExpenses.length === 0 || !bulkEditHasChanges) {
+      return;
+    }
+
+    const updatedExpenses = selectedExpenses.map((expense) => {
+      return {
+        ...expense,
+        frequency:
+          bulkEditValues.frequency !== 'no_change'
+            ? (bulkEditValues.frequency as Frequency)
+            : expense.frequency,
+        isFixed:
+          bulkEditValues.fixed !== 'no_change'
+            ? bulkEditValues.fixed === 'fixed'
+            : expense.isFixed,
+        category:
+          !expense.isSplit && bulkEditValues.category !== 'no_change'
+            ? (bulkEditValues.category as ExpenseCategory)
+            : expense.category,
+        bucketId:
+          !expense.isSplit && bulkEditValues.bucketId !== 'no_change'
+            ? bulkEditValues.bucketId
+            : expense.bucketId,
+      };
+    });
+
+    try {
+      await bulkUpdateExpenses.mutateAsync(updatedExpenses);
+      toast.success(`Updated ${updatedExpenses.length} expense(s)`);
+      setBulkEditOpen(false);
+      setBulkEditValues(DEFAULT_BULK_EDIT_VALUES);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to update expenses. Please try again.');
+    }
+  }, [
+    plan,
+    selectedExpenses,
+    bulkEditHasChanges,
+    bulkEditValues,
+    bulkUpdateExpenses,
+  ]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!plan || validSelectedIds.size === 0) return;
+    const ids = Array.from(validSelectedIds);
+    try {
+      await bulkDeleteExpenses.mutateAsync({ ids, planId: plan.id });
+      toast.success(`Deleted ${ids.length} expense(s)`);
+      setBulkDeleteOpen(false);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to delete expenses. Please try again.');
+    }
+  }, [plan, validSelectedIds, bulkDeleteExpenses]);
+
   const handleSaveAsTemplate = useCallback(
     async (expense: ExpenseItem) => {
       try {
@@ -505,22 +778,31 @@ export default function ExpensesPage() {
           dayOfMonth = new Date(expense.transactionDate).getDate();
         }
         await recurringService.createTemplateFromExpense(expense, dayOfMonth);
+        scheduleVaultSave();
         toast.success(`Created template from "${expense.name}"`);
         // Optionally switch to templates tab
-        setActiveTab('templates');
+        handleTabChange('templates');
       } catch {
         toast.error('Failed to create template');
       }
     },
-    [],
+    [scheduleVaultSave, handleTabChange],
   );
 
   const totalMonthly = useMemo(() => {
-    return filteredExpenses.reduce(
-      (sum, e) => addMoney(sum, normalizeToMonthly(e.amountCents, e.frequency)),
-      cents(0),
-    );
-  }, [filteredExpenses]);
+    const baseCurrency = plan?.currencyCode ?? DEFAULT_CURRENCY;
+    return filteredExpenses.reduce((sum, expense) => {
+      const converted = convertExpenseToBase(
+        expense,
+        baseCurrency,
+        exchangeRates ?? undefined,
+      );
+      return addMoney(
+        sum,
+        normalizeToMonthly(converted.amountCents, converted.frequency),
+      );
+    }, cents(0));
+  }, [filteredExpenses, plan?.currencyCode, exchangeRates]);
 
   const isLoading = planLoading || expensesLoading;
 
@@ -559,7 +841,7 @@ export default function ExpensesPage() {
       />
 
       {/* Tabs for Expenses and Templates */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="expenses">
             <Receipt className="size-4" />
@@ -584,364 +866,442 @@ export default function ExpensesPage() {
         <TabsContent value="expenses" className="space-y-6">
           {/* Search and Filter Section */}
           {expenses.length > 0 && (
-        <Card>
-          <CardContent className="space-y-4 pt-6">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
-              <Input
-                type="search"
-                placeholder="Search expenses by name, notes, category, or bucket..."
-                value={filters.q}
-                onChange={(e) => void setFilters({ q: e.target.value })}
-                className="pl-9 pr-9"
-                aria-label="Search expenses"
-              />
-              {filters.q && (
-                <button
-                  type="button"
-                  onClick={clearSearch}
-                  className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
-                  aria-label="Clear search"
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                  <Input
+                    ref={searchInputRef}
+                    type="search"
+                    placeholder="Search expenses by name, notes, category, or bucket..."
+                    value={filters.q}
+                    onChange={(e) => void setFilters({ q: e.target.value })}
+                    className="pl-9 pr-9"
+                    aria-label="Search expenses"
+                  />
+                  {filters.q && (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2"
+                      aria-label="Clear search"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Collapsible Filters */}
+                <Collapsible
+                  open={filtersExpanded}
+                  onOpenChange={setFiltersExpanded}
                 >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Collapsible Filters */}
-            <Collapsible
-              open={filtersExpanded}
-              onOpenChange={setFiltersExpanded}
-            >
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="-ml-2 h-8 gap-1">
-                    <Filter className="size-4" />
-                    Filters
-                    {activeFilterCount > 0 && (
-                      <Badge variant="secondary" className="ml-1 px-1.5 py-0">
-                        {activeFilterCount}
-                      </Badge>
-                    )}
-                    {filtersExpanded ? (
-                      <ChevronUp className="size-4" />
-                    ) : (
-                      <ChevronDown className="size-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-
-                <div className="flex items-center gap-2">
-                  {/* Sort */}
-                  <div className="flex items-center gap-1.5">
-                    <SortAsc className="text-muted-foreground size-4 shrink-0" />
-                    <Select
-                      value={filters.sort}
-                      onValueChange={(val) => void setFilters({ sort: val })}
-                    >
-                      <SelectTrigger
-                        className="h-8 w-[140px]"
-                        aria-label="Sort by"
+                  <div className="flex items-center justify-between">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-ml-2 h-8 gap-1"
                       >
-                        <SelectValue placeholder="Sort" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SORT_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {hasActiveFilters && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearAllFilters}
-                      className="h-8"
-                    >
-                      <X className="size-3" />
-                      Clear all
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <CollapsibleContent className="pt-4">
-                <div className="flex flex-wrap items-end gap-3">
-                  {/* Category Multi-Select */}
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Categories
-                    </Label>
-                    <MultiSelect
-                      options={categoryOptions}
-                      value={filters.categories}
-                      onChange={(val) => void setFilters({ categories: val })}
-                      placeholder="All categories"
-                      ariaLabel="Filter by categories"
-                    />
-                  </div>
-
-                  {/* Bucket Multi-Select */}
-                  {buckets.length > 0 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-muted-foreground text-xs">
-                        Buckets
-                      </Label>
-                      <MultiSelect
-                        options={bucketOptions}
-                        value={filters.buckets}
-                        onChange={(val) => void setFilters({ buckets: val })}
-                        placeholder="All buckets"
-                        ariaLabel="Filter by buckets"
-                      />
-                    </div>
-                  )}
-
-                  {/* Frequency */}
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Frequency
-                    </Label>
-                    <Select
-                      value={filters.frequency}
-                      onValueChange={(val) =>
-                        void setFilters({
-                          frequency: val === 'all' ? '' : val,
-                        })
-                      }
-                    >
-                      <SelectTrigger
-                        className="h-8 w-[140px]"
-                        aria-label="Filter by frequency"
-                      >
-                        <SelectValue placeholder="All frequencies" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All frequencies</SelectItem>
-                        {Object.entries(FREQUENCY_LABELS).map(
-                          ([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ),
+                        <Filter className="size-4" />
+                        Filters
+                        {activeFilterCount > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-1 px-1.5 py-0"
+                          >
+                            {activeFilterCount}
+                          </Badge>
                         )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                        {filtersExpanded ? (
+                          <ChevronUp className="size-4" />
+                        ) : (
+                          <ChevronDown className="size-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
 
-                  {/* Type (Fixed/Variable) */}
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Type
-                    </Label>
-                    <Select
-                      value={filters.fixed}
-                      onValueChange={(val) =>
-                        void setFilters({ fixed: val === 'all' ? '' : val })
-                      }
-                    >
-                      <SelectTrigger
-                        className="h-8 w-[120px]"
-                        aria-label="Filter by expense type"
-                      >
-                        <SelectValue placeholder="All types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All types</SelectItem>
-                        <SelectItem value="true">Fixed</SelectItem>
-                        <SelectItem value="false">Variable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Amount Range */}
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Amount range (monthly)
-                    </Label>
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Min"
-                        min={0}
-                        value={filters.minAmount || ''}
-                        onChange={(e) =>
-                          void setFilters({
-                            minAmount: e.target.value
-                              ? parseInt(e.target.value, 10)
-                              : 0,
-                          })
-                        }
-                        className="h-8 w-20"
-                        aria-label="Minimum amount"
-                      />
-                      <span className="text-muted-foreground">-</span>
-                      <Input
-                        type="number"
-                        placeholder="Max"
-                        min={0}
-                        value={filters.maxAmount || ''}
-                        onChange={(e) =>
-                          void setFilters({
-                            maxAmount: e.target.value
-                              ? parseInt(e.target.value, 10)
-                              : 0,
-                          })
-                        }
-                        className="h-8 w-20"
-                        aria-label="Maximum amount"
-                      />
+                      {/* Sort */}
+                      <div className="flex items-center gap-1.5">
+                        <SortAsc className="text-muted-foreground size-4 shrink-0" />
+                        <Select
+                          value={filters.sort}
+                          onValueChange={(val) =>
+                            void setFilters({ sort: val })
+                          }
+                        >
+                          <SelectTrigger
+                            className="h-8 w-[140px]"
+                            aria-label="Sort by"
+                          >
+                            <SelectValue placeholder="Sort" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SORT_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {hasActiveFilters && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearAllFilters}
+                          className="h-8"
+                        >
+                          <X className="size-3" />
+                          Clear all
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Date Range */}
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      Date range
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <DatePickerButton
-                        value={filters.dateFrom}
-                        onChange={(val) => void setFilters({ dateFrom: val })}
-                        placeholder="From"
-                        ariaLabel="Filter from date"
-                      />
-                      <span className="text-muted-foreground">-</span>
-                      <DatePickerButton
-                        value={filters.dateTo}
-                        onChange={(val) => void setFilters({ dateTo: val })}
-                        placeholder="To"
-                        ariaLabel="Filter to date"
-                      />
+                  <CollapsibleContent className="pt-4">
+                    <div className="flex flex-wrap items-end gap-3">
+                      {/* Category Multi-Select */}
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">
+                          Categories
+                        </Label>
+                        <MultiSelect
+                          options={categoryOptions}
+                          value={filters.categories}
+                          onChange={(val) =>
+                            void setFilters({ categories: val })
+                          }
+                          placeholder="All categories"
+                          ariaLabel="Filter by categories"
+                        />
+                      </div>
+
+                      {/* Bucket Multi-Select */}
+                      {buckets.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-muted-foreground text-xs">
+                            Buckets
+                          </Label>
+                          <MultiSelect
+                            options={bucketOptions}
+                            value={filters.buckets}
+                            onChange={(val) =>
+                              void setFilters({ buckets: val })
+                            }
+                            placeholder="All buckets"
+                            ariaLabel="Filter by buckets"
+                          />
+                        </div>
+                      )}
+
+                      {/* Frequency */}
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">
+                          Frequency
+                        </Label>
+                        <Select
+                          value={filters.frequency}
+                          onValueChange={(val) =>
+                            void setFilters({
+                              frequency: val === 'all' ? '' : val,
+                            })
+                          }
+                        >
+                          <SelectTrigger
+                            className="h-8 w-[140px]"
+                            aria-label="Filter by frequency"
+                          >
+                            <SelectValue placeholder="All frequencies" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All frequencies</SelectItem>
+                            {Object.entries(FREQUENCY_LABELS).map(
+                              ([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                  {label}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Type (Fixed/Variable) */}
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">
+                          Type
+                        </Label>
+                        <Select
+                          value={filters.fixed}
+                          onValueChange={(val) =>
+                            void setFilters({ fixed: val === 'all' ? '' : val })
+                          }
+                        >
+                          <SelectTrigger
+                            className="h-8 w-[120px]"
+                            aria-label="Filter by expense type"
+                          >
+                            <SelectValue placeholder="All types" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All types</SelectItem>
+                            <SelectItem value="true">Fixed</SelectItem>
+                            <SelectItem value="false">Variable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Amount Range */}
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">
+                          Amount range (monthly)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Min"
+                            min={0}
+                            value={filters.minAmount || ''}
+                            onChange={(e) =>
+                              void setFilters({
+                                minAmount: e.target.value
+                                  ? parseInt(e.target.value, 10)
+                                  : 0,
+                              })
+                            }
+                            className="h-8 w-20"
+                            aria-label="Minimum amount"
+                          />
+                          <span className="text-muted-foreground">-</span>
+                          <Input
+                            type="number"
+                            placeholder="Max"
+                            min={0}
+                            value={filters.maxAmount || ''}
+                            onChange={(e) =>
+                              void setFilters({
+                                maxAmount: e.target.value
+                                  ? parseInt(e.target.value, 10)
+                                  : 0,
+                              })
+                            }
+                            className="h-8 w-20"
+                            aria-label="Maximum amount"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Date Range */}
+                      <div className="space-y-1.5">
+                        <Label className="text-muted-foreground text-xs">
+                          Date range
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <DatePickerButton
+                            value={filters.dateFrom}
+                            onChange={(val) =>
+                              void setFilters({ dateFrom: val })
+                            }
+                            placeholder="From"
+                            ariaLabel="Filter from date"
+                          />
+                          <span className="text-muted-foreground">-</span>
+                          <DatePickerButton
+                            value={filters.dateTo}
+                            onChange={(val) => void setFilters({ dateTo: val })}
+                            placeholder="To"
+                            ariaLabel="Filter to date"
+                          />
+                        </div>
+                      </div>
                     </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Active Filter Chips */}
+                {hasActiveFilters && (
+                  <div className="flex flex-wrap gap-2">
+                    {debouncedSearch.trim() && (
+                      <FilterChip
+                        label={`Search: "${debouncedSearch}"`}
+                        onClear={clearSearch}
+                      />
+                    )}
+                    {filters.categories.length > 0 && (
+                      <FilterChip
+                        label={`Categories: ${filters.categories.map((c) => CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS] ?? c).join(', ')}`}
+                        onClear={clearCategories}
+                      />
+                    )}
+                    {filters.buckets.length > 0 && (
+                      <FilterChip
+                        label={`Buckets: ${filters.buckets.map((id) => bucketMap.get(id)?.name ?? id).join(', ')}`}
+                        onClear={clearBuckets}
+                      />
+                    )}
+                    {filters.frequency && (
+                      <FilterChip
+                        label={`Frequency: ${FREQUENCY_LABELS[filters.frequency as keyof typeof FREQUENCY_LABELS] ?? filters.frequency}`}
+                        onClear={clearFrequency}
+                      />
+                    )}
+                    {filters.fixed && (
+                      <FilterChip
+                        label={
+                          filters.fixed === 'true'
+                            ? 'Fixed only'
+                            : 'Variable only'
+                        }
+                        onClear={clearFixed}
+                      />
+                    )}
+                    {(filters.minAmount > 0 || filters.maxAmount > 0) && (
+                      <FilterChip
+                        label={`Amount: ${filters.minAmount > 0 ? `$${filters.minAmount}` : '$0'} - ${filters.maxAmount > 0 ? `$${filters.maxAmount}` : 'any'}`}
+                        onClear={clearAmountRange}
+                      />
+                    )}
+                    {(filters.dateFrom || filters.dateTo) && (
+                      <FilterChip
+                        label={`Date: ${filters.dateFrom ? formatTransactionDate(filters.dateFrom) : 'any'} - ${filters.dateTo ? formatTransactionDate(filters.dateTo) : 'any'}`}
+                        onClear={clearDateRange}
+                      />
+                    )}
                   </div>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Active Filter Chips */}
-            {hasActiveFilters && (
-              <div className="flex flex-wrap gap-2">
-                {debouncedSearch.trim() && (
-                  <FilterChip
-                    label={`Search: "${debouncedSearch}"`}
-                    onClear={clearSearch}
-                  />
                 )}
-                {filters.categories.length > 0 && (
-                  <FilterChip
-                    label={`Categories: ${filters.categories.map((c) => CATEGORY_LABELS[c as keyof typeof CATEGORY_LABELS] ?? c).join(', ')}`}
-                    onClear={clearCategories}
-                  />
-                )}
-                {filters.buckets.length > 0 && (
-                  <FilterChip
-                    label={`Buckets: ${filters.buckets.map((id) => bucketMap.get(id)?.name ?? id).join(', ')}`}
-                    onClear={clearBuckets}
-                  />
-                )}
-                {filters.frequency && (
-                  <FilterChip
-                    label={`Frequency: ${FREQUENCY_LABELS[filters.frequency as keyof typeof FREQUENCY_LABELS] ?? filters.frequency}`}
-                    onClear={clearFrequency}
-                  />
-                )}
-                {filters.fixed && (
-                  <FilterChip
-                    label={
-                      filters.fixed === 'true' ? 'Fixed only' : 'Variable only'
-                    }
-                    onClear={clearFixed}
-                  />
-                )}
-                {(filters.minAmount > 0 || filters.maxAmount > 0) && (
-                  <FilterChip
-                    label={`Amount: ${filters.minAmount > 0 ? `$${filters.minAmount}` : '$0'} - ${filters.maxAmount > 0 ? `$${filters.maxAmount}` : 'any'}`}
-                    onClear={clearAmountRange}
-                  />
-                )}
-                {(filters.dateFrom || filters.dateTo) && (
-                  <FilterChip
-                    label={`Date: ${filters.dateFrom ? formatTransactionDate(filters.dateFrom) : 'any'} - ${filters.dateTo ? formatTransactionDate(filters.dateTo) : 'any'}`}
-                    onClear={clearDateRange}
-                  />
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Result Summary */}
-      {filteredExpenses.length > 0 && (
-        <div className="text-muted-foreground text-sm">
-          {filteredExpenses.length} expense
-          {filteredExpenses.length !== 1 && 's'}
-          {hasActiveFilters &&
-            ` (filtered from ${expenses.length})`} &mdash;{' '}
-          <span className="font-medium tabular-nums">
-            {formatMoney(totalMonthly)}
-          </span>
-          /mo
-        </div>
-      )}
-
-      {/* Expense list */}
-      {expenses.length === 0 ? (
-        <EmptyState
-          icon={Receipt}
-          title="No expenses yet"
-          description="Add your recurring expenses to start tracking your budget."
-          action={{
-            label: 'Add your first expense',
-            onClick: handleOpenAdd,
-          }}
-        />
-      ) : filteredExpenses.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title="No matching expenses"
-          description={getNoResultsDescription(
-            debouncedSearch,
-            activeFilterCount,
+              </CardContent>
+            </Card>
           )}
-          action={{
-            label: 'Clear all filters',
-            onClick: clearAllFilters,
-          }}
-        />
-      ) : (
-        <div className="space-y-3">
-          {filteredExpenses.map((expense) => {
-            const monthly = normalizeToMonthly(
-              expense.amountCents,
-              expense.frequency,
-            );
-            const bucket = bucketMap.get(expense.bucketId);
-            const showNormalized = expense.frequency !== 'monthly';
 
-            return (
-              <ExpenseCard
-                key={expense.id}
-                expense={expense}
-                bucket={bucket}
-                bucketMap={bucketMap}
-                monthlyAmount={monthly}
-                showNormalized={showNormalized}
-                searchQuery={debouncedSearch}
-                onEdit={() => handleOpenEdit(expense)}
-                onDelete={() => setDeletingExpense(expense)}
-                onSaveAsTemplate={() => handleSaveAsTemplate(expense)}
-              />
-            );
-          })}
-        </div>
-      )}
+          {/* Result Summary */}
+          {filteredExpenses.length > 0 && (
+            <div className="text-muted-foreground text-sm">
+              {filteredExpenses.length} expense
+              {filteredExpenses.length !== 1 && 's'}
+              {hasActiveFilters && ` (filtered from ${expenses.length})`}{' '}
+              &mdash;{' '}
+              <span className="font-medium tabular-nums">
+                {formatMoney(totalMonthly, { currency: currencyCode })}
+              </span>
+              /mo
+            </div>
+          )}
+
+          {filteredExpenses.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  className="accent-primary size-4 rounded border"
+                  checked={allVisibleSelected}
+                  onChange={handleToggleSelectAllVisible}
+                  aria-label="Select all visible expenses"
+                />
+                <span>Select all {filteredExpenses.length} visible</span>
+              </label>
+              <span className="text-muted-foreground">
+                {selectedCount} selected
+              </span>
+            </div>
+          )}
+
+          {hasSelection && (
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="text-sm font-medium">
+                  {selectedCount} selected
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenBulkEdit}
+                    disabled={selectedCount === 0}
+                  >
+                    <Pencil className="size-4" />
+                    Bulk edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    disabled={selectedCount === 0}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClearSelection}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Expense list */}
+          {expenses.length === 0 ? (
+            <EmptyState
+              icon={Receipt}
+              title="No expenses yet"
+              description="Add your recurring expenses to start tracking your budget."
+              action={{
+                label: 'Add your first expense',
+                onClick: handleOpenAdd,
+              }}
+            />
+          ) : filteredExpenses.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No matching expenses"
+              description={getNoResultsDescription(
+                debouncedSearch,
+                activeFilterCount,
+              )}
+              action={{
+                label: 'Clear all filters',
+                onClick: clearAllFilters,
+              }}
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredExpenses.map((expense) => {
+                const monthly = normalizeToMonthly(
+                  expense.amountCents,
+                  expense.frequency,
+                );
+                const bucket = bucketMap.get(expense.bucketId);
+                const showNormalized = expense.frequency !== 'monthly';
+
+                return (
+                  <ExpenseCard
+                    key={expense.id}
+                    expense={expense}
+                    bucket={bucket}
+                    bucketMap={bucketMap}
+                    monthlyAmount={monthly}
+                    showNormalized={showNormalized}
+                    searchQuery={debouncedSearch}
+                    onEdit={() => handleOpenEdit(expense)}
+                    onDelete={() => setDeletingExpense(expense)}
+                    onSaveAsTemplate={() => handleSaveAsTemplate(expense)}
+                    selected={validSelectedIds.has(expense.id)}
+                    onToggleSelected={(checked) =>
+                      handleToggleSelect(expense.id, checked)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="templates">
@@ -971,6 +1331,178 @@ export default function ExpensesPage() {
           />
         </SheetContent>
       </Sheet>
+
+      {/* Bulk edit dialog */}
+      <Dialog
+        open={bulkEditOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkEditValues(DEFAULT_BULK_EDIT_VALUES);
+          }
+          setBulkEditOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk edit expenses</DialogTitle>
+            <DialogDescription>
+              Apply changes to {selectedCount} selected expense
+              {selectedCount !== 1 && 's'}. Fields set to “No change” will be
+              left untouched.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select
+                value={bulkEditValues.category}
+                onValueChange={(value) =>
+                  setBulkEditValues((prev) => ({
+                    ...prev,
+                    category: value as BulkEditValues['category'],
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No change</SelectItem>
+                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bucket</Label>
+              <Select
+                value={bulkEditValues.bucketId}
+                onValueChange={(value) =>
+                  setBulkEditValues((prev) => ({
+                    ...prev,
+                    bucketId: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No change</SelectItem>
+                  {buckets.map((bucket) => (
+                    <SelectItem key={bucket.id} value={bucket.id}>
+                      <span
+                        className="mr-1.5 inline-block size-2 rounded-full"
+                        style={{ backgroundColor: bucket.color }}
+                        aria-hidden="true"
+                      />
+                      {bucket.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedSplitCount > 0 && (
+                <p className="text-muted-foreground text-xs">
+                  Category and bucket changes won’t apply to split expenses.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select
+                value={bulkEditValues.frequency}
+                onValueChange={(value) =>
+                  setBulkEditValues((prev) => ({
+                    ...prev,
+                    frequency: value as BulkEditValues['frequency'],
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No change</SelectItem>
+                  {Object.entries(FREQUENCY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={bulkEditValues.fixed}
+                onValueChange={(value) =>
+                  setBulkEditValues((prev) => ({
+                    ...prev,
+                    fixed: value as BulkEditFixedOption,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No change</SelectItem>
+                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="variable">Variable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkEditApply}
+              disabled={!bulkEditHasChanges || bulkUpdateExpenses.isPending}
+            >
+              {bulkUpdateExpenses.isPending && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Apply changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete selected expenses?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {selectedCount} expense
+              {selectedCount !== 1 && 's'}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+              disabled={bulkDeleteExpenses.isPending}
+            >
+              {bulkDeleteExpenses.isPending && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Delete selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete confirmation */}
       <AlertDialog
@@ -1083,6 +1615,8 @@ interface ExpenseCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onSaveAsTemplate: () => void;
+  selected: boolean;
+  onToggleSelected: (checked: boolean) => void;
 }
 
 function ExpenseCard({
@@ -1095,8 +1629,13 @@ function ExpenseCard({
   onEdit,
   onDelete,
   onSaveAsTemplate,
+  selected,
+  onToggleSelected,
 }: ExpenseCardProps) {
   const [splitExpanded, setSplitExpanded] = useState(false);
+  const baseCurrency = useCurrencyStore((s) => s.currencyCode);
+  const expenseCurrency =
+    expense.currencyCode ?? baseCurrency ?? DEFAULT_CURRENCY;
 
   // Highlight matching text in name
   const nameContent = useMemo(() => {
@@ -1121,13 +1660,21 @@ function ExpenseCard({
     return segments;
   }, [bucket, searchQuery]);
 
-  const isSplit = expense.isSplit && expense.splits && expense.splits.length > 0;
+  const isSplit =
+    expense.isSplit && expense.splits && expense.splits.length > 0;
   const splitCount = isSplit ? expense.splits!.length : 0;
 
   return (
-    <Card>
+    <Card className={cn(selected && 'border-primary/50 bg-primary/5')}>
       <CardContent className="py-4">
         <div className="flex items-center gap-4">
+          <input
+            type="checkbox"
+            className="accent-primary size-4 rounded border"
+            checked={selected}
+            onChange={(e) => onToggleSelected(e.target.checked)}
+            aria-label={`Select expense ${expense.name}`}
+          />
           {/* Color swatch - show multiple colors for splits */}
           {isSplit ? (
             <div className="flex shrink-0 -space-x-1">
@@ -1210,7 +1757,7 @@ function ExpenseCard({
           {/* Amount */}
           <div className="shrink-0 text-right">
             <div className="font-medium tabular-nums">
-              {formatMoney(expense.amountCents)}
+              {formatMoney(expense.amountCents, { currency: expenseCurrency })}
               {showNormalized && (
                 <span className="text-muted-foreground text-xs">
                   /
@@ -1230,7 +1777,7 @@ function ExpenseCard({
             </div>
             {showNormalized && (
               <div className="text-muted-foreground text-xs tabular-nums">
-                {formatMoney(monthlyAmount)}/mo
+                {formatMoney(monthlyAmount, { currency: expenseCurrency })}/mo
               </div>
             )}
           </div>
@@ -1300,7 +1847,9 @@ function ExpenseCard({
                       )}
                     </div>
                     <div className="shrink-0 font-medium tabular-nums">
-                      {formatMoney(split.amountCents)}
+                      {formatMoney(split.amountCents, {
+                        currency: expenseCurrency,
+                      })}
                     </div>
                   </div>
                 );
@@ -1336,17 +1885,38 @@ function getNoResultsDescription(
   return `Try ${suggestions.join(' or ')}.`;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(1)} GB`;
+}
+
 // --- Expense Form ---
 
 interface ExpenseFormProps {
   expense: ExpenseItem | null;
   buckets: BucketAllocation[];
-  onSave: (data: ExpenseFormData) => Promise<void>;
+  onSave: (
+    data: ExpenseFormData,
+    attachments: ExpenseAttachmentPayload,
+  ) => Promise<void>;
   onCancel: () => void;
 }
 
 function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const baseCurrency = useCurrencyStore((s) => s.currencyCode);
+  const defaultCurrency =
+    expense?.currencyCode ?? baseCurrency ?? DEFAULT_CURRENCY;
+  const { data: existingAttachments = [] } = useExpenseAttachments(expense?.id);
+  const [newAttachments, setNewAttachments] = useState<File[]>([]);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(ExpenseFormSchema),
@@ -1357,16 +1927,18 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
           frequency: expense.frequency,
           category: expense.category,
           bucketId: expense.bucketId,
+          currencyCode: expense.currencyCode ?? defaultCurrency,
           isFixed: expense.isFixed,
           notes: expense.notes ?? '',
           transactionDate: expense.transactionDate ?? getTodayISODate(),
           isSplit: expense.isSplit ?? false,
-          splits: expense.splits?.map((s) => ({
-            bucketId: s.bucketId,
-            category: s.category,
-            amountDollars: centsToDollars(s.amountCents),
-            notes: s.notes,
-          })) ?? [],
+          splits:
+            expense.splits?.map((s) => ({
+              bucketId: s.bucketId,
+              category: s.category,
+              amountDollars: centsToDollars(s.amountCents),
+              notes: s.notes,
+            })) ?? [],
         }
       : {
           name: '',
@@ -1374,6 +1946,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
           frequency: 'monthly',
           category: 'other',
           bucketId: buckets[0]?.id ?? '',
+          currencyCode: defaultCurrency,
           isFixed: false,
           notes: '',
           transactionDate: getTodayISODate(),
@@ -1398,7 +1971,9 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
 
   const isSplit = watch('isSplit');
   const totalAmount = watch('amountDollars');
-  const splits = watch('splits') ?? [];
+  const splits = watch('splits') ?? EMPTY_SPLITS;
+  const selectedCurrency = watch('currencyCode') ?? defaultCurrency;
+  const currencySymbol = getCurrencySymbol(selectedCurrency as CurrencyCode);
 
   // Calculate split total and remaining amount
   const splitTotal = useMemo(
@@ -1407,6 +1982,49 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
   );
   const remainingAmount = totalAmount - splitTotal;
   const splitsMatch = Math.abs(remainingAmount) < 0.01;
+
+  useEffect(() => {
+    setNewAttachments([]);
+    setRemovedAttachmentIds(new Set());
+  }, [expense?.id]);
+
+  const visibleExistingAttachments = useMemo(
+    () => existingAttachments.filter((a) => !removedAttachmentIds.has(a.id)),
+    [existingAttachments, removedAttachmentIds],
+  );
+
+  const handleAddAttachments = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
+      if (files.length === 0) return;
+      setNewAttachments((prev) => [...prev, ...files]);
+      event.target.value = '';
+    },
+    [],
+  );
+
+  const handleRemoveNewAttachment = useCallback((index: number) => {
+    setNewAttachments((prev) => prev.filter((_, idx) => idx !== index));
+  }, []);
+
+  const handleRemoveExistingAttachment = useCallback((id: string) => {
+    setRemovedAttachmentIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleViewAttachment = useCallback((blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!win) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+    win.document.title = name;
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }, []);
 
   // Handle toggle split mode
   const handleToggleSplit = useCallback(
@@ -1447,13 +2065,21 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
     if (fields.length === 0) return;
     const lastIndex = fields.length - 1;
     const currentLast = splits[lastIndex]?.amountDollars ?? 0;
-    setValue(`splits.${lastIndex}.amountDollars`, currentLast + remainingAmount);
+    setValue(
+      `splits.${lastIndex}.amountDollars`,
+      currentLast + remainingAmount,
+    );
   }, [fields.length, splits, remainingAmount, setValue]);
 
   const onSubmit = async (data: ExpenseFormData) => {
     setIsSubmitting(true);
     try {
-      await onSave(data);
+      await onSave(data, {
+        newFiles: newAttachments,
+        removedIds: Array.from(removedAttachmentIds),
+      });
+      setNewAttachments([]);
+      setRemovedAttachmentIds(new Set());
     } finally {
       setIsSubmitting(false);
     }
@@ -1477,7 +2103,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="expense-amount">Amount</Label>
           <Controller
@@ -1491,6 +2117,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   min={0}
+                  currencyCode={watch('currencyCode') ?? defaultCurrency}
                 />
                 {fieldState.error && (
                   <p className="text-destructive text-sm">
@@ -1498,6 +2125,31 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                   </p>
                 )}
               </>
+            )}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="expense-currency">Currency</Label>
+          <Controller
+            control={control}
+            name="currencyCode"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? defaultCurrency}
+                onValueChange={(value) => field.onChange(value as CurrencyCode)}
+              >
+                <SelectTrigger id="expense-currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_CURRENCIES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           />
         </div>
@@ -1648,11 +2300,15 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
             )}
           >
             <span>
-              Split total: ${splitTotal.toFixed(2)} / ${totalAmount.toFixed(2)}
+              Split total: {currencySymbol}
+              {splitTotal.toFixed(2)} / {currencySymbol}
+              {totalAmount.toFixed(2)}
             </span>
             {!splitsMatch && (
               <span className="font-medium">
-                {remainingAmount > 0 ? '+' : ''}${remainingAmount.toFixed(2)}{' '}
+                {remainingAmount > 0 ? '+' : ''}
+                {currencySymbol}
+                {remainingAmount.toFixed(2)}{' '}
                 {remainingAmount > 0 ? 'remaining' : 'over'}
               </span>
             )}
@@ -1776,6 +2432,9 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                           onChange={field.onChange}
                           onBlur={field.onBlur}
                           min={0}
+                          currencyCode={
+                            watch('currencyCode') ?? defaultCurrency
+                          }
                           className="h-8"
                         />
                       )}
@@ -1783,10 +2442,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                   </div>
 
                   <div className="space-y-1">
-                    <Label
-                      htmlFor={`split-${index}-notes`}
-                      className="text-xs"
-                    >
+                    <Label htmlFor={`split-${index}-notes`} className="text-xs">
                       Notes
                     </Label>
                     <Input
@@ -1869,6 +2525,93 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
           placeholder="Any additional notes..."
           {...register('notes')}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="expense-attachments">Receipts & attachments</Label>
+        <input
+          id="expense-attachments"
+          type="file"
+          multiple
+          onChange={handleAddAttachments}
+          className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+          aria-label="Add receipt or attachment files"
+        />
+        {visibleExistingAttachments.length === 0 &&
+          newAttachments.length === 0 && (
+            <p className="text-muted-foreground text-xs">
+              Add receipts, invoices, or supporting documents.
+            </p>
+          )}
+        {(visibleExistingAttachments.length > 0 ||
+          newAttachments.length > 0) && (
+          <div className="space-y-2">
+            {visibleExistingAttachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <Paperclip className="text-muted-foreground size-4" />
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">
+                      {attachment.fileName}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {formatFileSize(attachment.size)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      handleViewAttachment(attachment.blob, attachment.fileName)
+                    }
+                  >
+                    View
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      handleRemoveExistingAttachment(attachment.id)
+                    }
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {newAttachments.map((file, index) => (
+              <div
+                key={`${file.name}-${index}`}
+                className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <Paperclip className="text-muted-foreground size-4" />
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{file.name}</div>
+                    <div className="text-muted-foreground text-xs">
+                      {formatFileSize(file.size)}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleRemoveNewAttachment(index)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 pt-2">

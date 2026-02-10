@@ -20,6 +20,7 @@ export interface PlanComputeInput {
   buckets: readonly BucketAllocation[];
   expenses: readonly ExpenseItem[];
   taxComponents: readonly TaxComponent[];
+  rolloverByBucket?: ReadonlyMap<string, Cents>;
 }
 
 /**
@@ -31,7 +32,7 @@ export function computePlanSummary(
   input: PlanComputeInput,
   yearMonth?: string,
 ): PlanSummary {
-  const { plan, buckets, expenses, taxComponents } = input;
+  const { plan, buckets, expenses, taxComponents, rolloverByBucket } = input;
   const currentYearMonth = yearMonth ?? getCurrentYearMonth();
 
   // 1. Monthly income
@@ -53,6 +54,7 @@ export function computePlanSummary(
     buckets,
     expensesByBucket,
     netMonthlyIncome,
+    rolloverByBucket,
   );
 
   // 5. Bottom line
@@ -157,6 +159,7 @@ function computeBucketAnalysis(
   allocations: readonly BucketAllocation[],
   actualByBucket: ReadonlyMap<string, Cents>,
   netMonthlyIncome: Cents,
+  rolloverByBucket?: ReadonlyMap<string, Cents>,
 ): readonly BucketAnalysis[] {
   return allocations.map((allocation) => {
     const targetAmountCents =
@@ -172,18 +175,21 @@ function computeBucketAnalysis(
           : 0;
 
     const actualAmountCents = actualByBucket.get(allocation.id) ?? cents(0);
+    const rolloverCents =
+      allocation.rolloverEnabled && rolloverByBucket
+        ? (rolloverByBucket.get(allocation.id) ?? cents(0))
+        : cents(0);
+    const availableCents = addMoney(targetAmountCents, rolloverCents);
 
-    const varianceCents = subtractMoney(targetAmountCents, actualAmountCents);
+    const varianceCents = subtractMoney(availableCents, actualAmountCents);
 
     // Guard: avoid division by zero when net income is zero (e.g., no income entered yet)
     const actualPercentage =
       netMonthlyIncome > 0 ? (actualAmountCents / netMonthlyIncome) * 100 : 0;
 
-    // Guard: avoid division by zero when target percentage is zero (e.g., unconfigured bucket)
+    // Guard: avoid division by zero when available is zero (e.g., unconfigured bucket)
     const variancePercent =
-      targetPercentage > 0
-        ? ((targetPercentage - actualPercentage) / targetPercentage) * 100
-        : 0;
+      availableCents > 0 ? (varianceCents / availableCents) * 100 : 0;
 
     const status: 'under' | 'on_target' | 'over' =
       variancePercent > BUCKET_VARIANCE_THRESHOLD
@@ -199,6 +205,8 @@ function computeBucketAnalysis(
       actualPercentage,
       targetAmountCents,
       actualAmountCents,
+      rolloverCents,
+      availableCents,
       varianceCents,
       status,
     };

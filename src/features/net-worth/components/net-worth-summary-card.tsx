@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,7 @@ export function NetWorthSummaryCard({
   netWorth,
   className,
 }: NetWorthSummaryCardProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const isPositive = netWorth > 0;
   const isNegative = netWorth < 0;
 
@@ -52,7 +54,7 @@ export function NetWorthSummaryCard({
               isNegative && 'text-red-600 dark:text-red-400',
             )}
           >
-            {formatMoney(netWorth)}
+            {formatMoney(netWorth, { currency: currencyCode })}
           </div>
 
           {/* Asset/Liability Breakdown */}
@@ -60,13 +62,13 @@ export function NetWorthSummaryCard({
             <div>
               <p className="text-muted-foreground text-sm">Total Assets</p>
               <p className="text-lg font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                {formatMoney(totalAssets)}
+                {formatMoney(totalAssets, { currency: currencyCode })}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground text-sm">Total Liabilities</p>
               <p className="text-lg font-semibold tabular-nums text-red-600 dark:text-red-400">
-                {formatMoney(totalLiabilities)}
+                {formatMoney(totalLiabilities, { currency: currencyCode })}
               </p>
             </div>
           </div>

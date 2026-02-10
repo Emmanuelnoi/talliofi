@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { useAllPlans, useSwitchPlan } from '@/hooks/use-active-plan';
-import { BUDGET_TEMPLATES } from '@/lib/budget-templates';
 import type { BudgetTemplate } from '@/lib/budget-templates';
 import { Button } from '@/components/ui/button';
 import {
@@ -69,7 +68,10 @@ interface CreatePlanDialogProps {
  * Dialog for creating a new budget plan.
  * Supports creating an empty plan or duplicating an existing one.
  */
-export function CreatePlanDialog({ open, onOpenChange }: CreatePlanDialogProps) {
+export function CreatePlanDialog({
+  open,
+  onOpenChange,
+}: CreatePlanDialogProps) {
   const { data: allPlans = [] } = useAllPlans();
   const { createPlan, duplicatePlan } = usePlanMutations();
   const switchPlan = useSwitchPlan();
@@ -86,7 +88,9 @@ export function CreatePlanDialog({ open, onOpenChange }: CreatePlanDialogProps) 
     },
   });
 
-  const mode = form.watch('mode');
+  const mode = useWatch({ control: form.control, name: 'mode' }) ?? 'empty';
+  const sourcePlanId =
+    useWatch({ control: form.control, name: 'sourcePlanId' }) ?? '';
   const isSubmitting = createPlan.isPending || duplicatePlan.isPending;
 
   const handleSelectTemplate = (template: BudgetTemplate | null) => {
@@ -209,7 +213,7 @@ export function CreatePlanDialog({ open, onOpenChange }: CreatePlanDialogProps) 
             <div className="space-y-2">
               <Label htmlFor="source-plan">Copy From</Label>
               <Select
-                value={form.watch('sourcePlanId')}
+                value={sourcePlanId}
                 onValueChange={(value) => form.setValue('sourcePlanId', value)}
               >
                 <SelectTrigger id="source-plan">

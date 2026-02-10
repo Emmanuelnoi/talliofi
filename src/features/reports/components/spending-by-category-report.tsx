@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { PieChart, Pie, Cell } from 'recharts';
 import {
   Download,
@@ -7,8 +7,10 @@ import {
   Loader2,
   PieChart as PieChartIcon,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { centsToDollars, formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,7 +57,17 @@ const CATEGORY_COLORS: string[] = [
 export function SpendingByCategoryReport({
   report,
 }: SpendingByCategoryReportProps) {
+  const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
+
+  /** Navigate to expenses page filtered by the clicked category. */
+  const handleCategoryClick = useCallback(
+    (category: string) => {
+      void navigate(`/expenses?categories=${encodeURIComponent(category)}`);
+    },
+    [navigate],
+  );
 
   const chartData = useMemo(() => {
     if (!report) return [];
@@ -85,11 +97,11 @@ export function SpendingByCategoryReport({
 
     try {
       if (format === 'csv') {
-        const csv = exportSpendingByCategoryCSV(report);
+        const csv = exportSpendingByCategoryCSV(report, currencyCode);
         downloadReportCSV(csv, 'spending-by-category');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportSpendingByCategoryPDF(report);
+        const blob = exportSpendingByCategoryPDF(report, currencyCode);
         downloadReportPDF(blob, 'spending-by-category');
         toast.success('PDF exported successfully');
       }
@@ -117,7 +129,14 @@ export function SpendingByCategoryReport({
     );
   }
 
-  const ariaLabel = `Spending by category pie chart: ${report.data.map((d) => `${d.label} ${formatMoney(d.totalCents)}`).join(', ')}`;
+  const ariaLabel = `Spending by category pie chart: ${report.data
+    .map(
+      (d) =>
+        `${d.label} ${formatMoney(d.totalCents, {
+          currency: currencyCode,
+        })}`,
+    )
+    .join(', ')}`;
 
   return (
     <Card className="print:shadow-none print:break-inside-avoid">
@@ -125,7 +144,7 @@ export function SpendingByCategoryReport({
         <div>
           <CardTitle>Spending by Category</CardTitle>
           <p className="text-muted-foreground text-sm">
-            Total: {formatMoney(report.totalCents)}
+            Total: {formatMoney(report.totalCents, { currency: currencyCode })}
           </p>
         </div>
         <DropdownMenu>
@@ -174,8 +193,13 @@ export function SpendingByCategoryReport({
                     <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
                       <p className="mb-1 font-medium">{data.name}</p>
                       <p className="text-muted-foreground">
-                        {formatMoney(data.totalCents)} (
-                        {data.percentage.toFixed(1)}%)
+                        {formatMoney(data.totalCents, {
+                          currency: currencyCode,
+                        })}{' '}
+                        ({data.percentage.toFixed(1)}%)
+                      </p>
+                      <p className="text-muted-foreground mt-1 italic">
+                        Click to filter expenses
                       </p>
                     </div>
                   );
@@ -187,9 +211,31 @@ export function SpendingByCategoryReport({
                 nameKey="name"
                 innerRadius={50}
                 strokeWidth={2}
+                className="cursor-pointer"
+                onClick={(_: unknown, index: number) => {
+                  const item = report.data[index];
+                  if (item) handleCategoryClick(item.category);
+                }}
               >
-                {chartData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.fill} />
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={entry.fill}
+                    className="cursor-pointer outline-none transition-opacity hover:opacity-80"
+                    role="button"
+                    aria-label={`${entry.name}: ${formatMoney(
+                      entry.totalCents,
+                      { currency: currencyCode },
+                    )} (${entry.percentage.toFixed(1)}%). Click to filter expenses.`}
+                    tabIndex={0}
+                    onKeyDown={(e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const item = report.data[index];
+                        if (item) handleCategoryClick(item.category);
+                      }
+                    }}
+                  />
                 ))}
               </Pie>
             </PieChart>
@@ -200,9 +246,14 @@ export function SpendingByCategoryReport({
             <h4 className="text-sm font-medium">Breakdown</h4>
             <div className="space-y-1">
               {report.data.map((item, index) => (
-                <div
+                <button
+                  type="button"
                   key={item.category}
-                  className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
+                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/50 transition-colors text-left"
+                  onClick={() => handleCategoryClick(item.category)}
+                  aria-label={`${item.label}: ${formatMoney(item.totalCents, {
+                    currency: currencyCode,
+                  })} (${item.percentage.toFixed(1)}%). Click to filter expenses by this category.`}
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -220,13 +271,15 @@ export function SpendingByCategoryReport({
                   </div>
                   <div className="text-right tabular-nums">
                     <span className="font-medium">
-                      {formatMoney(item.totalCents)}
+                      {formatMoney(item.totalCents, {
+                        currency: currencyCode,
+                      })}
                     </span>
                     <span className="text-muted-foreground ml-2 text-xs">
                       {item.percentage.toFixed(1)}%
                     </span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -237,7 +290,8 @@ export function SpendingByCategoryReport({
           <ul>
             {report.data.map((d) => (
               <li key={d.category}>
-                {d.label}: {formatMoney(d.totalCents)} (
+                {d.label}:{' '}
+                {formatMoney(d.totalCents, { currency: currencyCode })} (
                 {d.percentage.toFixed(1)}%)
               </li>
             ))}

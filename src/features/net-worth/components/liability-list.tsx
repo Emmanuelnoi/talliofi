@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import { LiabilityFormSchema } from '@/domain/plan/schemas';
 import { dollarsToCents, centsToDollars, formatMoney } from '@/domain/money';
 import type { Liability, LiabilityCategory } from '@/domain/plan';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { EmptyState } from '@/components/feedback/empty-state';
 import { MoneyInput } from '@/components/forms/money-input';
 import { Label } from '@/components/ui/label';
@@ -80,6 +81,7 @@ export function LiabilityList({
   const [deletingLiability, setDeletingLiability] = useState<Liability | null>(
     null,
   );
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const handleOpenAdd = useCallback(() => {
     setEditingLiability(null);
@@ -221,7 +223,9 @@ export function LiabilityList({
                                 )}
                                 <span>
                                   Min:{' '}
-                                  {formatMoney(liability.minimumPaymentCents)}
+                                  {formatMoney(liability.minimumPaymentCents, {
+                                    currency: currencyCode,
+                                  })}
                                 </span>
                               </>
                             )}
@@ -229,7 +233,9 @@ export function LiabilityList({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold tabular-nums text-red-600 dark:text-red-400">
-                            {formatMoney(liability.balanceCents)}
+                            {formatMoney(liability.balanceCents, {
+                              currency: currencyCode,
+                            })}
                           </span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

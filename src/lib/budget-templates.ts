@@ -46,6 +46,7 @@ export function templateBucketsToFormData(
     color: bucket.color,
     mode: 'percentage' as const,
     targetPercentage: bucket.targetPercentage,
+    rolloverEnabled: false,
   }));
 }
 
@@ -60,8 +61,7 @@ export function templateBucketsToFormData(
 export const FIFTY_THIRTY_TWENTY_TEMPLATE: BudgetTemplate = {
   id: 'fifty-thirty-twenty',
   name: '50/30/20 Rule',
-  description:
-    'The classic budgeting rule: 50% needs, 30% wants, 20% savings.',
+  description: 'The classic budgeting rule: 50% needs, 30% wants, 20% savings.',
   details:
     'Popularized by Senator Elizabeth Warren, this simple framework helps you balance essential spending with discretionary purchases while prioritizing your financial future.',
   buckets: [
@@ -187,6 +187,9 @@ export function getTemplateById(id: string): BudgetTemplate | undefined {
  * @returns True if allocations sum to 100%
  */
 export function validateTemplateAllocation(template: BudgetTemplate): boolean {
-  const total = template.buckets.reduce((sum, b) => sum + b.targetPercentage, 0);
+  const total = template.buckets.reduce(
+    (sum, b) => sum + b.targetPercentage,
+    0,
+  );
   return total === 100;
 }

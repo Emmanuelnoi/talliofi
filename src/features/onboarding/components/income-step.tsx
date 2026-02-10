@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IncomeInputSchema } from '@/domain/plan/schemas';
 import { Button } from '@/components/ui/button';
@@ -42,14 +42,15 @@ export function IncomeStep({ onNext }: IncomeStepProps) {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<IncomeFormData>({
     resolver: zodResolver(IncomeInputSchema),
     defaultValues: storedIncome,
   });
 
-  const selectedFrequency = watch('incomeFrequency');
+  const selectedFrequency =
+    useWatch({ control, name: 'incomeFrequency' }) ?? 'monthly';
 
   const onSubmit = (data: IncomeFormData) => {
     setIncome(data);

@@ -92,6 +92,39 @@ export const supabasePlanRepo = {
     const { error } = await client.from('plans').delete().eq('id', id);
     if (error) throw new Error(`Failed to delete plan: ${error.message}`);
   },
+
+  setActivePlanId(planId: string): void {
+    void planId;
+    // No-op for Supabase — active plan is determined server-side
+  },
+
+  async getAll(): Promise<Plan[]> {
+    const client = assertClient();
+    const { data, error } = await client
+      .from('plans')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(`Failed to fetch plans: ${error.message}`);
+    return (data ?? []).map((row) => toCamel<Plan>(row));
+  },
+
+  async duplicate(planId: string, newName: string): Promise<Plan> {
+    const plan = await supabasePlanRepo.getById(planId);
+    if (!plan) throw new Error(`Plan not found: ${planId}`);
+
+    const now = new Date().toISOString();
+    const newPlan: Plan = {
+      ...plan,
+      id: crypto.randomUUID(),
+      name: newName,
+      createdAt: now,
+      updatedAt: now,
+      version: 0,
+    };
+
+    await supabasePlanRepo.create(newPlan);
+    return newPlan;
+  },
 };
 
 // --- Bucket ---
@@ -216,10 +249,36 @@ export const supabaseExpenseRepo = {
     return expense;
   },
 
+  async bulkUpdate(expenses: ExpenseItem[]): Promise<ExpenseItem[]> {
+    if (expenses.length === 0) return [];
+    const client = assertClient();
+    const now = new Date().toISOString();
+    const updates = expenses.map((expense) => ({
+      ...expense,
+      updatedAt: now,
+    }));
+    const { error } = await client.from('expenses').upsert(
+      updates.map((expense) => toSnake(expense)),
+      {
+        onConflict: 'id',
+      },
+    );
+    if (error)
+      throw new Error(`Failed to bulk update expenses: ${error.message}`);
+    return updates;
+  },
+
   async delete(id: string): Promise<void> {
     const client = assertClient();
     const { error } = await client.from('expenses').delete().eq('id', id);
     if (error) throw new Error(`Failed to delete expense: ${error.message}`);
+  },
+
+  async bulkDelete(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const client = assertClient();
+    const { error } = await client.from('expenses').delete().in('id', ids);
+    if (error) throw new Error(`Failed to delete expenses: ${error.message}`);
   },
 
   async deleteByPlanId(planId: string): Promise<void> {

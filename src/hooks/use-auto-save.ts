@@ -16,6 +16,8 @@ interface UseAutoSaveOptions<T> {
 interface UseAutoSaveReturn {
   status: AutoSaveStatus;
   error: Error | null;
+  /** Immediately flush any pending save (e.g. triggered by Cmd+S) */
+  saveNow: () => void;
 }
 
 /**
@@ -129,5 +131,58 @@ export function useAutoSave<T>({
     };
   }, []);
 
-  return { status, error };
+  // Keep a ref to the latest data so saveNow always uses current values
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  const enabledRef = useRef(enabled);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  /**
+   * Immediately flush any pending debounced save.
+   * If there is no pending change, triggers a save with the current data.
+   */
+  const saveNow = useCallback(() => {
+    if (!enabledRef.current) return;
+
+    // Clear the debounce timer since we're saving immediately
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (savedTimerRef.current) {
+      clearTimeout(savedTimerRef.current);
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // Update the previous data ref so the debounce effect doesn't re-fire
+    previousDataRef.current = JSON.stringify(dataRef.current);
+
+    void performSave(dataRef.current, controller.signal);
+  }, [performSave]);
+
+  // Listen for global app:save event (dispatched by Cmd+S shortcut)
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleAppSave = () => {
+      saveNow();
+    };
+
+    document.addEventListener('app:save', handleAppSave);
+    return () => {
+      document.removeEventListener('app:save', handleAppSave);
+    };
+  }, [enabled, saveNow]);
+
+  return { status, error, saveNow };
 }

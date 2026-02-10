@@ -6,8 +6,16 @@ import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useActivePlan } from '@/hooks/use-active-plan';
-import { useBuckets, useExpenses, useTaxComponents } from '@/hooks/use-plan-data';
+import {
+  useBuckets,
+  useExpenses,
+  useTaxComponents,
+} from '@/hooks/use-plan-data';
+import { useExchangeRates } from '@/hooks/use-plan-data';
+import { useSnapshots } from '@/hooks/use-snapshots';
 import type { DateRange, DateRangePreset } from '../types';
 import { useReportData } from '../hooks/use-report-data';
 import { getDateRangeFromPreset } from '../utils/report-calculations';
@@ -35,19 +43,28 @@ export default function ReportsPage() {
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses(
     plan?.id,
   );
-  const { data: buckets = [], isLoading: bucketsLoading } = useBuckets(plan?.id);
+  const { data: buckets = [], isLoading: bucketsLoading } = useBuckets(
+    plan?.id,
+  );
   const { data: taxComponents = [], isLoading: taxLoading } = useTaxComponents(
     plan?.id,
   );
+  const { data: snapshots = [], isLoading: snapshotsLoading } = useSnapshots(
+    plan?.id,
+  );
+  const { data: exchangeRates, isLoading: exchangeRatesLoading } =
+    useExchangeRates(plan?.id);
 
   // URL-based filter state
   const [filters, setFilters] = useQueryStates({
     preset: parseAsString.withDefault('last_3_months'),
     start: parseAsString.withDefault(''),
     end: parseAsString.withDefault(''),
+    includeRollover: parseAsString.withDefault('true'),
   });
 
   const preset = filters.preset as DateRangePreset;
+  const includeRollover = filters.includeRollover === 'true';
 
   // Calculate effective date range
   const dateRange = useMemo((): DateRange => {
@@ -66,6 +83,9 @@ export default function ReportsPage() {
     taxComponents,
     expenses,
     buckets,
+    snapshots,
+    exchangeRates: exchangeRates ?? undefined,
+    includeRollover,
     dateRange,
   });
 
@@ -97,7 +117,12 @@ export default function ReportsPage() {
   }, []);
 
   const isLoading =
-    planLoading || expensesLoading || bucketsLoading || taxLoading;
+    planLoading ||
+    expensesLoading ||
+    bucketsLoading ||
+    taxLoading ||
+    snapshotsLoading ||
+    exchangeRatesLoading;
 
   if (isLoading) {
     return <ReportsSkeleton />;
@@ -151,6 +176,26 @@ export default function ReportsPage() {
             onCustomStartChange={handleCustomStartChange}
             onCustomEndChange={handleCustomEndChange}
           />
+          <div className="mt-4 flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="include-rollover" className="font-medium">
+                Include rollover
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Adds unused budget from the prior month to each bucket’s
+                available amount.
+              </p>
+            </div>
+            <Switch
+              id="include-rollover"
+              checked={includeRollover}
+              onCheckedChange={(checked) => {
+                void setFilters({
+                  includeRollover: checked ? 'true' : 'false',
+                });
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
 

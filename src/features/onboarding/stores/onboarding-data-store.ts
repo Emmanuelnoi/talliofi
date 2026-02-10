@@ -26,18 +26,21 @@ const DEFAULT_BUCKETS: BucketFormData[] = [
     color: '#4A90D9',
     mode: 'percentage',
     targetPercentage: 50,
+    rolloverEnabled: false,
   },
   {
     name: 'Wants',
     color: '#50C878',
     mode: 'percentage',
     targetPercentage: 30,
+    rolloverEnabled: false,
   },
   {
     name: 'Savings',
     color: '#FFB347',
     mode: 'percentage',
     targetPercentage: 20,
+    rolloverEnabled: false,
   },
 ];
 

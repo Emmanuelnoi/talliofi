@@ -40,23 +40,10 @@ interface QuickAddFabProps {
  */
 export function QuickAddFab({ className }: QuickAddFabProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const isMobile = useIsMobile();
   const prefersReducedMotion = useReducedMotion();
   const fabRef = useRef<HTMLButtonElement>(null);
   const wasOpenRef = useRef(false);
-
-  // Entrance animation on mount (skip if user prefers reduced motion)
-  useEffect(() => {
-    if (prefersReducedMotion) {
-      setIsVisible(true);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [prefersReducedMotion]);
 
   // Open with Cmd+N / Ctrl+N
   useKeyboardShortcut({
@@ -111,8 +98,8 @@ export function QuickAddFab({ className }: QuickAddFabProps) {
           // Desktop: lower position
           'md:bottom-6 md:right-6',
           // Entrance animation (disabled if user prefers reduced motion)
-          !prefersReducedMotion && 'transition-all duration-300 ease-out',
-          isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0',
+          'motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300',
+          'motion-reduce:animate-none',
           className,
         )}
       >
@@ -159,11 +146,10 @@ export function QuickAddFab({ className }: QuickAddFabProps) {
         <SheetContent
           side={isMobile ? 'bottom' : 'right'}
           className={cn(isMobile && 'h-auto max-h-[90vh] rounded-t-xl')}
-          aria-describedby="quick-add-description"
         >
           <SheetHeader>
             <SheetTitle>Quick add expense</SheetTitle>
-            <SheetDescription id="quick-add-description">
+            <SheetDescription>
               Add a new expense quickly. Press Escape to cancel.
             </SheetDescription>
           </SheetHeader>

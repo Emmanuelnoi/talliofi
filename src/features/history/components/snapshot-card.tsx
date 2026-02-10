@@ -1,6 +1,7 @@
 import type { MonthlySnapshot } from '@/domain/plan/types';
-import type { Cents } from '@/domain/money';
+import type { Cents, CurrencyCode } from '@/domain/money';
 import { formatMoney, subtractMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,9 +22,11 @@ function formatYearMonth(yearMonth: string): string {
 function DeltaBadge({
   current,
   previous,
+  currencyCode,
 }: {
   current: Cents;
   previous: Cents;
+  currencyCode: CurrencyCode;
 }) {
   const delta = subtractMoney(current, previous);
 
@@ -40,7 +43,7 @@ function DeltaBadge({
       )}
     >
       <Icon className="size-3" aria-hidden="true" />
-      {formatMoney(Math.abs(delta) as Cents)}
+      {formatMoney(Math.abs(delta) as Cents, { currency: currencyCode })}
     </span>
   );
 }
@@ -49,6 +52,7 @@ export function SnapshotCard({
   snapshot,
   previousSnapshot,
 }: SnapshotCardProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const surplus = subtractMoney(
     snapshot.netIncomeCents,
     snapshot.totalExpensesCents,
@@ -68,12 +72,15 @@ export function SnapshotCard({
             <span className="text-muted-foreground text-sm">Net Income</span>
             <div className="flex items-center gap-2">
               <span className="money text-sm font-medium">
-                {formatMoney(snapshot.netIncomeCents)}
+                {formatMoney(snapshot.netIncomeCents, {
+                  currency: currencyCode,
+                })}
               </span>
               {previousSnapshot && (
                 <DeltaBadge
                   current={snapshot.netIncomeCents}
                   previous={previousSnapshot.netIncomeCents}
+                  currencyCode={currencyCode}
                 />
               )}
             </div>
@@ -83,12 +90,15 @@ export function SnapshotCard({
             <span className="text-muted-foreground text-sm">Expenses</span>
             <div className="flex items-center gap-2">
               <span className="money text-sm font-medium">
-                {formatMoney(snapshot.totalExpensesCents)}
+                {formatMoney(snapshot.totalExpensesCents, {
+                  currency: currencyCode,
+                })}
               </span>
               {previousSnapshot && (
                 <DeltaBadge
                   current={snapshot.totalExpensesCents}
                   previous={previousSnapshot.totalExpensesCents}
+                  currencyCode={currencyCode}
                 />
               )}
             </div>
@@ -107,7 +117,7 @@ export function SnapshotCard({
                   isSurplus ? 'text-[var(--surplus)]' : 'text-[var(--deficit)]',
                 )}
               >
-                {formatMoney(surplus)}
+                {formatMoney(surplus, { currency: currencyCode })}
               </span>
               {previousSnapshot && (
                 <DeltaBadge
@@ -116,6 +126,7 @@ export function SnapshotCard({
                     previousSnapshot.netIncomeCents,
                     previousSnapshot.totalExpensesCents,
                   )}
+                  currencyCode={currencyCode}
                 />
               )}
             </div>

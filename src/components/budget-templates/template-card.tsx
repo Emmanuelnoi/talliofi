@@ -1,7 +1,12 @@
 import { Check } from 'lucide-react';
 import type { BudgetTemplate } from '@/lib/budget-templates';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from '@/components/ui/card';
 
 interface TemplateCardProps {
   /** The budget template to display */

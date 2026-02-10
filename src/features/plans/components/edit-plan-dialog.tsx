@@ -78,7 +78,9 @@ export function EditPlanDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Plan</DialogTitle>
-          <DialogDescription>Change the name of this budget plan.</DialogDescription>
+          <DialogDescription>
+            Change the name of this budget plan.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

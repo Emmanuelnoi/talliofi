@@ -23,16 +23,21 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { clearAllData } from '@/data/db';
+import { useEncryptionStore } from '@/stores/encryption-store';
 
 export function DangerZone() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const setEncryptionEnabled = useEncryptionStore((s) => s.setEnabled);
+  const setEncryptionPassword = useEncryptionStore((s) => s.setPassword);
   const [isClearing, setIsClearing] = useState(false);
 
   async function handleClearAllData() {
     setIsClearing(true);
     try {
       await clearAllData();
+      setEncryptionEnabled(false);
+      setEncryptionPassword(null);
       queryClient.clear();
       await queryClient.invalidateQueries();
       toast.success('All data has been cleared.');

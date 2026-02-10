@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import {
   Download,
@@ -7,9 +7,12 @@ import {
   Loader2,
   TrendingUp,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import type { Cents } from '@/domain/money';
 import { centsToDollars, formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +44,9 @@ interface CategoryTrendsReportProps {
 const MAX_CHART_CATEGORIES = 6;
 
 export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
+  const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   // Transform data for recharts (needs one object per month with all categories as properties)
   const chartData = useMemo(() => {
@@ -77,17 +82,29 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
     return config;
   }, [report]);
 
+  const handleCategoryClick = useCallback(
+    (category: string) => {
+      if (!report) return;
+      const dateFrom = format(report.dateRange.start, 'yyyy-MM-dd');
+      const dateTo = format(report.dateRange.end, 'yyyy-MM-dd');
+      void navigate(
+        `/expenses?categories=${encodeURIComponent(category)}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+      );
+    },
+    [navigate, report],
+  );
+
   const handleExport = async (format: 'csv' | 'pdf') => {
     if (!report) return;
     setExporting(format);
 
     try {
       if (format === 'csv') {
-        const csv = exportCategoryTrendsCSV(report);
+        const csv = exportCategoryTrendsCSV(report, currencyCode);
         downloadReportCSV(csv, 'category-trends');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportCategoryTrendsPDF(report);
+        const blob = exportCategoryTrendsPDF(report, currencyCode);
         downloadReportPDF(blob, 'category-trends');
         toast.success('PDF exported successfully');
       }
@@ -174,7 +191,9 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) =>
-                formatMoney(Math.round(value * 100) as Cents)
+                formatMoney(Math.round(value * 100) as Cents, {
+                  currency: currencyCode,
+                })
               }
             />
             <ChartTooltip
@@ -183,7 +202,9 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
                   formatter={(value) => {
                     const dollars =
                       typeof value === 'number' ? value : Number(value);
-                    return formatMoney(Math.round(dollars * 100) as Cents);
+                    return formatMoney(Math.round(dollars * 100) as Cents, {
+                      currency: currencyCode,
+                    });
                   }}
                 />
               }
@@ -199,6 +220,7 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
+                onClick={() => handleCategoryClick(trend.category)}
               />
             ))}
           </LineChart>
@@ -216,9 +238,15 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
               const avg = total / trend.dataPoints.length;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={trend.category}
-                  className="flex items-center gap-3 rounded-lg border p-3"
+                  className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/40"
+                  onClick={() => handleCategoryClick(trend.category)}
+                  aria-label={`${trend.label} average ${formatMoney(
+                    Math.round(avg) as Cents,
+                    { currency: currencyCode },
+                  )} per month. Click to filter expenses.`}
                 >
                   <span
                     className="size-3 shrink-0 rounded-full"
@@ -226,12 +254,18 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{trend.label}</p>
+                    <p className="truncate text-sm font-medium">
+                      {trend.label}
+                    </p>
                     <p className="text-muted-foreground text-xs">
-                      Avg: {formatMoney(Math.round(avg) as Cents)}/mo
+                      Avg:{' '}
+                      {formatMoney(Math.round(avg) as Cents, {
+                        currency: currencyCode,
+                      })}
+                      /mo
                     </p>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

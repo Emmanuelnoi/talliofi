@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import type { ExpenseItem, BucketAllocation, Plan, TaxComponent } from '@/domain/plan';
+import { describe, it, expect } from 'vitest';
+import type {
+  ExpenseItem,
+  BucketAllocation,
+  Plan,
+  TaxComponent,
+} from '@/domain/plan';
 import { cents, type Cents } from '@/domain/money';
 import {
   getDateRangeFromPreset,
@@ -299,6 +304,28 @@ describe('report-calculations', () => {
       expect(report.overallAdherencePercent).toBeGreaterThan(0);
       expect(report.overallAdherencePercent).toBeLessThanOrEqual(100);
     });
+
+    it('includes rollover amounts when enabled', () => {
+      const rolloverBuckets: BucketAllocation[] = [
+        { ...mockBuckets[0], rolloverEnabled: true },
+        ...mockBuckets.slice(1),
+      ];
+      const rolloverMap = new Map<string, Cents>([
+        ['bucket-1', cents(50000) as Cents],
+      ]);
+
+      const report = calculateBudgetAdherence(
+        rolloverBuckets,
+        mockExpenses,
+        netMonthlyIncome,
+        dateRange,
+        rolloverMap,
+      );
+
+      const essentials = report.data.find((d) => d.bucketId === 'bucket-1');
+      // Base target: 50% of $4,500 = $2,250. Rollover adds $500.
+      expect(essentials?.targetCents).toBe(275000);
+    });
   });
 
   describe('calculateCategoryTrends', () => {
@@ -338,7 +365,12 @@ describe('report-calculations', () => {
     };
 
     it('returns top expenses sorted by monthly amount', () => {
-      const report = calculateTopExpenses(mockExpenses, mockBuckets, dateRange, 10);
+      const report = calculateTopExpenses(
+        mockExpenses,
+        mockBuckets,
+        dateRange,
+        10,
+      );
 
       expect(report.type).toBe('top_expenses');
       expect(report.data.length).toBeLessThanOrEqual(10);
@@ -347,19 +379,34 @@ describe('report-calculations', () => {
     });
 
     it('includes bucket information', () => {
-      const report = calculateTopExpenses(mockExpenses, mockBuckets, dateRange, 10);
+      const report = calculateTopExpenses(
+        mockExpenses,
+        mockBuckets,
+        dateRange,
+        10,
+      );
 
       const rentExpense = report.data.find((d) => d.expense.name === 'Rent');
       expect(rentExpense?.bucket?.name).toBe('Essentials');
     });
 
     it('respects the limit parameter', () => {
-      const report = calculateTopExpenses(mockExpenses, mockBuckets, dateRange, 1);
+      const report = calculateTopExpenses(
+        mockExpenses,
+        mockBuckets,
+        dateRange,
+        1,
+      );
       expect(report.data).toHaveLength(1);
     });
 
     it('calculates total correctly', () => {
-      const report = calculateTopExpenses(mockExpenses, mockBuckets, dateRange, 10);
+      const report = calculateTopExpenses(
+        mockExpenses,
+        mockBuckets,
+        dateRange,
+        10,
+      );
 
       const expectedTotal = report.data.reduce(
         (sum, d) => sum + d.monthlyAmountCents,

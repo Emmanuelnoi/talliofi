@@ -21,7 +21,7 @@ export function createMonthlySnapshot(
     bucketSummaries: summary.bucketAnalysis.map((b) => ({
       bucketId: b.bucketId,
       bucketName: b.bucketName,
-      allocatedCents: b.targetAmountCents,
+      allocatedCents: b.availableCents,
       spentCents: b.actualAmountCents,
       remainingCents: b.varianceCents,
     })),

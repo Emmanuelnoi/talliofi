@@ -79,7 +79,9 @@ export function DeletePlanDialog({
                   <li>Net worth records</li>
                   <li>Historical snapshots</li>
                 </ul>
-                <p className="mt-2 font-medium">This action cannot be undone.</p>
+                <p className="mt-2 font-medium">
+                  This action cannot be undone.
+                </p>
               </>
             )}
           </AlertDialogDescription>

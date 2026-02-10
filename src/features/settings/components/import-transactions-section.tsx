@@ -51,9 +51,10 @@ import {
 
 import { useActivePlan } from '@/hooks/use-active-plan';
 import { useBuckets, useExpenses } from '@/hooks/use-plan-data';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { expenseRepo } from '@/data/repos/expense-repo';
-import { formatMoney, cents } from '@/domain/money';
-import type { Cents } from '@/domain/money';
+import { DEFAULT_CURRENCY, formatMoney, cents } from '@/domain/money';
+import type { Cents, CurrencyCode } from '@/domain/money';
 import type { ExpenseCategory, BucketAllocation } from '@/domain/plan/types';
 
 import {
@@ -471,6 +472,7 @@ function CsvConfiguration({
 interface TransactionPreviewTableProps {
   transactions: ImportableTransaction[];
   buckets: BucketAllocation[];
+  currencyCode: CurrencyCode;
   onTransactionUpdate: (
     index: number,
     updates: Partial<ImportableTransaction>,
@@ -481,6 +483,7 @@ interface TransactionPreviewTableProps {
 function TransactionPreviewTable({
   transactions,
   buckets,
+  currencyCode,
   onTransactionUpdate,
   onSelectAll,
 }: TransactionPreviewTableProps) {
@@ -557,7 +560,9 @@ function TransactionPreviewTable({
                 </td>
                 <td className="whitespace-nowrap p-2 text-right font-medium">
                   {tx.isExpense ? '-' : '+'}
-                  {formatMoney(tx.amountCents as Cents)}
+                  {formatMoney(tx.amountCents as Cents, {
+                    currency: currencyCode,
+                  })}
                 </td>
                 <td className="p-2">
                   <Select
@@ -654,9 +659,10 @@ function TransactionPreviewTable({
 
 interface ImportSummaryProps {
   preview: ImportPreview;
+  currencyCode: CurrencyCode;
 }
 
-function ImportSummary({ preview }: ImportSummaryProps) {
+function ImportSummary({ preview, currencyCode }: ImportSummaryProps) {
   const selectedCount = preview.transactions.filter((t) => t.selected).length;
   const totalAmount = preview.transactions
     .filter((t) => t.selected)
@@ -676,7 +682,7 @@ function ImportSummary({ preview }: ImportSummaryProps) {
         <div>
           <p className="text-xs text-muted-foreground">Total Amount</p>
           <p className="text-lg font-semibold">
-            {formatMoney(cents(totalAmount))}
+            {formatMoney(cents(totalAmount), { currency: currencyCode })}
           </p>
         </div>
         <div>
@@ -698,11 +704,13 @@ function ImportSummary({ preview }: ImportSummaryProps) {
 
 export function ImportTransactionsSection() {
   const queryClient = useQueryClient();
+  const { scheduleVaultSave } = useLocalEncryption();
   const { data: plan } = useActivePlan();
   const { data: buckets = [] } = useBuckets(plan?.id);
   const { data: existingExpenses = [] } = useExpenses(plan?.id);
 
   const defaultBucketId = buckets[0]?.id ?? '';
+  const planCurrency = plan?.currencyCode ?? DEFAULT_CURRENCY;
 
   const [state, setState] = useState<ImportState>(() =>
     getInitialState(defaultBucketId),
@@ -912,6 +920,7 @@ export function ImportTransactionsSection() {
       const expenseItems = convertToExpenseItems(selectedTransactions, {
         planId: plan.id,
         defaultBucketId: state.selectedBucketId || defaultBucketId,
+        currencyCode: planCurrency,
       });
 
       // Import one by one to handle potential errors
@@ -923,6 +932,7 @@ export function ImportTransactionsSection() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      scheduleVaultSave();
 
       setState((s) => ({
         ...s,
@@ -943,6 +953,8 @@ export function ImportTransactionsSection() {
     plan,
     defaultBucketId,
     queryClient,
+    scheduleVaultSave,
+    planCurrency,
   ]);
 
   // --------------------------------
@@ -1092,11 +1104,15 @@ export function ImportTransactionsSection() {
               </Select>
             </div>
 
-            <ImportSummary preview={state.preview} />
+            <ImportSummary
+              preview={state.preview}
+              currencyCode={planCurrency}
+            />
 
             <TransactionPreviewTable
               transactions={state.preview.transactions}
               buckets={buckets}
+              currencyCode={planCurrency}
               onTransactionUpdate={handleTransactionUpdate}
               onSelectAll={handleSelectAll}
             />

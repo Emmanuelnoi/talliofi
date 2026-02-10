@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-import { beforeEach } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 import { clearAllData } from '@/data/db';
+import { Blob as NodeBlob } from 'node:buffer';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 
 // Recharts' ResponsiveContainer relies on ResizeObserver, which jsdom lacks
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -28,6 +31,46 @@ if (typeof window.matchMedia === 'undefined') {
     }),
   });
 }
+
+if (typeof globalThis.Blob === 'undefined') {
+  globalThis.Blob = NodeBlob as unknown as typeof Blob;
+} else if (typeof globalThis.Blob.prototype.arrayBuffer !== 'function') {
+  globalThis.Blob = NodeBlob as unknown as typeof Blob;
+}
+
+vi.mock('recharts', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('recharts');
+  const fallbackWidth = 800;
+  const fallbackHeight = 400;
+
+  return {
+    ...actual,
+    ResponsiveContainer: ({
+      width,
+      height,
+      children,
+    }: {
+      width?: number | string;
+      height?: number | string;
+      children:
+        | ReactNode
+        | ((size: { width: number; height: number }) => ReactNode);
+    }) => {
+      const resolvedWidth = typeof width === 'number' ? width : fallbackWidth;
+      const resolvedHeight =
+        typeof height === 'number' ? height : fallbackHeight;
+      const content =
+        typeof children === 'function'
+          ? children({ width: resolvedWidth, height: resolvedHeight })
+          : children;
+      return createElement(
+        'div',
+        { style: { width: resolvedWidth, height: resolvedHeight } },
+        content,
+      );
+    },
+  };
+});
 
 beforeEach(async () => {
   await clearAllData();

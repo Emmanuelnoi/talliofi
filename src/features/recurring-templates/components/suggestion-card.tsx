@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FREQUENCY_LABELS, CATEGORY_LABELS } from '@/lib/constants';
+import { useCurrencyStore } from '@/stores/currency-store';
 
 interface SuggestionCardProps {
   /** The template suggestion to display */
@@ -39,6 +40,8 @@ export function SuggestionCard({
     () => normalizeToMonthly(suggestion.amountCents, suggestion.frequency),
     [suggestion.amountCents, suggestion.frequency],
   );
+  const baseCurrency = useCurrencyStore((s) => s.currencyCode);
+  const suggestionCurrency = suggestion.currencyCode ?? baseCurrency;
 
   const confidencePercent = Math.round(suggestion.confidence * 100);
   const showNormalized = suggestion.frequency !== 'monthly';
@@ -63,7 +66,9 @@ export function SuggestionCard({
           {/* Amount */}
           <div className="shrink-0 text-right">
             <div className="font-medium tabular-nums">
-              {formatMoney(suggestion.amountCents)}
+              {formatMoney(suggestion.amountCents, {
+                currency: suggestionCurrency,
+              })}
               {showNormalized && (
                 <span className="text-muted-foreground text-xs">
                   /
@@ -81,7 +86,8 @@ export function SuggestionCard({
             </div>
             {showNormalized && (
               <div className="text-muted-foreground text-xs tabular-nums">
-                {formatMoney(monthlyAmount)}/mo
+                {formatMoney(monthlyAmount, { currency: suggestionCurrency })}
+                /mo
               </div>
             )}
           </div>

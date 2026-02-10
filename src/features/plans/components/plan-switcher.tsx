@@ -102,7 +102,9 @@ export function PlanSwitcher({ collapsed = false }: PlanSwitcherProps) {
             className="w-full justify-between"
             aria-label="Switch plan"
           >
-            <span className="truncate">{activePlan?.name ?? 'Select plan'}</span>
+            <span className="truncate">
+              {activePlan?.name ?? 'Select plan'}
+            </span>
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>

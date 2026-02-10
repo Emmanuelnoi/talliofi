@@ -2,6 +2,7 @@
  * Money is represented as integer cents to avoid floating-point issues.
  * Branded type prevents accidental mixing with regular numbers.
  */
+import type { CurrencyCode } from './currency';
 export type Cents = number & { readonly __brand: 'Cents' };
 
 export function cents(value: number): Cents {
@@ -21,9 +22,9 @@ export function centsToDollars(amount: Cents): number {
 
 export function formatMoney(
   amount: Cents,
-  options: { locale?: string; currency?: string } = {},
+  options: { locale?: string; currency: CurrencyCode },
 ): string {
-  const { locale = 'en-US', currency = 'USD' } = options;
+  const { locale = 'en-US', currency } = options;
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

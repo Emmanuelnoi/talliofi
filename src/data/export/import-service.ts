@@ -65,6 +65,7 @@ function toBucketAllocation(raw: RawBucket): BucketAllocation {
       raw.targetAmountCents !== undefined
         ? cents(raw.targetAmountCents)
         : undefined,
+    rolloverEnabled: raw.rolloverEnabled ?? false,
     sortOrder: raw.sortOrder,
     createdAt: raw.createdAt,
   };

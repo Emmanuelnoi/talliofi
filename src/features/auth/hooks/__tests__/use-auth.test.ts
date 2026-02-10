@@ -8,6 +8,7 @@ const mockOnAuthStateChange = vi.fn();
 const mockSignInWithPassword = vi.fn();
 const mockSignUp = vi.fn();
 const mockSignOut = vi.fn();
+const mockListFactors = vi.fn();
 
 const mockSubscription = {
   unsubscribe: vi.fn(),
@@ -30,6 +31,9 @@ vi.mock('@/lib/supabase', () => ({
         mockSignInWithPassword(args),
       signUp: (args: { email: string; password: string }) => mockSignUp(args),
       signOut: () => mockSignOut(),
+      mfa: {
+        listFactors: () => mockListFactors(),
+      },
     },
   },
 }));
@@ -167,7 +171,12 @@ describe('useAuth', () => {
 
   describe('signIn', () => {
     it('calls supabase signInWithPassword with correct credentials', async () => {
-      mockSignInWithPassword.mockResolvedValue({ data: {}, error: null });
+      const user = createMockUser();
+      const session = createMockSession(user);
+      mockSignInWithPassword.mockResolvedValue({
+        data: { session },
+        error: null,
+      });
 
       const { result } = renderHook(() => useAuth());
 
@@ -175,14 +184,21 @@ describe('useAuth', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
+      let signInResult:
+        | Awaited<ReturnType<typeof result.current.signIn>>
+        | undefined;
       await act(async () => {
-        await result.current.signIn('user@example.com', 'password123');
+        signInResult = await result.current.signIn(
+          'user@example.com',
+          'password123',
+        );
       });
 
       expect(mockSignInWithPassword).toHaveBeenCalledWith({
         email: 'user@example.com',
         password: 'password123',
       });
+      expect(signInResult).toEqual({ status: 'signed_in' });
     });
 
     it('throws error when sign in fails', async () => {
@@ -203,6 +219,52 @@ describe('useAuth', () => {
           await result.current.signIn('user@example.com', 'wrongpassword');
         }),
       ).rejects.toThrow('Invalid credentials');
+    });
+
+    it('returns MFA required when session is missing', async () => {
+      mockSignInWithPassword.mockResolvedValue({
+        data: { session: null },
+        error: null,
+      });
+      mockListFactors.mockResolvedValue({
+        data: {
+          totp: [
+            {
+              id: 'factor-1',
+              status: 'verified',
+              factorType: 'totp',
+            },
+          ],
+        },
+        error: null,
+      });
+
+      const { result } = renderHook(() => useAuth());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      let signInResult:
+        | Awaited<ReturnType<typeof result.current.signIn>>
+        | undefined;
+      await act(async () => {
+        signInResult = await result.current.signIn(
+          'user@example.com',
+          'password123',
+        );
+      });
+
+      expect(signInResult).toEqual({
+        status: 'mfa_required',
+        factors: [
+          {
+            id: 'factor-1',
+            status: 'verified',
+            factorType: 'totp',
+          },
+        ],
+      });
     });
   });
 

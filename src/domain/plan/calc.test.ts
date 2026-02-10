@@ -465,7 +465,11 @@ describe('computePlanSummary()', () => {
         category: 'groceries',
         isSplit: true,
         splits: [
-          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
+          {
+            bucketId: bucket1,
+            category: 'groceries',
+            amountCents: cents(6000),
+          },
           { bucketId: bucket2, category: 'personal', amountCents: cents(4000) },
         ],
       });
@@ -504,8 +508,16 @@ describe('computePlanSummary()', () => {
         category: 'groceries',
         isSplit: true,
         splits: [
-          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
-          { bucketId: bucket2, category: 'groceries', amountCents: cents(4000) },
+          {
+            bucketId: bucket1,
+            category: 'groceries',
+            amountCents: cents(6000),
+          },
+          {
+            bucketId: bucket2,
+            category: 'groceries',
+            amountCents: cents(4000),
+          },
         ],
       });
 
@@ -552,7 +564,11 @@ describe('computePlanSummary()', () => {
         category: 'groceries',
         isSplit: true,
         splits: [
-          { bucketId: bucket1, category: 'groceries', amountCents: cents(6000) },
+          {
+            bucketId: bucket1,
+            category: 'groceries',
+            amountCents: cents(6000),
+          },
           { bucketId: bucket2, category: 'personal', amountCents: cents(4000) },
         ],
       });
@@ -598,8 +614,16 @@ describe('computePlanSummary()', () => {
         category: 'insurance',
         isSplit: true,
         splits: [
-          { bucketId: bucket1, category: 'insurance', amountCents: cents(80000) },
-          { bucketId: bucket2, category: 'healthcare', amountCents: cents(40000) },
+          {
+            bucketId: bucket1,
+            category: 'insurance',
+            amountCents: cents(80000),
+          },
+          {
+            bucketId: bucket2,
+            category: 'healthcare',
+            amountCents: cents(40000),
+          },
         ],
       });
 

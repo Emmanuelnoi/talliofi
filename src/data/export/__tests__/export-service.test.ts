@@ -757,7 +757,7 @@ describe('exportAsPDF', () => {
 
     expect(allTextContent).toContain('Total Monthly Expenses');
     // $1,500 + $400 = $1,900
-    expect(allTextContent).toContain('$1900.00');
+    expect(allTextContent).toContain('$1,900.00');
   });
 
   it('sets correct font styles throughout the document', async () => {

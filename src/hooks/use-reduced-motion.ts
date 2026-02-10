@@ -43,9 +43,6 @@ export function useReducedMotion(): boolean {
     // Modern browsers use addEventListener
     mediaQuery.addEventListener('change', handleChange);
 
-    // Sync initial value (in case it changed between render and effect)
-    setPrefersReducedMotion(mediaQuery.matches);
-
     return () => {
       mediaQuery.removeEventListener('change', handleChange);
     };

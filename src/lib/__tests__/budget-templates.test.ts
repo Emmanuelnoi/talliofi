@@ -180,18 +180,21 @@ describe('budget-templates', () => {
         color: expect.any(String),
         mode: 'percentage',
         targetPercentage: 50,
+        rolloverEnabled: false,
       });
       expect(formData[1]).toEqual({
         name: 'Wants',
         color: expect.any(String),
         mode: 'percentage',
         targetPercentage: 30,
+        rolloverEnabled: false,
       });
       expect(formData[2]).toEqual({
         name: 'Savings',
         color: expect.any(String),
         mode: 'percentage',
         targetPercentage: 20,
+        rolloverEnabled: false,
       });
     });
 

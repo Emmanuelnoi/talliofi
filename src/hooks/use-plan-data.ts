@@ -7,6 +7,8 @@ import { liabilityRepo } from '@/data/repos/liability-repo';
 import { netWorthSnapshotRepo } from '@/data/repos/net-worth-snapshot-repo';
 import { taxComponentRepo } from '@/data/repos/tax-component-repo';
 import { recurringTemplateRepo } from '@/data/repos/recurring-template-repo';
+import { attachmentRepo } from '@/data/repos/attachment-repo';
+import { exchangeRateRepo } from '@/data/repos/exchange-rate-repo';
 import { PLAN_DATA_STALE_TIME_MS } from '@/lib/constants';
 
 export function useBuckets(planId: string | undefined) {
@@ -76,6 +78,24 @@ export function useRecurringTemplates(planId: string | undefined) {
   return useQuery({
     queryKey: ['recurring-templates', planId],
     queryFn: () => recurringTemplateRepo.getByPlanId(planId!),
+    enabled: !!planId,
+    staleTime: PLAN_DATA_STALE_TIME_MS,
+  });
+}
+
+export function useExpenseAttachments(expenseId: string | undefined) {
+  return useQuery({
+    queryKey: ['expense-attachments', expenseId],
+    queryFn: () => attachmentRepo.getByExpenseId(expenseId!),
+    enabled: !!expenseId,
+    staleTime: PLAN_DATA_STALE_TIME_MS,
+  });
+}
+
+export function useExchangeRates(planId: string | undefined) {
+  return useQuery({
+    queryKey: ['exchange-rates', planId],
+    queryFn: () => exchangeRateRepo.getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });

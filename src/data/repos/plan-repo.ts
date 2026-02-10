@@ -91,23 +91,27 @@ export const planRepo = {
           db.buckets,
           db.taxComponents,
           db.expenses,
+          db.attachments,
           db.goals,
           db.assets,
           db.liabilities,
           db.snapshots,
           db.netWorthSnapshots,
           db.recurringTemplates,
+          db.exchangeRates,
         ],
         async () => {
           await db.buckets.where('planId').equals(id).delete();
           await db.taxComponents.where('planId').equals(id).delete();
           await db.expenses.where('planId').equals(id).delete();
+          await db.attachments.where('planId').equals(id).delete();
           await db.goals.where('planId').equals(id).delete();
           await db.assets.where('planId').equals(id).delete();
           await db.liabilities.where('planId').equals(id).delete();
           await db.snapshots.where('planId').equals(id).delete();
           await db.netWorthSnapshots.where('planId').equals(id).delete();
           await db.recurringTemplates.where('planId').equals(id).delete();
+          await db.exchangeRates.where('planId').equals(id).delete();
           await db.plans.delete(id);
         },
       );

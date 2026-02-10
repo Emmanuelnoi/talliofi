@@ -4,6 +4,7 @@ import { TrendingUp } from 'lucide-react';
 import type { NetWorthSnapshot } from '@/domain/plan/types';
 import { centsToDollars, formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { EmptyState } from '@/components/feedback/empty-state';
 import {
   ChartContainer,
@@ -41,6 +42,7 @@ function formatShortMonth(yearMonth: string): string {
 }
 
 export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const chartData = useMemo(() => {
     const sorted = [...snapshots].sort((a, b) =>
       a.yearMonth.localeCompare(b.yearMonth),
@@ -51,11 +53,17 @@ export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
       netWorth: centsToDollars(s.netWorthCents),
       assets: centsToDollars(s.totalAssetsCents),
       liabilities: centsToDollars(s.totalLiabilitiesCents),
-      netWorthFormatted: formatMoney(s.netWorthCents),
-      assetsFormatted: formatMoney(s.totalAssetsCents),
-      liabilitiesFormatted: formatMoney(s.totalLiabilitiesCents),
+      netWorthFormatted: formatMoney(s.netWorthCents, {
+        currency: currencyCode,
+      }),
+      assetsFormatted: formatMoney(s.totalAssetsCents, {
+        currency: currencyCode,
+      }),
+      liabilitiesFormatted: formatMoney(s.totalLiabilitiesCents, {
+        currency: currencyCode,
+      }),
     }));
-  }, [snapshots]);
+  }, [snapshots, currencyCode]);
 
   // Data for accessible table alternative
   const tableData = useMemo(
@@ -112,7 +120,9 @@ export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
               }`}
             >
               {isPositiveChange ? '+' : ''}
-              {formatMoney(netWorthChange as Cents)}
+              {formatMoney(netWorthChange as Cents, {
+                currency: currencyCode,
+              })}
             </div>
           )}
         </div>
@@ -131,7 +141,9 @@ export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) =>
-                formatMoney(Math.round(value * 100) as Cents)
+                formatMoney(Math.round(value * 100) as Cents, {
+                  currency: currencyCode,
+                })
               }
             />
             <ChartTooltip
@@ -140,7 +152,9 @@ export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
                   formatter={(value) => {
                     const dollars =
                       typeof value === 'number' ? value : Number(value);
-                    return formatMoney(Math.round(dollars * 100) as Cents);
+                    return formatMoney(Math.round(dollars * 100) as Cents, {
+                      currency: currencyCode,
+                    });
                   }}
                 />
               }

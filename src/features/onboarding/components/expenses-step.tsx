@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
@@ -45,7 +45,6 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
     handleSubmit,
     control,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<ExpensesFormData>({
     resolver: zodResolver(ExpensesFormSchema),
@@ -58,6 +57,8 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
     control,
     name: 'expenses',
   });
+
+  const watchedExpenses = useWatch({ control, name: 'expenses' }) ?? [];
 
   const handleAddExpense = useCallback(() => {
     append({
@@ -146,7 +147,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                       Frequency
                     </Label>
                     <Select
-                      value={watch(`expenses.${index}.frequency`)}
+                      value={watchedExpenses[index]?.frequency ?? 'monthly'}
                       onValueChange={(value) =>
                         setValue(
                           `expenses.${index}.frequency`,
@@ -177,7 +178,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                       Category
                     </Label>
                     <Select
-                      value={watch(`expenses.${index}.category`)}
+                      value={watchedExpenses[index]?.category ?? 'other'}
                       onValueChange={(value) =>
                         setValue(
                           `expenses.${index}.category`,
@@ -204,7 +205,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                   <div className="space-y-2">
                     <Label htmlFor={`expenses.${index}.bucketId`}>Bucket</Label>
                     <Select
-                      value={watch(`expenses.${index}.bucketId`)}
+                      value={watchedExpenses[index]?.bucketId ?? ''}
                       onValueChange={(value) =>
                         setValue(`expenses.${index}.bucketId`, value, {
                           shouldValidate: true,

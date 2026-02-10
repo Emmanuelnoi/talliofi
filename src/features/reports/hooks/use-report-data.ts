@@ -4,10 +4,15 @@ import type {
   TaxComponent,
   ExpenseItem,
   BucketAllocation,
+  MonthlySnapshot,
 } from '@/domain/plan';
-import { normalizeToMonthly, computeTax } from '@/domain/plan';
+import {
+  normalizeToMonthly,
+  computeTax,
+  getRolloverMapFromSnapshots,
+} from '@/domain/plan';
 import { subtractMoney } from '@/domain/money';
-import type { Cents } from '@/domain/money';
+import type { Cents, ExchangeRates } from '@/domain/money';
 import type {
   DateRange,
   SpendingByCategoryReport,
@@ -16,6 +21,8 @@ import type {
   CategoryTrendsReport,
   TopExpensesReport,
 } from '../types';
+import { convertExpensesToBase } from '@/lib/currency-conversion';
+import { DEFAULT_CURRENCY } from '@/domain/money';
 import {
   calculateSpendingByCategory,
   calculateIncomeVsExpenses,
@@ -29,6 +36,9 @@ interface UseReportDataParams {
   taxComponents: readonly TaxComponent[];
   expenses: readonly ExpenseItem[];
   buckets: readonly BucketAllocation[];
+  snapshots: readonly MonthlySnapshot[];
+  exchangeRates?: ExchangeRates;
+  includeRollover: boolean;
   dateRange: DateRange;
 }
 
@@ -51,9 +61,17 @@ export function useReportData({
   taxComponents,
   expenses,
   buckets,
+  snapshots,
+  exchangeRates,
+  includeRollover,
   dateRange,
 }: UseReportDataParams): UseReportDataResult {
   const isReady = plan !== null;
+  const baseCurrency = plan?.currencyCode ?? DEFAULT_CURRENCY;
+  const expensesInBase = useMemo(
+    () => convertExpensesToBase(expenses, baseCurrency, exchangeRates),
+    [expenses, baseCurrency, exchangeRates],
+  );
 
   // Calculate net monthly income once
   const netMonthlyIncome = useMemo(() => {
@@ -68,38 +86,59 @@ export function useReportData({
 
   // Spending by Category
   const spendingByCategory = useMemo(() => {
-    if (!plan || expenses.length === 0) return null;
-    return calculateSpendingByCategory(expenses, dateRange);
-  }, [plan, expenses, dateRange]);
+    if (!plan || expensesInBase.length === 0) return null;
+    return calculateSpendingByCategory(expensesInBase, dateRange);
+  }, [plan, expensesInBase, dateRange]);
 
   // Income vs Expenses
   const incomeVsExpenses = useMemo(() => {
     if (!plan) return null;
-    return calculateIncomeVsExpenses(plan, taxComponents, expenses, dateRange);
-  }, [plan, taxComponents, expenses, dateRange]);
+    return calculateIncomeVsExpenses(
+      plan,
+      taxComponents,
+      expensesInBase,
+      dateRange,
+    );
+  }, [plan, taxComponents, expensesInBase, dateRange]);
 
   // Budget Adherence
   const budgetAdherence = useMemo(() => {
     if (!plan || buckets.length === 0) return null;
+    const yearMonth = `${dateRange.start.getFullYear()}-${String(
+      dateRange.start.getMonth() + 1,
+    ).padStart(2, '0')}`;
+    const rolloverByBucket =
+      includeRollover && snapshots.length > 0
+        ? getRolloverMapFromSnapshots(snapshots, yearMonth)
+        : undefined;
     return calculateBudgetAdherence(
       buckets,
-      expenses,
+      expensesInBase,
       netMonthlyIncome,
       dateRange,
+      rolloverByBucket,
     );
-  }, [plan, buckets, expenses, netMonthlyIncome, dateRange]);
+  }, [
+    plan,
+    buckets,
+    expensesInBase,
+    netMonthlyIncome,
+    dateRange,
+    snapshots,
+    includeRollover,
+  ]);
 
   // Category Trends
   const categoryTrends = useMemo(() => {
-    if (!plan || expenses.length === 0) return null;
-    return calculateCategoryTrends(expenses, dateRange);
-  }, [plan, expenses, dateRange]);
+    if (!plan || expensesInBase.length === 0) return null;
+    return calculateCategoryTrends(expensesInBase, dateRange);
+  }, [plan, expensesInBase, dateRange]);
 
   // Top Expenses
   const topExpenses = useMemo(() => {
-    if (!plan || expenses.length === 0) return null;
-    return calculateTopExpenses(expenses, buckets, dateRange, 10);
-  }, [plan, expenses, buckets, dateRange]);
+    if (!plan || expensesInBase.length === 0) return null;
+    return calculateTopExpenses(expensesInBase, buckets, dateRange, 10);
+  }, [plan, expensesInBase, buckets, dateRange]);
 
   return {
     spendingByCategory,

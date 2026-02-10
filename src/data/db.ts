@@ -5,6 +5,7 @@ import type {
   BucketAllocation,
   TaxComponent,
   ExpenseItem,
+  ExpenseAttachment,
   Goal,
   Asset,
   Liability,
@@ -13,6 +14,8 @@ import type {
   ChangeLogEntry,
   RecurringTemplate,
 } from '@/domain/plan/types';
+import type { ExchangeRateRecord } from '@/domain/money';
+import type { EncryptedVaultRecord } from './local-encryption/types';
 
 export class TalliofiDatabase extends Dexie {
   plans!: Table<Plan, string>;
@@ -26,6 +29,9 @@ export class TalliofiDatabase extends Dexie {
   netWorthSnapshots!: Table<NetWorthSnapshot, string>;
   changelog!: Table<ChangeLogEntry, string>;
   recurringTemplates!: Table<RecurringTemplate, string>;
+  attachments!: Table<ExpenseAttachment, string>;
+  exchangeRates!: Table<ExchangeRateRecord, string>;
+  vault!: Table<EncryptedVaultRecord, string>;
 
   constructor() {
     super('TalliofiDB');
@@ -94,39 +100,106 @@ export class TalliofiDatabase extends Dexie {
       changelog: 'id, planId, timestamp, entityType',
       recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
     });
+
+    // Version 6: Add encrypted vault table for local encryption
+    this.version(6).stores({
+      plans: 'id, name, createdAt, updatedAt',
+      buckets: 'id, planId, sortOrder',
+      taxComponents: 'id, planId, sortOrder',
+      expenses:
+        'id, planId, bucketId, category, frequency, transactionDate, createdAt',
+      goals: 'id, planId, type, isCompleted, createdAt',
+      assets: 'id, planId, category, createdAt',
+      liabilities: 'id, planId, category, createdAt',
+      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+      changelog: 'id, planId, timestamp, entityType',
+      recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
+      vault: 'id, updatedAt',
+    });
+
+    // Version 7: Add expense attachments table
+    this.version(7).stores({
+      plans: 'id, name, createdAt, updatedAt',
+      buckets: 'id, planId, sortOrder',
+      taxComponents: 'id, planId, sortOrder',
+      expenses:
+        'id, planId, bucketId, category, frequency, transactionDate, createdAt',
+      goals: 'id, planId, type, isCompleted, createdAt',
+      assets: 'id, planId, category, createdAt',
+      liabilities: 'id, planId, category, createdAt',
+      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+      changelog: 'id, planId, timestamp, entityType',
+      recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
+      attachments: 'id, planId, expenseId, createdAt',
+      vault: 'id, updatedAt',
+    });
+
+    // Version 8: Add exchange rates table for multi-currency support
+    this.version(8)
+      .stores({
+        plans: 'id, name, createdAt, updatedAt',
+        buckets: 'id, planId, sortOrder',
+        taxComponents: 'id, planId, sortOrder',
+        expenses:
+          'id, planId, bucketId, category, frequency, transactionDate, createdAt',
+        goals: 'id, planId, type, isCompleted, createdAt',
+        assets: 'id, planId, category, createdAt',
+        liabilities: 'id, planId, category, createdAt',
+        snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+        netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
+        changelog: 'id, planId, timestamp, entityType',
+        recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
+        attachments: 'id, planId, expenseId, createdAt',
+        exchangeRates: 'id, planId, baseCurrency, updatedAt',
+        vault: 'id, updatedAt',
+      })
+      .upgrade(async () => {
+        // Template for future data migrations.
+      });
   }
 }
 
 export const db = new TalliofiDatabase();
 
-export async function clearAllData(): Promise<void> {
-  await db.transaction(
-    'rw',
-    [
-      db.plans,
-      db.buckets,
-      db.taxComponents,
-      db.expenses,
-      db.goals,
-      db.assets,
-      db.liabilities,
-      db.snapshots,
-      db.netWorthSnapshots,
-      db.changelog,
-      db.recurringTemplates,
-    ],
-    async () => {
-      await db.plans.clear();
-      await db.buckets.clear();
-      await db.taxComponents.clear();
-      await db.expenses.clear();
-      await db.goals.clear();
-      await db.assets.clear();
-      await db.liabilities.clear();
-      await db.snapshots.clear();
-      await db.netWorthSnapshots.clear();
-      await db.changelog.clear();
-      await db.recurringTemplates.clear();
-    },
-  );
+export async function clearAllData(options?: {
+  keepVault?: boolean;
+}): Promise<void> {
+  const keepVault = options?.keepVault ?? false;
+  const tables = [
+    db.plans,
+    db.buckets,
+    db.taxComponents,
+    db.expenses,
+    db.goals,
+    db.assets,
+    db.liabilities,
+    db.snapshots,
+    db.netWorthSnapshots,
+    db.changelog,
+    db.recurringTemplates,
+    db.attachments,
+    db.exchangeRates,
+    ...(keepVault ? [] : [db.vault]),
+  ];
+
+  await db.transaction('rw', tables, async () => {
+    await db.plans.clear();
+    await db.buckets.clear();
+    await db.taxComponents.clear();
+    await db.expenses.clear();
+    await db.goals.clear();
+    await db.assets.clear();
+    await db.liabilities.clear();
+    await db.snapshots.clear();
+    await db.netWorthSnapshots.clear();
+    await db.changelog.clear();
+    await db.recurringTemplates.clear();
+    await db.attachments.clear();
+    await db.exchangeRates.clear();
+    if (!keepVault) {
+      await db.vault.clear();
+    }
+  });
 }

@@ -8,7 +8,7 @@ import type {
 
 export type IncomeFormData = z.infer<typeof IncomeInputSchema>;
 export type TaxFormData = z.infer<typeof TaxSimpleInputSchema>;
-export type BucketFormData = z.infer<typeof BucketInputSchema>;
+export type BucketFormData = z.input<typeof BucketInputSchema>;
 export type ExpenseFormData = z.infer<typeof CreateExpenseInputSchema>;
 
 export interface OnboardingData {

@@ -6,7 +6,8 @@ import { ACTIVE_PLAN_QUERY_KEY } from '@/hooks/use-active-plan';
 import { planRepo } from '@/data/repos/plan-repo';
 import { bucketRepo } from '@/data/repos/bucket-repo';
 import { expenseRepo } from '@/data/repos/expense-repo';
-import { dollarsToCents } from '@/domain/money';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
+import { dollarsToCents, DEFAULT_CURRENCY } from '@/domain/money';
 import type { Plan, BucketAllocation, ExpenseItem } from '@/domain/plan';
 import type { Frequency } from '@/domain/plan';
 import { IncomeStep } from '../components/income-step';
@@ -32,6 +33,7 @@ const STEP_TITLES = [
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { scheduleVaultSave } = useLocalEncryption();
   const step = useUIStore((s) => s.onboardingStep);
   const setStep = useUIStore((s) => s.setOnboardingStep);
 
@@ -55,6 +57,7 @@ export default function OnboardingPage() {
         incomeFrequency: data.income.incomeFrequency as Frequency,
         taxMode: 'simple',
         taxEffectiveRate: data.tax.effectiveRate,
+        currencyCode: DEFAULT_CURRENCY,
         createdAt: now,
         updatedAt: now,
         version: 0,
@@ -82,6 +85,7 @@ export default function OnboardingPage() {
             b.mode === 'fixed' && b.targetAmountDollars !== undefined
               ? dollarsToCents(b.targetAmountDollars)
               : undefined,
+          rolloverEnabled: false,
           sortOrder: i,
           createdAt: now,
         };
@@ -97,6 +101,7 @@ export default function OnboardingPage() {
           amountCents: dollarsToCents(e.amountDollars),
           frequency: e.frequency as Frequency,
           category: e.category,
+          currencyCode: e.currencyCode ?? DEFAULT_CURRENCY,
           isFixed: e.isFixed,
           createdAt: now,
           updatedAt: now,
@@ -108,10 +113,11 @@ export default function OnboardingPage() {
         queryKey: ACTIVE_PLAN_QUERY_KEY,
       });
 
+      scheduleVaultSave();
       navigate('/dashboard', { replace: true });
       setStep(0);
     },
-    [navigate, queryClient, setStep],
+    [navigate, queryClient, setStep, scheduleVaultSave],
   );
 
   return (

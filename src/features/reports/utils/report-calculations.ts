@@ -267,6 +267,7 @@ export function calculateBudgetAdherence(
   expenses: readonly ExpenseItem[],
   netMonthlyIncome: Cents,
   dateRange: DateRange,
+  rolloverByBucket?: ReadonlyMap<string, Cents>,
 ): BudgetAdherenceReport {
   const filtered = filterExpensesByDateRange(expenses, dateRange);
 
@@ -283,10 +284,15 @@ export function calculateBudgetAdherence(
 
   // Calculate adherence for each bucket
   const data: BudgetAdherenceData[] = buckets.map((bucket) => {
-    const targetCents =
+    const baseTargetCents =
       bucket.mode === 'percentage'
         ? percentOf(netMonthlyIncome, bucket.targetPercentage ?? 0)
         : (bucket.targetAmountCents ?? cents(0));
+    const rolloverCents =
+      bucket.rolloverEnabled && rolloverByBucket
+        ? (rolloverByBucket.get(bucket.id) ?? cents(0))
+        : cents(0);
+    const targetCents = addMoney(baseTargetCents, rolloverCents);
 
     const actualCents = expensesByBucket.get(bucket.id) ?? cents(0);
     const varianceCents = subtractMoney(targetCents, actualCents);

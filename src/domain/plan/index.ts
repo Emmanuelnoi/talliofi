@@ -8,6 +8,7 @@ export type {
   BucketAllocation,
   TaxComponent,
   ExpenseItem,
+  ExpenseAttachment,
   ExpenseSplit,
   Goal,
   Asset,
@@ -37,6 +38,7 @@ export {
 export {
   CentsSchema,
   FrequencySchema,
+  CurrencyCodeSchema,
   ExpenseCategorySchema,
   GoalTypeSchema,
   AssetCategorySchema,
@@ -46,6 +48,7 @@ export {
   TaxComponentSchema,
   ExpenseSplitSchema,
   ExpenseItemSchema,
+  ExpenseAttachmentSchema,
   GoalSchema,
   GoalFormSchema,
   AssetSchema,
@@ -80,3 +83,10 @@ export {
   computeRollingAverages,
   calculateTrend,
 } from './snapshot';
+
+// Rollover helpers
+export {
+  getCurrentYearMonth,
+  getPreviousYearMonth,
+  getRolloverMapFromSnapshots,
+} from './rollover';

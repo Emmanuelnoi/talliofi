@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
-import { formatMoney } from '@/domain/money';
+import { formatMoney, type Cents, type CurrencyCode } from '@/domain/money';
 import { CATEGORY_LABELS, FREQUENCY_LABELS } from '@/lib/constants';
 import type {
   SpendingByCategoryReport,
@@ -53,12 +53,14 @@ function triggerDownload(blob: Blob, filename: string): void {
 
 export function exportSpendingByCategoryCSV(
   report: SpendingByCategoryReport,
+  currency: CurrencyCode,
 ): string {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const lines: string[] = [];
 
   lines.push('Spending by Category Report');
   lines.push(`Date Range: ${formatDateRange(report.dateRange)}`);
-  lines.push(`Total: ${formatMoney(report.totalCents)}`);
+  lines.push(`Total: ${formatAmount(report.totalCents)}`);
   lines.push('');
   lines.push('Category,Amount,Percentage,Expense Count');
 
@@ -66,7 +68,7 @@ export function exportSpendingByCategoryCSV(
     lines.push(
       [
         escapeCSVValue(item.label),
-        escapeCSVValue(formatMoney(item.totalCents)),
+        escapeCSVValue(formatAmount(item.totalCents)),
         `${item.percentage.toFixed(1)}%`,
         item.expenseCount.toString(),
       ].join(','),
@@ -78,13 +80,15 @@ export function exportSpendingByCategoryCSV(
 
 export function exportIncomeVsExpensesCSV(
   report: IncomeVsExpensesReport,
+  currency: CurrencyCode,
 ): string {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const lines: string[] = [];
 
   lines.push('Income vs Expenses Report');
   lines.push(`Date Range: ${formatDateRange(report.dateRange)}`);
   lines.push(
-    `Total Income: ${formatMoney(report.totalIncomeCents)}, Total Expenses: ${formatMoney(report.totalExpensesCents)}, Net: ${formatMoney(report.totalSurplusCents)}`,
+    `Total Income: ${formatAmount(report.totalIncomeCents)}, Total Expenses: ${formatAmount(report.totalExpensesCents)}, Net: ${formatAmount(report.totalSurplusCents)}`,
   );
   lines.push('');
   lines.push('Month,Net Income,Expenses,Surplus/Deficit');
@@ -93,9 +97,9 @@ export function exportIncomeVsExpensesCSV(
     lines.push(
       [
         escapeCSVValue(item.label),
-        escapeCSVValue(formatMoney(item.incomeCents)),
-        escapeCSVValue(formatMoney(item.expensesCents)),
-        escapeCSVValue(formatMoney(item.surplusCents)),
+        escapeCSVValue(formatAmount(item.incomeCents)),
+        escapeCSVValue(formatAmount(item.expensesCents)),
+        escapeCSVValue(formatAmount(item.surplusCents)),
       ].join(','),
     );
   }
@@ -105,7 +109,9 @@ export function exportIncomeVsExpensesCSV(
 
 export function exportBudgetAdherenceCSV(
   report: BudgetAdherenceReport,
+  currency: CurrencyCode,
 ): string {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const lines: string[] = [];
 
   lines.push('Budget Adherence Report');
@@ -120,9 +126,9 @@ export function exportBudgetAdherenceCSV(
     lines.push(
       [
         escapeCSVValue(item.bucketName),
-        escapeCSVValue(formatMoney(item.targetCents)),
-        escapeCSVValue(formatMoney(item.actualCents)),
-        escapeCSVValue(formatMoney(item.varianceCents)),
+        escapeCSVValue(formatAmount(item.targetCents)),
+        escapeCSVValue(formatAmount(item.actualCents)),
+        escapeCSVValue(formatAmount(item.varianceCents)),
         `${item.adherencePercent.toFixed(1)}%`,
         item.status.replace('_', ' '),
       ].join(','),
@@ -132,7 +138,11 @@ export function exportBudgetAdherenceCSV(
   return lines.join('\n');
 }
 
-export function exportCategoryTrendsCSV(report: CategoryTrendsReport): string {
+export function exportCategoryTrendsCSV(
+  report: CategoryTrendsReport,
+  currency: CurrencyCode,
+): string {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const lines: string[] = [];
 
   lines.push('Category Trends Report');
@@ -147,7 +157,7 @@ export function exportCategoryTrendsCSV(report: CategoryTrendsReport): string {
     const row = [
       escapeCSVValue(trend.label),
       ...trend.dataPoints.map((p) =>
-        escapeCSVValue(formatMoney(p.amountCents)),
+        escapeCSVValue(formatAmount(p.amountCents)),
       ),
     ];
     lines.push(row.join(','));
@@ -156,12 +166,16 @@ export function exportCategoryTrendsCSV(report: CategoryTrendsReport): string {
   return lines.join('\n');
 }
 
-export function exportTopExpensesCSV(report: TopExpensesReport): string {
+export function exportTopExpensesCSV(
+  report: TopExpensesReport,
+  currency: CurrencyCode,
+): string {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const lines: string[] = [];
 
   lines.push('Top Expenses Report');
   lines.push(`Date Range: ${formatDateRange(report.dateRange)}`);
-  lines.push(`Total: ${formatMoney(report.totalCents)}`);
+  lines.push(`Total: ${formatAmount(report.totalCents)}`);
   lines.push('');
   lines.push('Name,Amount,Frequency,Monthly Amount,Category,Bucket,Date');
 
@@ -170,9 +184,9 @@ export function exportTopExpensesCSV(report: TopExpensesReport): string {
     lines.push(
       [
         escapeCSVValue(expense.name),
-        escapeCSVValue(formatMoney(expense.amountCents)),
+        escapeCSVValue(formatAmount(expense.amountCents)),
         escapeCSVValue(FREQUENCY_LABELS[expense.frequency]),
-        escapeCSVValue(formatMoney(item.monthlyAmountCents)),
+        escapeCSVValue(formatAmount(item.monthlyAmountCents)),
         escapeCSVValue(CATEGORY_LABELS[expense.category]),
         escapeCSVValue(bucket?.name ?? 'Unknown'),
         escapeCSVValue(
@@ -268,7 +282,9 @@ function addPageNumbers(doc: jsPDF): void {
 
 export function exportSpendingByCategoryPDF(
   report: SpendingByCategoryReport,
+  currency: CurrencyCode,
 ): Blob {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const ctx = createPDFContext();
 
   addReportHeader(ctx, 'Spending by Category', report.dateRange);
@@ -277,7 +293,7 @@ export function exportSpendingByCategoryPDF(
   ctx.doc.setFontSize(12);
   ctx.doc.setFont('helvetica', 'bold');
   ctx.doc.text(
-    `Total Spending: ${formatMoney(report.totalCents)}`,
+    `Total Spending: ${formatAmount(report.totalCents)}`,
     ctx.margin,
     ctx.y,
   );
@@ -306,7 +322,7 @@ export function exportSpendingByCategoryPDF(
     x = ctx.margin;
     const row = [
       item.label,
-      formatMoney(item.totalCents),
+      formatAmount(item.totalCents),
       `${item.percentage.toFixed(1)}%`,
       item.expenseCount.toString(),
     ];
@@ -323,7 +339,9 @@ export function exportSpendingByCategoryPDF(
 
 export function exportIncomeVsExpensesPDF(
   report: IncomeVsExpensesReport,
+  currency: CurrencyCode,
 ): Blob {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const ctx = createPDFContext();
 
   addReportHeader(ctx, 'Income vs Expenses', report.dateRange);
@@ -332,13 +350,13 @@ export function exportIncomeVsExpensesPDF(
   ctx.doc.setFontSize(10);
   ctx.doc.setFont('helvetica', 'bold');
   ctx.doc.text(
-    `Total Income: ${formatMoney(report.totalIncomeCents)}`,
+    `Total Income: ${formatAmount(report.totalIncomeCents)}`,
     ctx.margin,
     ctx.y,
   );
   ctx.y += 6;
   ctx.doc.text(
-    `Total Expenses: ${formatMoney(report.totalExpensesCents)}`,
+    `Total Expenses: ${formatAmount(report.totalExpensesCents)}`,
     ctx.margin,
     ctx.y,
   );
@@ -346,7 +364,7 @@ export function exportIncomeVsExpensesPDF(
   const netLabel =
     report.totalSurplusCents >= 0 ? 'Net Surplus' : 'Net Deficit';
   ctx.doc.text(
-    `${netLabel}: ${formatMoney(report.totalSurplusCents)}`,
+    `${netLabel}: ${formatAmount(report.totalSurplusCents)}`,
     ctx.margin,
     ctx.y,
   );
@@ -373,9 +391,9 @@ export function exportIncomeVsExpensesPDF(
     x = ctx.margin;
     const row = [
       item.label,
-      formatMoney(item.incomeCents),
-      formatMoney(item.expensesCents),
-      formatMoney(item.surplusCents),
+      formatAmount(item.incomeCents),
+      formatAmount(item.expensesCents),
+      formatAmount(item.surplusCents),
     ];
     for (let i = 0; i < row.length; i++) {
       ctx.doc.text(row[i], x, ctx.y);
@@ -388,7 +406,11 @@ export function exportIncomeVsExpensesPDF(
   return ctx.doc.output('blob');
 }
 
-export function exportBudgetAdherencePDF(report: BudgetAdherenceReport): Blob {
+export function exportBudgetAdherencePDF(
+  report: BudgetAdherenceReport,
+  currency: CurrencyCode,
+): Blob {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const ctx = createPDFContext();
 
   addReportHeader(ctx, 'Budget Adherence', report.dateRange);
@@ -426,9 +448,9 @@ export function exportBudgetAdherencePDF(report: BudgetAdherenceReport): Blob {
       item.bucketName.length > 18
         ? item.bucketName.slice(0, 16) + '...'
         : item.bucketName,
-      formatMoney(item.targetCents),
-      formatMoney(item.actualCents),
-      formatMoney(item.varianceCents),
+      formatAmount(item.targetCents),
+      formatAmount(item.actualCents),
+      formatAmount(item.varianceCents),
       `${item.adherencePercent.toFixed(0)}%`,
       item.status.replace('_', ' '),
     ];
@@ -443,7 +465,11 @@ export function exportBudgetAdherencePDF(report: BudgetAdherenceReport): Blob {
   return ctx.doc.output('blob');
 }
 
-export function exportCategoryTrendsPDF(report: CategoryTrendsReport): Blob {
+export function exportCategoryTrendsPDF(
+  report: CategoryTrendsReport,
+  currency: CurrencyCode,
+): Blob {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const ctx = createPDFContext();
 
   addReportHeader(ctx, 'Category Trends', report.dateRange);
@@ -470,7 +496,7 @@ export function exportCategoryTrendsPDF(report: CategoryTrendsReport): Blob {
     ctx.doc.setFontSize(9);
     ctx.doc.setFont('helvetica', 'normal');
     const values = trend.dataPoints
-      .map((p) => `${p.label}: ${formatMoney(p.amountCents)}`)
+      .map((p) => `${p.label}: ${formatAmount(p.amountCents)}`)
       .join('  |  ');
 
     // Wrap text if needed
@@ -483,7 +509,11 @@ export function exportCategoryTrendsPDF(report: CategoryTrendsReport): Blob {
   return ctx.doc.output('blob');
 }
 
-export function exportTopExpensesPDF(report: TopExpensesReport): Blob {
+export function exportTopExpensesPDF(
+  report: TopExpensesReport,
+  currency: CurrencyCode,
+): Blob {
+  const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
   const ctx = createPDFContext();
 
   addReportHeader(ctx, 'Top Expenses', report.dateRange);
@@ -492,7 +522,7 @@ export function exportTopExpensesPDF(report: TopExpensesReport): Blob {
   ctx.doc.setFontSize(12);
   ctx.doc.setFont('helvetica', 'bold');
   ctx.doc.text(
-    `Total (Top ${report.data.length}): ${formatMoney(report.totalCents)}`,
+    `Total (Top ${report.data.length}): ${formatAmount(report.totalCents)}`,
     ctx.margin,
     ctx.y,
   );
@@ -521,7 +551,7 @@ export function exportTopExpensesPDF(report: TopExpensesReport): Blob {
       item.expense.name.length > 22
         ? item.expense.name.slice(0, 20) + '...'
         : item.expense.name,
-      formatMoney(item.monthlyAmountCents),
+      formatAmount(item.monthlyAmountCents),
       CATEGORY_LABELS[item.expense.category],
       item.bucket?.name ?? 'Unknown',
     ];

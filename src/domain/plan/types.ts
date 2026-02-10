@@ -1,4 +1,4 @@
-import type { Cents } from '@/domain/money';
+import type { Cents, CurrencyCode } from '@/domain/money';
 import type { Frequency } from './normalize';
 
 // --- Expense Categories ---
@@ -48,6 +48,8 @@ export interface Plan {
   readonly incomeFrequency: Frequency;
   readonly taxMode: 'simple' | 'itemized';
   readonly taxEffectiveRate?: number; // 0-100, used when taxMode === 'simple'
+  /** Base currency for this plan (defaults to USD) */
+  readonly currencyCode?: CurrencyCode;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly version: number;
@@ -63,6 +65,8 @@ export interface BucketAllocation {
   readonly mode: 'percentage' | 'fixed';
   readonly targetPercentage?: number; // 0-100, used when mode === 'percentage'
   readonly targetAmountCents?: Cents; // used when mode === 'fixed'
+  /** Whether unused budget should roll over to next month */
+  readonly rolloverEnabled?: boolean;
   readonly sortOrder: number;
   readonly createdAt: string;
 }
@@ -108,6 +112,8 @@ export interface ExpenseItem {
    * For split expenses: the primary category (first split or largest amount).
    */
   readonly category: ExpenseCategory;
+  /** Currency code for this expense (defaults to plan currency) */
+  readonly currencyCode?: CurrencyCode;
   readonly isFixed: boolean;
   readonly notes?: string;
   /** ISO date string (YYYY-MM-DD) for when the transaction occurred. Optional for backwards compatibility. */
@@ -118,6 +124,19 @@ export interface ExpenseItem {
   readonly splits?: readonly ExpenseSplit[];
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+// --- Expense Attachment (receipts, documents) ---
+
+export interface ExpenseAttachment {
+  readonly id: string;
+  readonly planId: string;
+  readonly expenseId: string;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly size: number;
+  readonly blob: Blob;
+  readonly createdAt: string;
 }
 
 // --- Goal (separate table) ---
@@ -217,6 +236,8 @@ export interface BucketAnalysis {
   readonly actualPercentage: number;
   readonly targetAmountCents: Cents;
   readonly actualAmountCents: Cents;
+  readonly rolloverCents: Cents;
+  readonly availableCents: Cents;
   readonly varianceCents: Cents;
   readonly status: 'under' | 'on_target' | 'over';
 }
@@ -263,6 +284,8 @@ export interface RecurringTemplate {
   readonly frequency: Frequency;
   readonly category: ExpenseCategory;
   readonly bucketId: string;
+  /** Currency code for this template (defaults to plan currency) */
+  readonly currencyCode?: CurrencyCode;
   /** Day of month (1-31) when expenses should be generated */
   readonly dayOfMonth?: number;
   /** Whether this template is active and should generate expenses */
@@ -282,6 +305,7 @@ export interface TemplateSuggestion {
   readonly amountCents: Cents;
   readonly frequency: Frequency;
   readonly category: ExpenseCategory;
+  readonly currencyCode?: CurrencyCode;
   readonly confidence: number;
   readonly matchingExpenseIds: readonly string[];
 }

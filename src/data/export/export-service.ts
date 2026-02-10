@@ -4,7 +4,8 @@ import { bucketRepo } from '@/data/repos/bucket-repo';
 import { taxComponentRepo } from '@/data/repos/tax-component-repo';
 import { expenseRepo } from '@/data/repos/expense-repo';
 import { snapshotRepo } from '@/data/repos/snapshot-repo';
-import { centsToDollars, formatMoney, normalizeToMonthly } from '@/domain';
+import { addMoney, cents, formatMoney, normalizeToMonthly } from '@/domain';
+import { DEFAULT_CURRENCY } from '@/domain/money';
 import type {
   Plan,
   BucketAllocation,
@@ -133,6 +134,7 @@ function escapeCSVValue(value: string | number | boolean): string {
 export async function exportAsCSV(planId: string): Promise<string> {
   const { plan, buckets, taxComponents, expenses } =
     await getExportData(planId);
+  const baseCurrency = plan.currencyCode ?? DEFAULT_CURRENCY;
 
   const lines: string[] = [];
 
@@ -140,7 +142,11 @@ export async function exportAsCSV(planId: string): Promise<string> {
   lines.push('=== PLAN SUMMARY ===');
   lines.push('Field,Value');
   lines.push(`Plan Name,${escapeCSVValue(plan.name)}`);
-  lines.push(`Gross Income,${formatMoney(plan.grossIncomeCents)}`);
+  lines.push(
+    `Gross Income,${formatMoney(plan.grossIncomeCents, {
+      currency: baseCurrency,
+    })}`,
+  );
   lines.push(`Income Frequency,${escapeCSVValue(plan.incomeFrequency)}`);
   lines.push(`Tax Mode,${escapeCSVValue(plan.taxMode)}`);
   if (plan.taxMode === 'simple' && plan.taxEffectiveRate !== undefined) {
@@ -170,7 +176,7 @@ export async function exportAsCSV(planId: string): Promise<string> {
         : '';
     const targetAmt =
       bucket.targetAmountCents !== undefined
-        ? formatMoney(bucket.targetAmountCents)
+        ? formatMoney(bucket.targetAmountCents, { currency: baseCurrency })
         : '';
     lines.push(
       `${escapeCSVValue(bucket.name)},${bucket.color},${bucket.mode},${targetPct},${targetAmt}`,
@@ -185,10 +191,13 @@ export async function exportAsCSV(planId: string): Promise<string> {
   const bucketMap = new Map(buckets.map((b) => [b.id, b.name]));
   for (const expense of expenses) {
     const bucketName = bucketMap.get(expense.bucketId) || 'Unknown';
+    const expenseCurrency = expense.currencyCode ?? baseCurrency;
     lines.push(
       [
         escapeCSVValue(expense.name),
-        escapeCSVValue(formatMoney(expense.amountCents)),
+        escapeCSVValue(
+          formatMoney(expense.amountCents, { currency: expenseCurrency }),
+        ),
         escapeCSVValue(expense.frequency),
         escapeCSVValue(expense.category),
         escapeCSVValue(bucketName),
@@ -222,6 +231,7 @@ function formatCategoryName(category: string): string {
 export async function exportAsPDF(planId: string): Promise<Blob> {
   const { plan, buckets, taxComponents, expenses } =
     await getExportData(planId);
+  const baseCurrency = plan.currencyCode ?? DEFAULT_CURRENCY;
   const bucketMap = new Map(buckets.map((b) => [b.id, b.name]));
 
   const doc = new jsPDF();
@@ -262,7 +272,9 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
     ['Plan Name:', plan.name],
     [
       'Gross Income:',
-      `${formatMoney(plan.grossIncomeCents)} (${plan.incomeFrequency})`,
+      `${formatMoney(plan.grossIncomeCents, {
+        currency: baseCurrency,
+      })} (${plan.incomeFrequency})`,
     ],
     [
       'Tax Mode:',
@@ -312,7 +324,7 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
       bucket.mode === 'percentage'
         ? `${bucket.targetPercentage ?? 0}%`
         : bucket.targetAmountCents !== undefined
-          ? formatMoney(bucket.targetAmountCents)
+          ? formatMoney(bucket.targetAmountCents, { currency: baseCurrency })
           : 'N/A';
     doc.setFont('helvetica', 'normal');
     doc.text(`• ${bucket.name}: ${target} (${bucket.mode})`, margin + 5, y);
@@ -356,11 +368,12 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
       addNewPageIfNeeded(8);
       x = margin;
       const bucketName = bucketMap.get(expense.bucketId) || 'Unknown';
+      const expenseCurrency = expense.currencyCode ?? baseCurrency;
       const row = [
         expense.name.length > 20
           ? expense.name.slice(0, 18) + '...'
           : expense.name,
-        formatMoney(expense.amountCents),
+        formatMoney(expense.amountCents, { currency: expenseCurrency }),
         expense.frequency,
         formatCategoryName(expense.category),
         bucketName.length > 15 ? bucketName.slice(0, 13) + '...' : bucketName,
@@ -380,13 +393,19 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
     y += 5;
 
     // Normalize all expenses to monthly amounts for accurate total
-    const totalMonthlyExpenses = expenses.reduce((sum, e) => {
-      const monthlyAmount = normalizeToMonthly(e.amountCents, e.frequency);
-      return sum + centsToDollars(monthlyAmount);
-    }, 0);
+    const totalMonthlyExpenses = expenses.reduce(
+      (sum, expense) =>
+        addMoney(
+          sum,
+          normalizeToMonthly(expense.amountCents, expense.frequency),
+        ),
+      cents(0),
+    );
     doc.setFont('helvetica', 'bold');
     doc.text(
-      `Total Monthly Expenses: $${totalMonthlyExpenses.toFixed(2)}`,
+      `Total Monthly Expenses: ${formatMoney(totalMonthlyExpenses, {
+        currency: baseCurrency,
+      })}`,
       margin,
       y,
     );

@@ -1,16 +1,16 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import type { ExpenseCategory } from '@/domain/plan';
 import type { Cents } from '@/domain/money';
 import { centsToDollars, formatMoney } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { CATEGORY_LABELS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
@@ -41,6 +41,7 @@ export function ExpenseTrendChart({
   expensesByCategory,
 }: ExpenseTrendChartProps) {
   const navigate = useNavigate();
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const data: CategoryDatum[] = useMemo(
     () =>
@@ -49,10 +50,30 @@ export function ExpenseTrendChart({
           category,
           label: CATEGORY_LABELS[category],
           value: centsToDollars(amount),
-          formatted: formatMoney(amount),
+          formatted: formatMoney(amount, { currency: currencyCode }),
         }))
         .sort((a, b) => b.value - a.value),
-    [expensesByCategory],
+    [expensesByCategory, currencyCode],
+  );
+
+  /** Navigate to expenses page filtered by the clicked category. */
+  const handleBarClick = useCallback(
+    (datum: CategoryDatum) => {
+      void navigate(
+        `/expenses?categories=${encodeURIComponent(datum.category)}`,
+      );
+    },
+    [navigate],
+  );
+
+  // Data for accessible table alternative
+  const tableData = useMemo(
+    () =>
+      data.map((d) => ({
+        label: d.label,
+        value: d.formatted,
+      })),
+    [data],
   );
 
   if (data.length === 0) {
@@ -78,16 +99,6 @@ export function ExpenseTrendChart({
 
   const ariaLabel = `Spending by category bar chart: ${data.map((d) => `${d.label} ${d.formatted}`).join(', ')}`;
 
-  // Data for accessible table alternative
-  const tableData = useMemo(
-    () =>
-      data.map((d) => ({
-        label: d.label,
-        value: d.formatted,
-      })),
-    [data],
-  );
-
   return (
     <Card>
       <CardHeader>
@@ -112,13 +123,30 @@ export function ExpenseTrendChart({
             />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const datum = payload[0].payload as CategoryDatum;
+                return (
+                  <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
+                    <p className="mb-1 font-medium">{datum.label}</p>
+                    <p className="text-muted-foreground">{datum.formatted}</p>
+                    <p className="text-muted-foreground mt-1 italic">
+                      Click to view expenses
+                    </p>
+                  </div>
+                );
+              }}
             />
             <Bar
               dataKey="value"
               fill={CHART_COLOR}
               radius={[0, 4, 4, 0]}
               maxBarSize={28}
+              className="cursor-pointer"
+              onClick={(_: unknown, index: number) => {
+                const datum = data[index];
+                if (datum) handleBarClick(datum);
+              }}
             />
           </BarChart>
         </ChartContainer>

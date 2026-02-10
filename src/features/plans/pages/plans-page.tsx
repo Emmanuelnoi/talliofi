@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Plus, FolderOpen } from 'lucide-react';
-import { useActivePlan, useAllPlans, useSwitchPlan } from '@/hooks/use-active-plan';
+import {
+  useActivePlan,
+  useAllPlans,
+  useSwitchPlan,
+} from '@/hooks/use-active-plan';
 import type { Plan } from '@/domain/plan/types';
 import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useRecurringTemplates } from '@/hooks/use-plan-data';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import {
   useCreateRecurringTemplate,
   useUpdateRecurringTemplate,
@@ -65,6 +66,7 @@ interface TemplatesSectionProps {
  */
 export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
   const { data: templates = [], isLoading } = useRecurringTemplates(planId);
+  const { scheduleVaultSave } = useLocalEncryption();
 
   const createTemplate = useCreateRecurringTemplate();
   const updateTemplate = useUpdateRecurringTemplate();
@@ -118,6 +120,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
             frequency: data.frequency,
             category: data.category,
             bucketId: data.bucketId,
+            currencyCode: data.currencyCode ?? editingTemplate.currencyCode,
             dayOfMonth: data.dayOfMonth,
             isActive: data.isActive,
             isFixed: data.isFixed,
@@ -135,6 +138,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
             frequency: data.frequency,
             category: data.category,
             bucketId: data.bucketId,
+            currencyCode: data.currencyCode,
             dayOfMonth: data.dayOfMonth,
             isActive: data.isActive,
             isFixed: data.isFixed,
@@ -189,12 +193,13 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
     async (template: RecurringTemplate) => {
       try {
         await recurringService.generateNow(template.id);
+        scheduleVaultSave();
         toast.success(`Generated expense from "${template.name}"`);
       } catch {
         toast.error('Failed to generate expense');
       }
     },
-    [],
+    [scheduleVaultSave],
   );
 
   // --- Pattern Detection ---
@@ -207,7 +212,9 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
       if (detected.length === 0) {
         toast.info('No recurring patterns detected');
       } else {
-        toast.success(`Found ${detected.length} potential recurring pattern(s)`);
+        toast.success(
+          `Found ${detected.length} potential recurring pattern(s)`,
+        );
       }
     } catch {
       toast.error('Failed to detect patterns');
@@ -233,6 +240,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         activeSuggestion,
         selectedBucketForSuggestion,
       );
+      scheduleVaultSave();
       toast.success(`Created template "${activeSuggestion.name}"`);
 
       // Remove from suggestions
@@ -243,7 +251,12 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
     } catch {
       toast.error('Failed to create template');
     }
-  }, [planId, activeSuggestion, selectedBucketForSuggestion]);
+  }, [
+    planId,
+    activeSuggestion,
+    selectedBucketForSuggestion,
+    scheduleVaultSave,
+  ]);
 
   const handleDismissSuggestion = useCallback(
     (suggestion: TemplateSuggestion) => {
@@ -273,10 +286,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         <div className="text-muted-foreground text-sm">
           {templates.length} template{templates.length !== 1 && 's'}
           {templates.filter((t) => t.isActive).length > 0 && (
-            <span>
-              {' '}
-              ({templates.filter((t) => t.isActive).length} active)
-            </span>
+            <span> ({templates.filter((t) => t.isActive).length} active)</span>
           )}
         </div>
         <div className="flex gap-2">

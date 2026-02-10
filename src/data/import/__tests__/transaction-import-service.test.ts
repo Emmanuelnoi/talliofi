@@ -330,8 +330,18 @@ describe('Duplicate Detection', () => {
   describe('detectDuplicates', () => {
     it('detects duplicate transactions', () => {
       const newTransactions = [
-        { date: '2024-01-15', amountCents: cents(500), description: 'Coffee', isExpense: true },
-        { date: '2024-01-16', amountCents: cents(1000), description: 'Lunch', isExpense: true },
+        {
+          date: '2024-01-15',
+          amountCents: cents(500),
+          description: 'Coffee',
+          isExpense: true,
+        },
+        {
+          date: '2024-01-16',
+          amountCents: cents(1000),
+          description: 'Lunch',
+          isExpense: true,
+        },
       ];
 
       const existingExpenses = [
@@ -356,7 +366,12 @@ describe('Duplicate Detection', () => {
 
     it('returns empty set when no duplicates', () => {
       const newTransactions = [
-        { date: '2024-01-15', amountCents: cents(500), description: 'Coffee', isExpense: true },
+        {
+          date: '2024-01-15',
+          amountCents: cents(500),
+          description: 'Coffee',
+          isExpense: true,
+        },
       ];
 
       const duplicates = detectDuplicates(newTransactions, []);
@@ -369,9 +384,24 @@ describe('Import Preview', () => {
   describe('createImportPreview', () => {
     it('creates preview with correct stats', () => {
       const transactions = [
-        { date: '2024-01-15', amountCents: cents(500), description: 'Coffee', isExpense: true },
-        { date: '2024-01-16', amountCents: cents(1000), description: 'Salary', isExpense: false },
-        { date: '2024-01-17', amountCents: cents(2500), description: 'Groceries', isExpense: true },
+        {
+          date: '2024-01-15',
+          amountCents: cents(500),
+          description: 'Coffee',
+          isExpense: true,
+        },
+        {
+          date: '2024-01-16',
+          amountCents: cents(1000),
+          description: 'Salary',
+          isExpense: false,
+        },
+        {
+          date: '2024-01-17',
+          amountCents: cents(2500),
+          description: 'Groceries',
+          isExpense: true,
+        },
       ];
 
       const preview = createImportPreview(transactions, [], 'bucket-1');
@@ -388,8 +418,18 @@ describe('Import Preview', () => {
 
     it('auto-selects non-duplicate expenses', () => {
       const transactions = [
-        { date: '2024-01-15', amountCents: cents(500), description: 'Coffee', isExpense: true },
-        { date: '2024-01-16', amountCents: cents(1000), description: 'Salary', isExpense: false },
+        {
+          date: '2024-01-15',
+          amountCents: cents(500),
+          description: 'Coffee',
+          isExpense: true,
+        },
+        {
+          date: '2024-01-16',
+          amountCents: cents(1000),
+          description: 'Salary',
+          isExpense: false,
+        },
       ];
 
       const preview = createImportPreview(transactions, [], 'bucket-1');
@@ -400,7 +440,12 @@ describe('Import Preview', () => {
 
     it('assigns default bucket to all transactions', () => {
       const transactions = [
-        { date: '2024-01-15', amountCents: cents(500), description: 'Coffee', isExpense: true },
+        {
+          date: '2024-01-15',
+          amountCents: cents(500),
+          description: 'Coffee',
+          isExpense: true,
+        },
       ];
 
       const preview = createImportPreview(transactions, [], 'default-bucket');
@@ -439,6 +484,7 @@ describe('Import Conversion', () => {
       const items = convertToExpenseItems(transactions, {
         planId: 'plan-1',
         defaultBucketId: 'bucket-1',
+        currencyCode: 'USD',
       });
 
       expect(items).toHaveLength(1);
@@ -447,6 +493,7 @@ describe('Import Conversion', () => {
         bucketId: 'bucket-1',
         name: 'Coffee',
         amountCents: cents(500),
+        currencyCode: 'USD',
         category: 'dining',
         transactionDate: '2024-01-15',
       });
@@ -470,6 +517,7 @@ describe('Import Conversion', () => {
       const items = convertToExpenseItems(transactions, {
         planId: 'plan-1',
         defaultBucketId: 'bucket-1',
+        currencyCode: 'USD',
       });
 
       expect(items[0].name.length).toBe(100);
@@ -523,7 +571,9 @@ describe('File Detection', () => {
     });
 
     it('throws for unsupported files', () => {
-      expect(() => parseFile('test.xyz', 'random')).toThrow('Unsupported file type');
+      expect(() => parseFile('test.xyz', 'random')).toThrow(
+        'Unsupported file type',
+      );
     });
   });
 });

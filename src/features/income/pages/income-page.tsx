@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,6 +28,8 @@ import {
 import { useActivePlan } from '@/hooks/use-active-plan';
 import { useUpdatePlan } from '@/hooks/use-plan-mutations';
 import { useAutoSave } from '@/hooks/use-auto-save';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
 import { FREQUENCY_LABELS } from '@/lib/constants';
 
 type IncomeFormData = z.infer<typeof IncomeInputSchema>;
@@ -44,7 +46,7 @@ export default function IncomePage() {
     },
   });
 
-  const { control, watch, reset } = form;
+  const { control, reset } = form;
 
   // Populate form when plan loads
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function IncomePage() {
     }
   }, [plan, reset]);
 
-  const watchedData = watch();
+  const watchedData = useWatch({ control });
 
   const { status } = useAutoSave({
     data: watchedData,
@@ -75,6 +77,10 @@ export default function IncomePage() {
         toast.error('Failed to save income changes');
       }
     },
+  });
+
+  const { blocker, confirmNavigation, cancelNavigation } = useUnsavedChanges({
+    isDirty: status === 'saving',
   });
 
   if (isLoading) {
@@ -170,6 +176,12 @@ export default function IncomePage() {
           </div>
         </CardContent>
       </Card>
+
+      <UnsavedChangesDialog
+        open={blocker.state === 'blocked'}
+        onStay={cancelNavigation}
+        onLeave={confirmNavigation}
+      />
     </div>
   );
 }

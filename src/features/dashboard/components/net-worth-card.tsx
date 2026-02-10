@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ export function NetWorthCard({
   totalLiabilities,
   netWorth,
 }: NetWorthCardProps) {
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const isPositive = netWorth > 0;
   const isNegative = netWorth < 0;
 
@@ -52,7 +54,7 @@ export function NetWorthCard({
               isNegative && 'text-red-600 dark:text-red-400',
             )}
           >
-            {formatMoney(netWorth)}
+            {formatMoney(netWorth, { currency: currencyCode })}
           </div>
           {isPositive && (
             <TrendingUp
@@ -76,13 +78,13 @@ export function NetWorthCard({
         <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
           <span>
             <span className="font-medium text-emerald-600 dark:text-emerald-400">
-              {formatMoney(totalAssets)}
+              {formatMoney(totalAssets, { currency: currencyCode })}
             </span>{' '}
             assets
           </span>
           <span>
             <span className="font-medium text-red-600 dark:text-red-400">
-              {formatMoney(totalLiabilities)}
+              {formatMoney(totalLiabilities, { currency: currencyCode })}
             </span>{' '}
             liabilities
           </span>

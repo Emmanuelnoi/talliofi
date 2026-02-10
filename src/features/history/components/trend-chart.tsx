@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import type { MonthlySnapshot } from '@/domain/plan/types';
 import { centsToDollars, formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
+import { useCurrencyStore } from '@/stores/currency-store';
 import { EmptyState } from '@/components/feedback/empty-state';
 import {
   ChartContainer,
@@ -13,9 +14,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartDataTable } from '@/components/accessibility';
 import { TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { format } from 'date-fns';
 
 interface TrendChartProps {
   snapshots: MonthlySnapshot[];
+}
+
+interface ChartClickState {
+  activePayload?: Array<{ payload?: { yearMonth?: string } }>;
 }
 
 const chartConfig = {
@@ -37,6 +44,8 @@ function formatShortMonth(yearMonth: string): string {
 }
 
 export function TrendChart({ snapshots }: TrendChartProps) {
+  const navigate = useNavigate();
+  const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const chartData = useMemo(() => {
     const sorted = [...snapshots].sort((a, b) =>
       a.yearMonth.localeCompare(b.yearMonth),
@@ -44,12 +53,39 @@ export function TrendChart({ snapshots }: TrendChartProps) {
 
     return sorted.map((s) => ({
       month: formatShortMonth(s.yearMonth),
+      yearMonth: s.yearMonth,
       netIncome: centsToDollars(s.netIncomeCents),
       expenses: centsToDollars(s.totalExpensesCents),
-      netIncomeFormatted: formatMoney(s.netIncomeCents),
-      expensesFormatted: formatMoney(s.totalExpensesCents),
+      netIncomeFormatted: formatMoney(s.netIncomeCents, {
+        currency: currencyCode,
+      }),
+      expensesFormatted: formatMoney(s.totalExpensesCents, {
+        currency: currencyCode,
+      }),
     }));
-  }, [snapshots]);
+  }, [snapshots, currencyCode]);
+
+  const handleMonthClick = useCallback(
+    (yearMonth?: string) => {
+      if (!yearMonth) return;
+      const [year, month] = yearMonth.split('-').map(Number);
+      if (!year || !month) return;
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+      const dateFrom = format(start, 'yyyy-MM-dd');
+      const dateTo = format(end, 'yyyy-MM-dd');
+      void navigate(`/expenses?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+    },
+    [navigate],
+  );
+
+  const handleChartClick = useCallback(
+    (state: ChartClickState) => {
+      const yearMonth = state?.activePayload?.[0]?.payload?.yearMonth;
+      handleMonthClick(yearMonth);
+    },
+    [handleMonthClick],
+  );
 
   // Generate accessible description for screen readers
   const accessibleDescription = useMemo(() => {
@@ -101,14 +137,20 @@ export function TrendChart({ snapshots }: TrendChartProps) {
           role="img"
           aria-label={accessibleDescription}
         >
-          <LineChart data={chartData} accessibilityLayer>
+          <LineChart
+            data={chartData}
+            accessibilityLayer
+            onClick={handleChartClick}
+          >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" tickLine={false} axisLine={false} />
             <YAxis
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) =>
-                formatMoney(Math.round(value * 100) as Cents)
+                formatMoney(Math.round(value * 100) as Cents, {
+                  currency: currencyCode,
+                })
               }
             />
             <ChartTooltip
@@ -117,7 +159,9 @@ export function TrendChart({ snapshots }: TrendChartProps) {
                   formatter={(value) => {
                     const dollars =
                       typeof value === 'number' ? value : Number(value);
-                    return formatMoney(Math.round(dollars * 100) as Cents);
+                    return formatMoney(Math.round(dollars * 100) as Cents, {
+                      currency: currencyCode,
+                    });
                   }}
                 />
               }

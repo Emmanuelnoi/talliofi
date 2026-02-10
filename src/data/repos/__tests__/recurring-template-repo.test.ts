@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { cents } from '@/domain/money';
 import type { RecurringTemplate } from '@/domain/plan/types';
 import { recurringTemplateRepo } from '../recurring-template-repo';
@@ -174,7 +174,9 @@ describe('recurringTemplateRepo', () => {
 
       await recurringTemplateRepo.delete(template.id);
 
-      const remaining = await recurringTemplateRepo.getByPlanId(template.planId);
+      const remaining = await recurringTemplateRepo.getByPlanId(
+        template.planId,
+      );
       expect(remaining).toHaveLength(0);
     });
   });
@@ -204,7 +206,7 @@ describe('recurringTemplateRepo', () => {
   });
 
   describe('getTemplatesForToday()', () => {
-    it('returns templates matching today\'s day of month', async () => {
+    it("returns templates matching today's day of month", async () => {
       const planId = crypto.randomUUID();
       const today = new Date();
       const currentDay = today.getDate();

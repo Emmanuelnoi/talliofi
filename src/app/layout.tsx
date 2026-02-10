@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import {
   LayoutDashboard,
@@ -16,9 +16,13 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useActivePlan } from '@/hooks/use-active-plan';
 import { useAutoSnapshot } from '@/hooks/use-auto-snapshot';
+import { useGlobalShortcuts } from '@/hooks/use-global-shortcuts';
+import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { useSessionTimeout } from '@/hooks/use-session-timeout';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from '@/stores/currency-store';
+import { DEFAULT_CURRENCY } from '@/domain/money';
 import { SkipLink, LiveRegion } from '@/components/accessibility';
 import {
   Sidebar,
@@ -37,6 +41,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
+import { EncryptionLockScreen } from '@/components/feedback/encryption-lock-screen';
+import { KeyboardShortcutsDialog } from '@/components/feedback/keyboard-shortcuts-dialog';
 import { QuickAddFab } from '@/components/quick-add';
 
 interface NavItem {
@@ -180,10 +186,25 @@ function MobileBottomNav() {
 }
 
 export default function AppLayout() {
+  const { enabled, isLocked, unlock, isBusy, error } = useLocalEncryption();
   const { data: plan, isLoading } = useActivePlan();
+  const setCurrencyCode = useCurrencyStore((s) => s.setCurrencyCode);
   const prefersReducedMotion = useReducedMotion();
+  const { isShortcutsDialogOpen, setShortcutsDialogOpen } =
+    useGlobalShortcuts();
   useAutoSnapshot();
   useSessionTimeout();
+
+  useEffect(() => {
+    const currency = plan?.currencyCode ?? DEFAULT_CURRENCY;
+    setCurrencyCode(currency);
+  }, [plan?.currencyCode, setCurrencyCode]);
+
+  if (enabled && isLocked) {
+    return (
+      <EncryptionLockScreen onUnlock={unlock} isBusy={isBusy} error={error} />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -219,7 +240,11 @@ export default function AppLayout() {
         <SidebarInset>
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 md:hidden">
             <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />
-            <Separator orientation="vertical" className="mr-2 h-4" aria-hidden="true" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 h-4"
+              aria-hidden="true"
+            />
             <span className="text-sm font-semibold">Talliofi</span>
           </header>
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -240,6 +265,12 @@ export default function AppLayout() {
         {/* Quick Add FAB - available on all pages within app shell */}
         <QuickAddFab />
       </SidebarProvider>
+
+      {/* Keyboard shortcuts help dialog (Cmd+/) */}
+      <KeyboardShortcutsDialog
+        open={isShortcutsDialogOpen}
+        onOpenChange={setShortcutsDialogOpen}
+      />
     </>
   );
 }

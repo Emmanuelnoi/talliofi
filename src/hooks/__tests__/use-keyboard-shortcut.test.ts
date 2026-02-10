@@ -184,14 +184,20 @@ describe('useKeyboardShortcut', () => {
 
 describe('formatShortcut', () => {
   it('formats shortcut for Mac', () => {
-    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    Object.defineProperty(navigator, 'userAgentData', {
+      value: { platform: 'macOS' },
+      configurable: true,
+    });
 
     expect(formatShortcut('N', ['meta'])).toBe('\u2318N');
     expect(formatShortcut('S', ['meta', 'shift'])).toBe('\u2318\u21E7S');
   });
 
   it('formats shortcut for Windows', () => {
-    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    Object.defineProperty(navigator, 'userAgentData', {
+      value: { platform: 'Windows' },
+      configurable: true,
+    });
 
     expect(formatShortcut('N', ['meta'])).toBe('Ctrl+N');
     expect(formatShortcut('S', ['meta', 'shift'])).toBe('Ctrl+Shift+S');
@@ -204,12 +210,18 @@ describe('formatShortcut', () => {
 
 describe('getModifierKeySymbol', () => {
   it('returns Cmd symbol on Mac', () => {
-    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    Object.defineProperty(navigator, 'userAgentData', {
+      value: { platform: 'macOS' },
+      configurable: true,
+    });
     expect(getModifierKeySymbol()).toBe('\u2318');
   });
 
   it('returns Ctrl on Windows', () => {
-    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('Win32');
+    Object.defineProperty(navigator, 'userAgentData', {
+      value: { platform: 'Windows' },
+      configurable: true,
+    });
     expect(getModifierKeySymbol()).toBe('Ctrl');
   });
 });

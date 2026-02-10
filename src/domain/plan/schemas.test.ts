@@ -294,8 +294,16 @@ describe('ExpenseItemSchema', () => {
       isFixed: false,
       isSplit: true,
       splits: [
-        { bucketId: bucketId1, category: 'groceries' as const, amountCents: 6000 },
-        { bucketId: bucketId2, category: 'personal' as const, amountCents: 4000 },
+        {
+          bucketId: bucketId1,
+          category: 'groceries' as const,
+          amountCents: 6000,
+        },
+        {
+          bucketId: bucketId2,
+          category: 'personal' as const,
+          amountCents: 4000,
+        },
       ],
       createdAt: now,
       updatedAt: now,
@@ -315,7 +323,11 @@ describe('ExpenseItemSchema', () => {
       isFixed: false,
       isSplit: true,
       splits: [
-        { bucketId: validUUID(), category: 'groceries' as const, amountCents: 10000 },
+        {
+          bucketId: validUUID(),
+          category: 'groceries' as const,
+          amountCents: 10000,
+        },
       ],
       createdAt: now,
       updatedAt: now,
@@ -335,8 +347,16 @@ describe('ExpenseItemSchema', () => {
       isFixed: false,
       isSplit: true,
       splits: [
-        { bucketId: validUUID(), category: 'groceries' as const, amountCents: 5000 },
-        { bucketId: validUUID(), category: 'personal' as const, amountCents: 3000 },
+        {
+          bucketId: validUUID(),
+          category: 'groceries' as const,
+          amountCents: 5000,
+        },
+        {
+          bucketId: validUUID(),
+          category: 'personal' as const,
+          amountCents: 3000,
+        },
       ],
       createdAt: now,
       updatedAt: now,

@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+} from '@/domain/money/currency';
 
 export const CentsSchema = z.number().int().safe();
 
@@ -10,6 +14,8 @@ export const FrequencySchema = z.enum([
   'quarterly',
   'annual',
 ]);
+
+export const CurrencyCodeSchema = z.enum(SUPPORTED_CURRENCIES);
 
 export const ExpenseCategorySchema = z.enum([
   'housing',
@@ -55,6 +61,7 @@ export const PlanSchema = z.object({
   incomeFrequency: FrequencySchema,
   taxMode: z.enum(['simple', 'itemized']),
   taxEffectiveRate: z.number().min(0).max(100).optional(),
+  currencyCode: CurrencyCodeSchema.optional().default(DEFAULT_CURRENCY),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   version: z.number().int().nonnegative(),
@@ -69,6 +76,7 @@ export const BucketAllocationSchema = z
     mode: z.enum(['percentage', 'fixed']),
     targetPercentage: z.number().min(0).max(100).optional(),
     targetAmountCents: CentsSchema.nonnegative().optional(),
+    rolloverEnabled: z.boolean().default(false),
     sortOrder: z.number().int().nonnegative(),
     createdAt: z.string().datetime(),
   })
@@ -114,6 +122,7 @@ export const ExpenseItemSchema = z
     amountCents: CentsSchema.nonnegative(),
     frequency: FrequencySchema,
     category: ExpenseCategorySchema,
+    currencyCode: CurrencyCodeSchema.optional(),
     isFixed: z.boolean(),
     notes: z.string().max(500).optional(),
     transactionDate: TransactionDateSchema,
@@ -144,6 +153,17 @@ export const ExpenseItemSchema = z
         'Split expenses must have at least 2 splits that sum to the total amount',
     },
   );
+
+export const ExpenseAttachmentSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
+  size: z.number().int().nonnegative(),
+  blob: z.instanceof(Blob),
+  createdAt: z.string().datetime(),
+});
 
 export const GoalSchema = z.object({
   id: z.string().uuid(),
@@ -233,6 +253,7 @@ export const BucketInputSchema = z.object({
   mode: z.enum(['percentage', 'fixed']),
   targetPercentage: z.number().min(0).max(100).optional(),
   targetAmountDollars: z.number().nonnegative().optional(),
+  rolloverEnabled: z.boolean().default(false),
 });
 
 export const CreateExpenseInputSchema = z.object({
@@ -241,6 +262,7 @@ export const CreateExpenseInputSchema = z.object({
   frequency: FrequencySchema,
   category: ExpenseCategorySchema,
   bucketId: z.string().uuid(),
+  currencyCode: CurrencyCodeSchema.optional(),
   isFixed: z.boolean().default(false),
   notes: z.string().max(500).optional(),
   transactionDate: TransactionDateSchema,
@@ -267,6 +289,7 @@ export const ExpenseFormSchema = z
     frequency: FrequencySchema,
     category: ExpenseCategorySchema,
     bucketId: z.string().uuid(),
+    currencyCode: CurrencyCodeSchema.optional(),
     isFixed: z.boolean(),
     notes: z.string().max(500).optional(),
     transactionDate: TransactionDateSchema,
@@ -284,7 +307,10 @@ export const ExpenseFormSchema = z
         return false;
       }
       // Splits must sum to total amount
-      const splitsTotal = data.splits.reduce((sum, s) => sum + s.amountDollars, 0);
+      const splitsTotal = data.splits.reduce(
+        (sum, s) => sum + s.amountDollars,
+        0,
+      );
       // Use a small tolerance for floating point comparison
       return Math.abs(splitsTotal - data.amountDollars) < 0.01;
     },
@@ -304,6 +330,7 @@ export const ExpenseEntrySchema = z.object({
   frequency: FrequencySchema,
   category: ExpenseCategorySchema,
   bucketId: z.string(),
+  currencyCode: CurrencyCodeSchema.optional(),
   isFixed: z.boolean(),
   notes: z.string().max(500).optional(),
 });
@@ -370,6 +397,7 @@ export const RecurringTemplateSchema = z.object({
   frequency: FrequencySchema,
   category: ExpenseCategorySchema,
   bucketId: z.string().uuid().or(z.literal('')),
+  currencyCode: CurrencyCodeSchema.optional(),
   dayOfMonth: z.number().int().min(1).max(31).optional(),
   isActive: z.boolean(),
   lastGeneratedDate: TransactionDateSchema,
@@ -389,6 +417,7 @@ export const RecurringTemplateFormSchema = z.object({
   frequency: FrequencySchema,
   category: ExpenseCategorySchema,
   bucketId: z.string().uuid('Please select a bucket'),
+  currencyCode: CurrencyCodeSchema.optional(),
   dayOfMonth: z.number().int().min(1).max(31).optional(),
   isActive: z.boolean(),
   notes: z.string().max(500).optional(),

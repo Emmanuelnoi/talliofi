@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
+import { extractFactors, type MfaFactor } from '@/lib/mfa-utils';
 
 interface AuthState {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+}
+
+export interface SignInResult {
+  status: 'signed_in' | 'mfa_required';
+  factors?: MfaFactor[];
 }
 
 /**
@@ -51,11 +57,24 @@ export function useAuth(): AuthState {
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) throw new Error('Supabase is not configured.');
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw new Error(error.message);
+
+    if (data.session) {
+      return { status: 'signed_in' } satisfies SignInResult;
+    }
+
+    const { data: factorData, error: factorError } =
+      await supabase.auth.mfa.listFactors();
+    if (factorError) throw new Error(factorError.message);
+    const factors = extractFactors(factorData);
+    if (factors.length === 0) {
+      throw new Error('Multi-factor authentication required.');
+    }
+    return { status: 'mfa_required', factors } satisfies SignInResult;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {

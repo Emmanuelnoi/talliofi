@@ -50,6 +50,8 @@ function makeBucketAnalysis(
     actualPercentage: 30,
     targetAmountCents: cents(120000),
     actualAmountCents: cents(120000),
+    rolloverCents: cents(0),
+    availableCents: cents(120000),
     varianceCents: cents(0),
     status: 'on_target',
     ...overrides,

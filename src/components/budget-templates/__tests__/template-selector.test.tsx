@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
@@ -7,10 +8,7 @@ import { BUDGET_TEMPLATES } from '@/lib/budget-templates';
 describe('TemplateSelector', () => {
   it('renders all built-in templates', () => {
     render(
-      <TemplateSelector
-        selectedTemplateId={null}
-        onSelectTemplate={vi.fn()}
-      />,
+      <TemplateSelector selectedTemplateId={null} onSelectTemplate={vi.fn()} />,
     );
 
     // Check that all templates are rendered
@@ -21,10 +19,7 @@ describe('TemplateSelector', () => {
 
   it('renders "Start from scratch" option by default', () => {
     render(
-      <TemplateSelector
-        selectedTemplateId={null}
-        onSelectTemplate={vi.fn()}
-      />,
+      <TemplateSelector selectedTemplateId={null} onSelectTemplate={vi.fn()} />,
     );
 
     expect(
@@ -57,7 +52,9 @@ describe('TemplateSelector', () => {
       />,
     );
 
-    const templateCard = screen.getByText('50/30/20 Rule').closest('[role="radio"]');
+    const templateCard = screen
+      .getByText('50/30/20 Rule')
+      .closest('[role="radio"]');
     await user.click(templateCard!);
 
     expect(onSelectTemplate).toHaveBeenCalledWith(
@@ -76,7 +73,9 @@ describe('TemplateSelector', () => {
       />,
     );
 
-    const templateCard = screen.getByText('50/30/20 Rule').closest('[role="radio"]');
+    const templateCard = screen
+      .getByText('50/30/20 Rule')
+      .closest('[role="radio"]');
     await user.click(templateCard!);
 
     // Should deselect (pass null)
@@ -109,7 +108,9 @@ describe('TemplateSelector', () => {
       />,
     );
 
-    const selectedCard = screen.getByText('50/30/20 Rule').closest('[role="radio"]');
+    const selectedCard = screen
+      .getByText('50/30/20 Rule')
+      .closest('[role="radio"]');
     expect(selectedCard).toHaveAttribute('aria-checked', 'true');
 
     // Other cards should not be selected
@@ -143,10 +144,7 @@ describe('TemplateSelector', () => {
 
   it('has accessible radiogroup role', () => {
     render(
-      <TemplateSelector
-        selectedTemplateId={null}
-        onSelectTemplate={vi.fn()}
-      />,
+      <TemplateSelector selectedTemplateId={null} onSelectTemplate={vi.fn()} />,
     );
 
     expect(

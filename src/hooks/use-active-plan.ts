@@ -54,8 +54,12 @@ export function useSwitchPlan() {
       await queryClient.invalidateQueries({ queryKey: ['assets'] });
       await queryClient.invalidateQueries({ queryKey: ['liabilities'] });
       await queryClient.invalidateQueries({ queryKey: ['snapshots'] });
-      await queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] });
-      await queryClient.invalidateQueries({ queryKey: ['recurring-templates'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['net-worth-snapshots'],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['recurring-templates'],
+      });
       await queryClient.invalidateQueries({
         queryKey: ['recurring-templates-active'],
       });

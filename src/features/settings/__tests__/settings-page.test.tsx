@@ -49,6 +49,7 @@ describe('SettingsPage', () => {
     });
 
     expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText('Currency & Exchange Rates')).toBeInTheDocument();
     expect(screen.getByText('Export Data')).toBeInTheDocument();
     expect(screen.getByText('Import Data')).toBeInTheDocument();
     expect(screen.getByText('Privacy')).toBeInTheDocument();

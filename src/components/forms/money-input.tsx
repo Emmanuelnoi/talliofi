@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from '@/stores/currency-store';
+import { getCurrencySymbol, type CurrencyCode } from '@/domain/money';
 
 interface MoneyInputProps extends Omit<
   React.ComponentProps<'input'>,
@@ -13,6 +15,8 @@ interface MoneyInputProps extends Omit<
   min?: number;
   /** Maximum dollar value allowed */
   max?: number;
+  /** Override currency code for the prefix symbol */
+  currencyCode?: CurrencyCode;
 }
 
 /**
@@ -25,13 +29,25 @@ interface MoneyInputProps extends Omit<
  */
 const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
   function MoneyInput(
-    { value, onChange, min, max, className, onBlur, onFocus, ...props },
+    {
+      value,
+      onChange,
+      min,
+      max,
+      className,
+      onBlur,
+      onFocus,
+      currencyCode,
+      ...props
+    },
     ref,
   ) {
     const [displayValue, setDisplayValue] = React.useState<string>(
       formatDollars(value),
     );
     const [isFocused, setIsFocused] = React.useState(false);
+    const defaultCurrency = useCurrencyStore((s) => s.currencyCode);
+    const symbol = getCurrencySymbol(currencyCode ?? defaultCurrency);
 
     // Sync from external value changes when not focused
     React.useEffect(() => {
@@ -77,7 +93,7 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
     return (
       <div className="relative">
         <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
-          $
+          {symbol}
         </span>
         <input
           ref={ref}
