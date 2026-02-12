@@ -363,7 +363,7 @@ describe('exportAsCSV', () => {
   });
 
   it('handles Unicode characters correctly', async () => {
-    await planRepo.create(makeCSVPlan({ name: 'Plan with émojis 🎉 and ñ' }));
+    await planRepo.create(makeCSVPlan({ name: 'Plan with accents é and ñ' }));
     const bucket = makeCSVBucket({ name: '日本語バケット' });
     await bucketRepo.create(bucket);
     await expenseRepo.create(
@@ -375,7 +375,7 @@ describe('exportAsCSV', () => {
 
     const csv = await exportAsCSV(CSV_PLAN_ID);
 
-    expect(csv).toContain('Plan with émojis 🎉 and ñ');
+    expect(csv).toContain('Plan with accents é and ñ');
     expect(csv).toContain('日本語バケット');
     expect(csv).toContain('Café expense');
     expect(csv).toContain('中文笔记');

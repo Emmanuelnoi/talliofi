@@ -454,7 +454,7 @@ function LiabilityForm({ liability, onSave, onCancel }: LiabilityFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="liability-interest">Interest Rate (%)</Label>
           <Input
@@ -489,7 +489,7 @@ function LiabilityForm({ liability, onSave, onCancel }: LiabilityFormProps) {
         <Label htmlFor="liability-notes">Notes (optional)</Label>
         <Textarea
           id="liability-notes"
-          placeholder="Any additional details..."
+          placeholder="Any additional details…"
           {...register('notes')}
         />
       </div>

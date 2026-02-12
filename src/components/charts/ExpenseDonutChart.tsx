@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { PieChart, Pie, Cell } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import type { Cents } from '@/domain/money';
-import { centsToDollars, formatMoney } from '@/domain/money';
+import { addMoney, cents, centsToDollars, formatMoney } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartTooltip } from '@/components/ui/chart';
@@ -49,6 +49,16 @@ type LabelLayout = {
   textX: number;
   textY: number;
   textAnchor: 'start' | 'end';
+  side: 'left' | 'right';
+};
+
+type RawLabel = {
+  index: number;
+  rawY: number;
+  lineStartX: number;
+  lineStartY: number;
+  lineBreakX: number;
+  lineBreakY: number;
   side: 'left' | 'right';
 };
 
@@ -153,7 +163,11 @@ export function ExpenseDonutChart({
   }, [data, compactFormatter, currencyCode]);
 
   const totalCents = useMemo(
-    () => chartData.reduce((sum, datum) => sum + datum.valueCents, 0),
+    () =>
+      chartData.reduce(
+        (sum, datum) => addMoney(sum, datum.valueCents),
+        cents(0),
+      ),
     [chartData],
   );
 
@@ -202,15 +216,7 @@ export function ExpenseDonutChart({
 
     const raw = chartData.reduce<{
       cumulative: number;
-      items: Array<{
-        index: number;
-        rawY: number;
-        lineStartX: number;
-        lineStartY: number;
-        lineBreakX: number;
-        lineBreakY: number;
-        side: 'left' | 'right';
-      }>;
+      items: RawLabel[];
     }>(
       (acc, datum, index) => {
         const sliceAngle = (datum.value / total) * 360;
@@ -223,7 +229,7 @@ export function ExpenseDonutChart({
         const lineBreakY = cy + Math.sin(radians) * (outerRadius + 16);
         const rawY = cy + Math.sin(radians) * (outerRadius + 28);
 
-        const item = {
+        const item: RawLabel = {
           index,
           rawY,
           lineStartX,
@@ -238,7 +244,7 @@ export function ExpenseDonutChart({
           items: [...acc.items, item],
         };
       },
-      { cumulative: 0, items: [] },
+      { cumulative: 0, items: [] as RawLabel[] },
     ).items;
 
     const left = adjustLabelPositions(
@@ -338,11 +344,11 @@ export function ExpenseDonutChart({
                       ? ((datum.valueCents / totalCents) * 100).toFixed(1)
                       : '0.0';
                   return (
-                    <div className="bg-background/95 border-border/60 rounded-lg border px-3 py-2 text-xs shadow-xl backdrop-blur">
-                      <p className="text-foreground mb-1 font-medium">
+                    <div className="border-border/60 bg-card/95 text-foreground/90 rounded-lg border px-3 py-2 text-[11px] shadow-xl backdrop-blur">
+                      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
                         {datum.label}
                       </p>
-                      <p className="text-muted-foreground">
+                      <p className="text-sm font-semibold tabular-nums">
                         {datum.formatted} · {percent}%
                       </p>
                     </div>

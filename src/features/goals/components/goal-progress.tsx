@@ -54,7 +54,7 @@ export function GoalProgress({
         aria-label={`${Math.round(percentage)}% progress`}
       >
         <div
-          className={cn('h-full rounded-full transition-all duration-500')}
+          className={cn('h-full rounded-full transition-[width] duration-500')}
           style={{
             width: `${percentage}%`,
             backgroundColor: color,

@@ -58,7 +58,7 @@ export function NetWorthSummaryCard({
           </div>
 
           {/* Asset/Liability Breakdown */}
-          <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
             <div>
               <p className="text-muted-foreground text-sm">Total Assets</p>
               <p className="text-lg font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">

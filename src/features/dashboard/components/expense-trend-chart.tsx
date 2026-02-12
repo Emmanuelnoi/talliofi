@@ -1,13 +1,19 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { Receipt } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import type { ExpenseCategory } from '@/domain/plan';
 import type { Cents } from '@/domain/money';
 import { centsToDollars, formatMoney } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { CATEGORY_LABELS } from '@/lib/constants';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   ChartContainer,
   ChartTooltip,
@@ -15,6 +21,7 @@ import {
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
 import { ChartDataTable } from '@/components/accessibility';
+import { Button } from '@/components/ui/button';
 
 interface ExpenseTrendChartProps {
   expensesByCategory: ReadonlyMap<ExpenseCategory, Cents>;
@@ -40,7 +47,6 @@ const CHART_CONFIG: ChartConfig = {
 export function ExpenseTrendChart({
   expensesByCategory,
 }: ExpenseTrendChartProps) {
-  const navigate = useNavigate();
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
 
   const data: CategoryDatum[] = useMemo(
@@ -56,16 +62,6 @@ export function ExpenseTrendChart({
     [expensesByCategory, currencyCode],
   );
 
-  /** Navigate to expenses page filtered by the clicked category. */
-  const handleBarClick = useCallback(
-    (datum: CategoryDatum) => {
-      void navigate(
-        `/expenses?categories=${encodeURIComponent(datum.category)}`,
-      );
-    },
-    [navigate],
-  );
-
   // Data for accessible table alternative
   const tableData = useMemo(
     () =>
@@ -79,18 +75,22 @@ export function ExpenseTrendChart({
   if (data.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Spending by Category</CardTitle>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 space-y-2">
+            <CardTitle>Spending by Category</CardTitle>
+            <CardDescription>
+              Highest monthly expenses across your categories.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/expenses">View Expenses</Link>
+          </Button>
         </CardHeader>
         <CardContent>
           <EmptyState
             icon={Receipt}
             title="No expenses tracked yet"
             description="Add expenses to see a breakdown by category."
-            action={{
-              label: 'Go to Expenses',
-              onClick: () => void navigate('/expenses'),
-            }}
           />
         </CardContent>
       </Card>
@@ -101,10 +101,18 @@ export function ExpenseTrendChart({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Spending by Category</CardTitle>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-2">
+          <CardTitle>Spending by Category</CardTitle>
+          <CardDescription>
+            Highest monthly expenses across your categories.
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/expenses">View Expenses</Link>
+        </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <ChartContainer
           config={CHART_CONFIG}
           className="aspect-auto"
@@ -127,11 +135,12 @@ export function ExpenseTrendChart({
                 if (!active || !payload?.length) return null;
                 const datum = payload[0].payload as CategoryDatum;
                 return (
-                  <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
-                    <p className="mb-1 font-medium">{datum.label}</p>
-                    <p className="text-muted-foreground">{datum.formatted}</p>
-                    <p className="text-muted-foreground mt-1 italic">
-                      Click to view expenses
+                  <div className="border-border/60 bg-card/95 text-foreground/90 rounded-lg border px-3 py-2 text-[11px] shadow-xl backdrop-blur">
+                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                      {datum.label}
+                    </p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {datum.formatted}
                     </p>
                   </div>
                 );
@@ -142,14 +151,30 @@ export function ExpenseTrendChart({
               fill={CHART_COLOR}
               radius={[0, 4, 4, 0]}
               maxBarSize={28}
-              className="cursor-pointer"
-              onClick={(_: unknown, index: number) => {
-                const datum = data[index];
-                if (datum) handleBarClick(datum);
-              }}
             />
           </BarChart>
         </ChartContainer>
+
+        <div className="flex flex-wrap gap-2">
+          {data.map((datum) => (
+            <Button
+              key={datum.category}
+              variant="outline"
+              className="h-8 gap-2 px-3 text-xs font-semibold tracking-tight"
+              asChild
+            >
+              <Link
+                to={`/expenses?categories=${encodeURIComponent(datum.category)}`}
+                aria-label={`View ${datum.label} expenses`}
+              >
+                <span className="truncate">{datum.label}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {datum.formatted}
+                </span>
+              </Link>
+            </Button>
+          ))}
+        </div>
 
         {/* Screen-reader data summary */}
         <div className="sr-only">

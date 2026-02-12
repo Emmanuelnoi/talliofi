@@ -13,10 +13,11 @@ import { LocalEncryptionSection } from '../components/local-encryption-section';
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Settings"
         description="Manage your preferences and data."
+        eyebrow="Preferences"
       />
       <ThemeSection />
       <CurrencySection />

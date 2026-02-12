@@ -1,8 +1,7 @@
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IncomeInputSchema } from '@/domain/plan/schemas';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -18,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MoneyInput } from '@/components/forms/money-input';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 import type { IncomeFormData } from '../types';
 
@@ -39,7 +39,6 @@ export function IncomeStep({ onNext }: IncomeStepProps) {
   const setIncome = useOnboardingDataStore((s) => s.setIncome);
 
   const {
-    register,
     handleSubmit,
     setValue,
     control,
@@ -60,27 +59,35 @@ export function IncomeStep({ onNext }: IncomeStepProps) {
   return (
     <Card>
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Income
+        </p>
         <CardTitle>What is your gross income?</CardTitle>
         <CardDescription>
           Enter your total income before taxes and deductions.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="grossIncomeDollars">Gross income ($)</Label>
-            <Input
-              id="grossIncomeDollars"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="5000.00"
-              className="money"
-              aria-invalid={!!errors.grossIncomeDollars}
-              {...register('grossIncomeDollars', { valueAsNumber: true })}
+            <Controller
+              control={control}
+              name="grossIncomeDollars"
+              render={({ field }) => (
+                <MoneyInput
+                  id="grossIncomeDollars"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  min={0}
+                  placeholder="5,000.00…"
+                  aria-invalid={!!errors.grossIncomeDollars}
+                />
+              )}
             />
             {errors.grossIncomeDollars && (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs">
                 {errors.grossIncomeDollars.message}
               </p>
             )}
@@ -99,7 +106,7 @@ export function IncomeStep({ onNext }: IncomeStepProps) {
               }
             >
               <SelectTrigger id="incomeFrequency">
-                <SelectValue placeholder="Select frequency" />
+                <SelectValue placeholder="Select frequency…" />
               </SelectTrigger>
               <SelectContent>
                 {FREQUENCY_OPTIONS.map((option) => (
@@ -110,14 +117,14 @@ export function IncomeStep({ onNext }: IncomeStepProps) {
               </SelectContent>
             </Select>
             {errors.incomeFrequency && (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs">
                 {errors.incomeFrequency.message}
               </p>
             )}
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit">Continue</Button>
+            <Button type="submit">Continue to Taxes</Button>
           </div>
         </form>
       </CardContent>

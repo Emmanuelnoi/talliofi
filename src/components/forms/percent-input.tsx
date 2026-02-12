@@ -31,6 +31,8 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
       className,
       onBlur,
       onFocus,
+      name,
+      autoComplete,
       ...props
     },
     ref,
@@ -86,8 +88,8 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
           inputMode="decimal"
           data-slot="input"
           className={cn(
-            'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent py-1 pr-8 pl-3 text-base tabular-nums shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:opacity-50 md:text-sm',
-            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+            'file:text-foreground placeholder:text-muted-foreground/70 selection:bg-foreground selection:text-background bg-background border-border/70 flex h-10 w-full min-w-0 rounded-lg border py-2 pr-8 pl-3 text-sm tabular-nums shadow-sm transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
+            'focus-visible:border-foreground/30 focus-visible:ring-2 focus-visible:ring-foreground/10',
             'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
             className,
           )}
@@ -95,6 +97,8 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
           onChange={handleChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          name={name ?? props.id}
+          autoComplete={autoComplete ?? 'off'}
           {...props}
         />
         <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm">

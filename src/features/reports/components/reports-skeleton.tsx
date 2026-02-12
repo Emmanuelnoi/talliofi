@@ -3,10 +3,11 @@ import { PageHeader } from '@/components/layout/page-header';
 
 export function ReportsSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Reports"
         description="Analyze your financial data with custom date ranges."
+        eyebrow="Insights"
       />
 
       {/* Date Range Selector Skeleton */}

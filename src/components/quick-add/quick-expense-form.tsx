@@ -382,7 +382,7 @@ export function QuickExpenseForm({
             <Label htmlFor="quick-expense-notes">Notes (optional)</Label>
             <Textarea
               id="quick-expense-notes"
-              placeholder="Any additional notes..."
+              placeholder="Any additional notes…"
               rows={2}
               {...register('notes')}
             />
@@ -402,7 +402,7 @@ export function QuickExpenseForm({
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-          Add expense
+          Add Expense
         </Button>
       </div>
     </form>

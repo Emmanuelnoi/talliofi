@@ -208,24 +208,26 @@ export default function BucketsPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Buckets"
           description="Complete onboarding to set up buckets."
+          eyebrow="Savings"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Buckets"
         description="Organize your budget into spending categories."
+        eyebrow="Savings"
         action={
           <Button size="sm" onClick={handleOpenAdd}>
             <Plus className="size-4" />
-            Add bucket
+            Add Bucket
           </Button>
         }
       />
@@ -236,18 +238,20 @@ export default function BucketsPage() {
           <CardContent className="pt-6">
             <div className="space-y-2">
               <div className="flex items-baseline justify-between text-sm">
-                <span className="font-medium">Budget allocation</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  Budget allocation
+                </span>
                 <span className="tabular-nums">
                   {totalPercentage.toFixed(0)}% of 100%
                 </span>
               </div>
-              <div className="bg-muted flex h-3 overflow-hidden rounded-full">
+              <div className="bg-muted/70 flex h-3 overflow-hidden rounded-full">
                 {buckets
                   .filter((b) => b.mode === 'percentage' && b.targetPercentage)
                   .map((b) => (
                     <div
                       key={b.id}
-                      className="transition-all duration-300"
+                      className="transition-[width] duration-300"
                       style={{
                         width: `${b.targetPercentage}%`,
                         backgroundColor: b.color,
@@ -278,10 +282,10 @@ export default function BucketsPage() {
       {buckets.length === 0 ? (
         <EmptyState
           icon={Plus}
-          title="No buckets yet"
+          title="No Buckets Yet"
           description="Create spending buckets to organize your budget. Try the popular 50/30/20 approach."
           action={{
-            label: 'Add your first bucket',
+            label: 'Add Your First Bucket',
             onClick: handleOpenAdd,
           }}
         />
@@ -291,7 +295,7 @@ export default function BucketsPage() {
             const spent = spendingByBucket.get(bucket.id) ?? cents(0);
             return (
               <Card key={bucket.id}>
-                <CardHeader>
+                <CardHeader className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span
@@ -301,9 +305,7 @@ export default function BucketsPage() {
                       />
                       <CardTitle className="text-base">{bucket.name}</CardTitle>
                       {bucket.rolloverEnabled && (
-                        <Badge variant="secondary" className="text-xs">
-                          Rollover
-                        </Badge>
+                        <Badge variant="secondary">Rollover</Badge>
                       )}
                     </div>
                     <DropdownMenu>
@@ -335,19 +337,17 @@ export default function BucketsPage() {
                     </DropdownMenu>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-baseline justify-between">
-                    <Badge variant="outline">
-                      {bucket.mode === 'percentage'
-                        ? `${bucket.targetPercentage}%`
-                        : formatMoney(bucket.targetAmountCents ?? cents(0), {
-                            currency: currencyCode,
-                          })}
-                    </Badge>
-                    <span className="text-muted-foreground text-sm tabular-nums">
-                      {formatMoney(spent, { currency: currencyCode })} spent/mo
-                    </span>
-                  </div>
+                <CardContent className="flex items-center justify-between">
+                  <Badge variant="outline">
+                    {bucket.mode === 'percentage'
+                      ? `${bucket.targetPercentage}%`
+                      : formatMoney(bucket.targetAmountCents ?? cents(0), {
+                          currency: currencyCode,
+                        })}
+                  </Badge>
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    {formatMoney(spent, { currency: currencyCode })} spent/mo
+                  </span>
                 </CardContent>
               </Card>
             );

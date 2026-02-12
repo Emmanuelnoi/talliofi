@@ -67,7 +67,7 @@ export function DangerZone() {
               ) : (
                 <Trash2 className="size-4" />
               )}
-              {isClearing ? 'Deleting...' : 'Delete All Data'}
+              {isClearing ? 'Deleting…' : 'Delete All Data'}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -87,7 +87,7 @@ export function DangerZone() {
                 disabled={isClearing}
                 className="bg-destructive text-white hover:bg-destructive/90"
               >
-                {isClearing ? 'Deleting...' : 'Delete Everything'}
+                {isClearing ? 'Deleting…' : 'Delete Everything'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

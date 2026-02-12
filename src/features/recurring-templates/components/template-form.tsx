@@ -204,7 +204,7 @@ export function TemplateForm({
       </div>
 
       {/* Category and Bucket */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="template-category">Category</Label>
           <Controller
@@ -350,7 +350,7 @@ export function TemplateForm({
         <Label htmlFor="template-notes">Notes (optional)</Label>
         <Input
           id="template-notes"
-          placeholder="Any additional notes..."
+          placeholder="Any additional notes…"
           {...register('notes')}
         />
       </div>

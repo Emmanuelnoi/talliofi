@@ -52,10 +52,11 @@ export default function PlansPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Budget Plans"
           description="Manage your budget plans and scenarios."
+          eyebrow="Workspace"
         />
         <PlansSkeleton />
       </div>
@@ -63,13 +64,14 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Budget Plans"
         description="Manage your budget plans and scenarios."
+        eyebrow="Workspace"
         action={
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="mr-2 size-4" />
+          <Button size="sm" onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="size-4" />
             New Plan
           </Button>
         }
@@ -78,7 +80,7 @@ export default function PlansPage() {
       {allPlans.length === 0 ? (
         <EmptyState
           icon={FolderOpen}
-          title="No budget plans"
+          title="No Budget Plans"
           description="Create your first budget plan to start tracking your finances."
           action={{
             label: 'Create Plan',

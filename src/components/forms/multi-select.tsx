@@ -45,7 +45,7 @@ export function MultiSelect({
   options,
   value,
   onChange,
-  placeholder = 'Select...',
+  placeholder = 'Select…',
   ariaLabel,
   className,
   disabled = false,

@@ -111,7 +111,7 @@ describe('DashboardPage', () => {
     render(<DashboardPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText('No plan yet')).toBeInTheDocument();
+      expect(screen.getByText('No Plan Yet')).toBeInTheDocument();
     });
 
     expect(

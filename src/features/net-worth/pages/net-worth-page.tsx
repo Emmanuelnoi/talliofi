@@ -98,10 +98,11 @@ export default function NetWorthPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Net Worth"
           description="Complete onboarding to start tracking your net worth."
+          eyebrow="Balance"
         />
       </div>
     );
@@ -110,16 +111,17 @@ export default function NetWorthPage() {
   const hasData = assets.length > 0 || liabilities.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Net Worth"
         description="Track your assets and liabilities to monitor your financial health."
+        eyebrow="Balance"
       />
 
       {!hasData ? (
         <EmptyState
           icon={Landmark}
-          title="Start tracking your net worth"
+          title="Start Tracking Your Net Worth"
           description="Add your assets and liabilities to see your complete financial picture."
         />
       ) : (

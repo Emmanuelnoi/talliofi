@@ -58,7 +58,7 @@ export function useSessionTimeout(): void {
 
     warningRef.current = setTimeout(() => {
       warningShownRef.current = true;
-      toast.warning('Session expiring in 1 minute due to inactivity...');
+      toast.warning('Session expiring in 1 minute due to inactivity…');
     }, SESSION_WARNING_MS);
 
     timeoutRef.current = setTimeout(() => {

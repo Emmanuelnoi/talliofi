@@ -11,6 +11,7 @@ interface EmptyStateProps {
   title: string;
   description: string;
   action?: EmptyStateAction;
+  eyebrow?: string;
 }
 
 export function EmptyState({
@@ -18,14 +19,22 @@ export function EmptyState({
   title,
   description,
   action,
+  eyebrow,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="bg-muted mb-4 flex size-12 items-center justify-center rounded-full">
-        <Icon className="text-muted-foreground size-6" />
+    <div className="border-border/60 bg-card/50 flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-8 py-12 text-center">
+      <div className="bg-muted/70 flex size-12 items-center justify-center rounded-2xl">
+        <Icon className="text-muted-foreground size-6" aria-hidden="true" />
       </div>
-      <h3 className="mb-1 text-lg font-semibold">{title}</h3>
-      <p className="text-muted-foreground mb-4 max-w-sm text-sm">
+      <div className="space-y-2">
+        {eyebrow && (
+          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+            {eyebrow}
+          </p>
+        )}
+        <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
+      </div>
+      <p className="text-muted-foreground max-w-sm text-sm leading-6">
         {description}
       </p>
       {action && (

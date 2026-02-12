@@ -47,7 +47,7 @@ describe('OnboardingPage', () => {
 
     expect(screen.getByText('What is your gross income?')).toBeInTheDocument();
     expect(screen.getByLabelText('Gross income ($)')).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
+    expect(screen.getAllByText('Step 1 of 6').length).toBeGreaterThan(0);
   });
 
   it('shows income frequency select', () => {
@@ -63,10 +63,10 @@ describe('OnboardingPage', () => {
     const incomeInput = screen.getByLabelText('Gross income ($)');
     await user.clear(incomeInput);
     await user.type(incomeInput, '5000');
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: 'Continue to Taxes' }));
 
     expect(await screen.findByText('Estimate your taxes')).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 6')).toBeInTheDocument();
+    expect(screen.getAllByText('Step 2 of 6').length).toBeGreaterThan(0);
   });
 
   it('navigates back from tax step to income step', async () => {
@@ -88,7 +88,7 @@ describe('OnboardingPage', () => {
   it('shows progress indicator with correct step count', () => {
     renderOnboarding();
 
-    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
+    expect(screen.getAllByText('Step 1 of 6').length).toBeGreaterThan(0);
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
@@ -96,8 +96,8 @@ describe('OnboardingPage', () => {
     useUIStore.setState({ onboardingStep: 5 });
     renderOnboarding();
 
-    expect(screen.getByText('Summary')).toBeInTheDocument();
-    expect(screen.getByText('Step 6 of 6')).toBeInTheDocument();
+    expect(screen.getAllByText('Summary').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Step 6 of 6').length).toBeGreaterThan(0);
   });
 
   it('shows the template step', () => {
@@ -105,6 +105,6 @@ describe('OnboardingPage', () => {
     renderOnboarding();
 
     expect(screen.getByText('Choose a starting point')).toBeInTheDocument();
-    expect(screen.getByText('Step 3 of 6')).toBeInTheDocument();
+    expect(screen.getAllByText('Step 3 of 6').length).toBeGreaterThan(0);
   });
 });

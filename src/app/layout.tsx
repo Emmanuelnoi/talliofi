@@ -12,6 +12,7 @@ import {
   FileBarChart,
   Settings,
   Loader2,
+  Layers,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivePlan } from '@/hooks/use-active-plan';
@@ -92,7 +93,7 @@ function LoadingFallback() {
         )}
         aria-hidden="true"
       />
-      <span className="sr-only">Loading...</span>
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
@@ -103,16 +104,19 @@ function AppSidebar() {
   return (
     <Sidebar collapsible="icon" aria-label="Main navigation">
       <SidebarHeader>
-        <div className="flex h-8 items-center gap-2 px-2">
+        <div className="flex items-center gap-3 px-2">
           <div
-            className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md text-xs font-bold"
+            className="bg-foreground text-background flex size-7 items-center justify-center rounded-lg text-xs font-semibold"
             aria-hidden="true"
           >
             T
           </div>
-          <span className="text-sm font-semibold group-data-[collapsible=icon]:hidden">
-            Talliofi
-          </span>
+          <div className="group-data-[collapsible=icon]:hidden">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+              Talliofi
+            </p>
+            <p className="text-sm font-semibold tracking-tight">Planner</p>
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -124,17 +128,17 @@ function AppSidebar() {
                 const isActive = location.pathname === item.to;
                 return (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
                       <NavLink
                         to={item.to}
-                        className={isActive ? 'font-medium' : ''}
                         aria-current={isActive ? 'page' : undefined}
                       >
                         <item.icon
-                          className={cn(
-                            'size-4',
-                            isActive && 'text-sidebar-primary',
-                          )}
+                          className={cn('size-4', isActive && 'text-primary')}
                           aria-hidden="true"
                         />
                         <span>{item.label}</span>
@@ -157,11 +161,11 @@ function MobileBottomNav() {
 
   return (
     <nav
-      className="bg-background border-t md:hidden"
+      className="bg-background/80 border-border/60 sticky bottom-0 border-t backdrop-blur md:hidden"
       aria-label="Mobile navigation"
     >
       {/* Ensure minimum touch target size of 44x44px for all nav items */}
-      <div className="flex h-16 items-center justify-around">
+      <div className="flex h-16 items-center justify-around px-2">
         {BOTTOM_NAV_ITEMS.map((item) => {
           const isActive = location.pathname === item.to;
           return (
@@ -170,8 +174,8 @@ function MobileBottomNav() {
               to={item.to}
               className={cn(
                 // Minimum touch target: 44x44px
-                'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-0.5 px-2 py-1 text-xs transition-colors',
-                isActive ? 'text-primary font-medium' : 'text-muted-foreground',
+                'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors',
+                isActive ? 'text-foreground' : 'text-muted-foreground',
               )}
               aria-current={isActive ? 'page' : undefined}
             >
@@ -220,7 +224,7 @@ export default function AppLayout() {
           )}
           aria-hidden="true"
         />
-        <span className="sr-only">Loading application...</span>
+        <span className="sr-only">Loading application…</span>
       </div>
     );
   }
@@ -238,26 +242,39 @@ export default function AppLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 md:hidden">
-            <SidebarTrigger className="-ml-1" aria-label="Toggle sidebar" />
-            <Separator
-              orientation="vertical"
-              className="mr-2 h-4"
-              aria-hidden="true"
-            />
-            <span className="text-sm font-semibold">Talliofi</span>
+          <header className="border-border/60 bg-background/80 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-6 backdrop-blur">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger aria-label="Toggle sidebar" />
+              <Separator orientation="vertical" className="h-5" />
+              <div>
+                <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+                  Active plan
+                </p>
+                <p className="text-sm font-semibold tracking-tight">
+                  {plan.name}
+                </p>
+              </div>
+            </div>
+            <NavLink to="/plans" className="shrink-0">
+              <span className="text-muted-foreground inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]">
+                <Layers className="size-4" aria-hidden="true" />
+                Plans
+              </span>
+            </NavLink>
           </header>
           <div className="flex flex-1 flex-col overflow-hidden">
             <main
               id={MAIN_CONTENT_ID}
-              className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6"
+              className="flex-1 overflow-y-auto px-6 pb-24 pt-6 md:px-8"
               tabIndex={-1}
             >
-              <ErrorBoundary>
-                <Suspense fallback={<LoadingFallback />}>
-                  <Outlet />
-                </Suspense>
-              </ErrorBoundary>
+              <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+                <ErrorBoundary>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Outlet />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
             </main>
             <MobileBottomNav />
           </div>

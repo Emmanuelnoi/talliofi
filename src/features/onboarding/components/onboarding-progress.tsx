@@ -10,12 +10,15 @@ export function OnboardingProgress({
   totalSteps,
 }: OnboardingProgressProps) {
   return (
-    <div className="space-y-2">
-      <div className="text-muted-foreground text-right text-sm">
-        Step {currentStep + 1} of {totalSteps}
+    <div className="space-y-3">
+      <div className="text-muted-foreground flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.2em]">
+        <span>Progress</span>
+        <span>
+          Step {currentStep + 1} of {totalSteps}
+        </span>
       </div>
       <div
-        className="flex gap-1.5"
+        className="flex gap-2"
         role="progressbar"
         aria-label="Onboarding progress"
         aria-valuenow={currentStep + 1}
@@ -27,7 +30,7 @@ export function OnboardingProgress({
             key={i}
             className={cn(
               'h-1.5 flex-1 rounded-full transition-colors',
-              i <= currentStep ? 'bg-primary' : 'bg-muted',
+              i <= currentStep ? 'bg-foreground' : 'bg-border/80',
             )}
           />
         ))}

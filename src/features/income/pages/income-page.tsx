@@ -68,8 +68,8 @@ export default function IncomePage() {
       if (!plan) return;
       const updated: Plan = {
         ...plan,
-        grossIncomeCents: dollarsToCents(data.grossIncomeDollars),
-        incomeFrequency: data.incomeFrequency,
+        grossIncomeCents: dollarsToCents(data.grossIncomeDollars ?? 0),
+        incomeFrequency: data.incomeFrequency ?? plan.incomeFrequency,
       };
       try {
         await updatePlan.mutateAsync(updated);
@@ -93,20 +93,22 @@ export default function IncomePage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Income"
           description="Complete onboarding to set up your income."
+          eyebrow="Earnings"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Income"
         description="Manage your gross income and pay frequency."
+        eyebrow="Earnings"
         action={<SaveIndicator status={status === 'error' ? 'idle' : status} />}
       />
 
@@ -117,7 +119,7 @@ export default function IncomePage() {
             Your total income before taxes and deductions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="grossIncomeDollars">Amount</Label>
             <Controller

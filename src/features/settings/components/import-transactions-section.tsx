@@ -220,7 +220,7 @@ function FileDropzone({
         <div className="text-center">
           <p className="text-sm font-medium">
             {isProcessing
-              ? 'Processing file...'
+              ? 'Processing file…'
               : 'Drop file here or click to browse'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -1125,7 +1125,7 @@ export function ImportTransactionsSection() {
                   <Upload className="size-4" />
                 )}
                 {state.isImporting
-                  ? 'Importing...'
+                  ? 'Importing…'
                   : `Import ${state.preview.transactions.filter((t) => t.selected).length} Transactions`}
               </Button>
               {isCsvFile && (

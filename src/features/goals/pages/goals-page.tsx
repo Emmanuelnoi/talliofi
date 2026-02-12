@@ -252,24 +252,26 @@ export default function GoalsPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Goals"
           description="Complete onboarding to start tracking goals."
+          eyebrow="Planning"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Goals"
         description="Track your savings targets and debt payoff progress."
+        eyebrow="Planning"
         action={
           <Button size="sm" onClick={handleOpenAdd}>
             <Plus className="size-4" />
-            Add goal
+            Add Goal
           </Button>
         }
       />
@@ -279,26 +281,30 @@ export default function GoalsPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-muted-foreground text-sm">Active Goals</div>
-              <div className="text-2xl font-bold tabular-nums">
+              <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                Active goals
+              </div>
+              <div className="text-2xl font-semibold tabular-nums">
                 {stats.activeCount}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-muted-foreground text-sm">Completed</div>
-              <div className="text-2xl font-bold tabular-nums">
+              <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                Completed
+              </div>
+              <div className="text-2xl font-semibold tabular-nums">
                 {stats.completedCount}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-muted-foreground text-sm">
-                Overall Progress
+              <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                Overall progress
               </div>
-              <div className="text-2xl font-bold tabular-nums">
+              <div className="text-2xl font-semibold tabular-nums">
                 {stats.overallProgress.toFixed(0)}%
               </div>
             </CardContent>

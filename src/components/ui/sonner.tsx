@@ -22,11 +22,12 @@ function Toaster({ ...props }: React.ComponentProps<typeof Sonner>) {
       toastOptions={{
         // Ensure toast content is accessible
         classNames: {
-          toast: 'group toast',
-          title: 'font-semibold',
-          description: 'text-sm text-muted-foreground',
-          actionButton: 'bg-primary text-primary-foreground',
-          cancelButton: 'bg-muted text-muted-foreground',
+          toast:
+            'group toast rounded-lg border border-border/60 bg-card text-foreground shadow-lg',
+          title: 'text-sm font-semibold tracking-tight',
+          description: 'text-xs text-muted-foreground',
+          actionButton: 'bg-foreground text-background hover:bg-foreground/90',
+          cancelButton: 'bg-muted text-foreground',
         },
       }}
       // Close button is accessible by default with proper aria-label

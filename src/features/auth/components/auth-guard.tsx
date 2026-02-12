@@ -1,6 +1,8 @@
 import { Loader2 } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useSyncStore } from '@/stores/sync-store';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { cn } from '@/lib/utils';
 import { useAuth } from '../hooks/use-auth';
 import { AuthForm } from './auth-form';
 import type { ReactNode } from 'react';
@@ -17,6 +19,7 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const storageMode = useSyncStore((s) => s.storageMode);
   const { user, isLoading } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
 
   // Local-only: no auth required
   if (storageMode === 'local' || !isSupabaseConfigured) {
@@ -26,8 +29,18 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // Cloud mode: wait for session check
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
+      <div
+        className="flex min-h-[50vh] items-center justify-center"
+        role="status"
+        aria-label="Loading account status"
+      >
+        <Loader2
+          className={cn(
+            'text-muted-foreground size-6',
+            !prefersReducedMotion && 'animate-spin',
+          )}
+          aria-hidden="true"
+        />
       </div>
     );
   }

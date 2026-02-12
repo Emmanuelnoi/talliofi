@@ -125,7 +125,7 @@ export function GoalForm({ goal, onSave, onCancel }: GoalFormProps) {
       </div>
 
       {/* Target and current amounts */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="goal-target">Target amount</Label>
           <Controller
@@ -205,7 +205,7 @@ export function GoalForm({ goal, onSave, onCancel }: GoalFormProps) {
                   type="button"
                   onClick={() => field.onChange(color)}
                   className={cn(
-                    'size-8 rounded-full border-2 transition-all',
+                    'size-8 rounded-full border-2 transition-transform transition-colors',
                     selectedColor === color
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-105',
@@ -225,7 +225,7 @@ export function GoalForm({ goal, onSave, onCancel }: GoalFormProps) {
         <Label htmlFor="goal-notes">Notes (optional)</Label>
         <Input
           id="goal-notes"
-          placeholder="Any additional notes..."
+          placeholder="Any additional notes…"
           {...register('notes')}
         />
         {errors.notes && (

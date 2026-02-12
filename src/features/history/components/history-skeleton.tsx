@@ -7,7 +7,7 @@ function SkeletonBlock({ className }: { className?: string }) {
 /** Loading skeleton that mirrors the history page layout. */
 export function HistorySkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header placeholder */}
       <div className="space-y-2">
         <div className="bg-muted h-7 w-32 animate-pulse rounded" />

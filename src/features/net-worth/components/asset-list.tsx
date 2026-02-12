@@ -416,7 +416,7 @@ function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
         <Label htmlFor="asset-notes">Notes (optional)</Label>
         <Textarea
           id="asset-notes"
-          placeholder="Any additional details..."
+          placeholder="Any additional details…"
           {...register('notes')}
         />
       </div>

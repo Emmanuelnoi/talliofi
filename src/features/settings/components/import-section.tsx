@@ -149,7 +149,7 @@ export function ImportSection() {
           <div className="space-y-3">
             <div className="rounded-md border bg-muted/50 p-3">
               <p className="mb-2 text-sm font-medium">Import preview</p>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
                 <dt className="text-muted-foreground">Plan</dt>
                 <dd>{preview.planName}</dd>
                 <dt className="text-muted-foreground">Buckets</dt>
@@ -172,7 +172,7 @@ export function ImportSection() {
               ) : (
                 <Upload className="size-4" />
               )}
-              {isImporting ? 'Importing...' : 'Import Data'}
+              {isImporting ? 'Importing…' : 'Import Data'}
             </Button>
           </div>
         )}
@@ -194,7 +194,7 @@ export function ImportSection() {
                 onClick={handleConfirmImport}
                 disabled={isImporting}
               >
-                {isImporting ? 'Importing...' : 'Continue'}
+                {isImporting ? 'Importing…' : 'Continue'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

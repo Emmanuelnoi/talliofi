@@ -194,6 +194,9 @@ export function AuthForm() {
   return (
     <Card className="mx-auto w-full max-w-sm">
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          {isMfaStep ? 'Security' : 'Cloud Sync'}
+        </p>
         <CardTitle>
           {isMfaStep
             ? 'Two-Factor Verification'
@@ -210,7 +213,7 @@ export function AuthForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {!isMfaStep && (
             <>
               <div className="space-y-2">
@@ -220,9 +223,10 @@ export function AuthForm() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="you@example.com…"
                   required
                   autoComplete="email"
+                  spellCheck={false}
                 />
               </div>
               <div className="space-y-2">
@@ -232,7 +236,7 @@ export function AuthForm() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  placeholder="Your password…"
                   required
                   minLength={6}
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
@@ -252,15 +256,16 @@ export function AuthForm() {
                 id="auth-mfa-code"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                placeholder="123456"
+                placeholder="123456…"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
                 required
+                spellCheck={false}
               />
             </div>
           )}
           {rateLimitError && (
-            <p className="text-destructive text-sm" role="alert">
+            <p className="text-destructive text-xs" role="alert">
               {rateLimitError}
             </p>
           )}
@@ -270,19 +275,19 @@ export function AuthForm() {
             disabled={isSubmitting || isMfaVerifying}
           >
             {(isSubmitting || isMfaVerifying) && (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             )}
             {isMfaStep ? 'Verify Code' : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>
           {!isMfaStep && (
-            <p className="text-center text-sm text-muted-foreground">
-              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+            <p className="text-center text-xs text-muted-foreground">
+              {isLogin ? 'Do not have an account?' : 'Already have an account?'}{' '}
               <button
                 type="button"
                 className="text-primary underline-offset-4 hover:underline"
                 onClick={() => setMode(isLogin ? 'signup' : 'login')}
               >
-                {isLogin ? 'Sign up' : 'Sign in'}
+                {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
             </p>
           )}
@@ -293,7 +298,7 @@ export function AuthForm() {
               className="w-full"
               onClick={handleCancelMfa}
             >
-              Back to sign in
+              Back to Sign In
             </Button>
           )}
         </form>

@@ -141,6 +141,7 @@ import { attachmentRepo } from '@/data/repos/attachment-repo';
 import { useCurrencyStore } from '@/stores/currency-store';
 
 type ExpenseFormData = z.infer<typeof ExpenseFormSchema>;
+type ExpenseSplitForm = NonNullable<ExpenseFormData['splits']>[number];
 
 type SortField =
   | 'name'
@@ -178,7 +179,7 @@ const DEFAULT_BULK_EDIT_VALUES: BulkEditValues = {
   frequency: 'no_change',
   fixed: 'no_change',
 };
-const EMPTY_SPLITS: ExpenseFormData['splits'] = [];
+const EMPTY_SPLITS: ExpenseSplitForm[] = [];
 
 /** Search debounce delay in milliseconds */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -816,25 +817,27 @@ export default function ExpensesPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Expenses"
           description="Complete onboarding to start tracking expenses."
+          eyebrow="Transactions"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Expenses"
         description="Track and manage your recurring expenses."
+        eyebrow="Transactions"
         action={
           activeTab === 'expenses' ? (
             <Button size="sm" onClick={handleOpenAdd}>
               <Plus className="size-4" />
-              Add expense
+              Add Expense
             </Button>
           ) : undefined
         }
@@ -847,7 +850,7 @@ export default function ExpensesPage() {
             <Receipt className="size-4" />
             Expenses
             {expenses.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
+              <Badge variant="secondary" className="ml-2">
                 {expenses.length}
               </Badge>
             )}
@@ -856,25 +859,27 @@ export default function ExpensesPage() {
             <RefreshCw className="size-4" />
             Templates
             {templates.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-xs">
+              <Badge variant="secondary" className="ml-2">
                 {templates.length}
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expenses" className="space-y-6">
+        <TabsContent value="expenses" className="space-y-8">
           {/* Search and Filter Section */}
           {expenses.length > 0 && (
             <Card>
-              <CardContent className="space-y-4 pt-6">
+              <CardContent className="space-y-5 pt-6">
                 {/* Search Input */}
                 <div className="relative">
                   <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                   <Input
                     ref={searchInputRef}
                     type="search"
-                    placeholder="Search expenses by name, notes, category, or bucket..."
+                    placeholder="Search expenses by name, notes, category, or bucket…"
+                    name="expenseSearch"
+                    autoComplete="off"
                     value={filters.q}
                     onChange={(e) => void setFilters({ q: e.target.value })}
                     className="pl-9 pr-9"
@@ -1304,7 +1309,7 @@ export default function ExpensesPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="templates">
+        <TabsContent value="templates" className="space-y-8">
           <TemplatesSection planId={plan.id} buckets={buckets} />
         </TabsContent>
       </Tabs>
@@ -1314,7 +1319,7 @@ export default function ExpensesPage() {
         <SheetContent>
           <SheetHeader>
             <SheetTitle>
-              {editingExpense ? 'Edit expense' : 'New expense'}
+              {editingExpense ? 'Edit Expense' : 'New Expense'}
             </SheetTitle>
             <SheetDescription>
               {editingExpense
@@ -1665,8 +1670,13 @@ function ExpenseCard({
   const splitCount = isSplit ? expense.splits!.length : 0;
 
   return (
-    <Card className={cn(selected && 'border-primary/50 bg-primary/5')}>
-      <CardContent className="py-4">
+    <Card
+      className={cn(
+        'transition-colors hover:border-foreground/15',
+        selected && 'border-primary/50 bg-primary/5',
+      )}
+    >
+      <CardContent className="py-5">
         <div className="flex items-center gap-4">
           <input
             type="checkbox"
@@ -1709,7 +1719,9 @@ function ExpenseCard({
           {/* Name + meta */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium">{nameContent}</span>
+              <span className="truncate text-base font-semibold">
+                {nameContent}
+              </span>
               <Badge
                 variant={expense.isFixed ? 'secondary' : 'outline'}
                 className="shrink-0"
@@ -1717,17 +1729,20 @@ function ExpenseCard({
                 {expense.isFixed ? 'Fixed' : 'Variable'}
               </Badge>
               {isSplit && (
-                <Badge
-                  variant="outline"
-                  className="shrink-0 cursor-pointer gap-1"
-                  onClick={() => setSplitExpanded(!splitExpanded)}
-                >
-                  <Split className="size-3" />
-                  {splitCount} splits
+                <Badge asChild variant="outline" className="shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSplitExpanded(!splitExpanded)}
+                    aria-expanded={splitExpanded}
+                    className="flex items-center gap-1"
+                  >
+                    <Split className="size-3" />
+                    {splitCount} splits
+                  </button>
                 </Badge>
               )}
             </div>
-            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
               <span>{categoryContent}</span>
               {bucketContent && (
                 <>
@@ -1738,9 +1753,7 @@ function ExpenseCard({
               {isSplit && (
                 <>
                   <span aria-hidden="true">&middot;</span>
-                  <span className="text-blue-600 dark:text-blue-400">
-                    +{splitCount - 1} more
-                  </span>
+                  <span className="text-primary">+{splitCount - 1} more</span>
                 </>
               )}
               <span aria-hidden="true">&middot;</span>
@@ -1756,10 +1769,10 @@ function ExpenseCard({
 
           {/* Amount */}
           <div className="shrink-0 text-right">
-            <div className="font-medium tabular-nums">
+            <div className="text-lg font-semibold tabular-nums">
               {formatMoney(expense.amountCents, { currency: expenseCurrency })}
               {showNormalized && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
                   /
                   {expense.frequency === 'weekly'
                     ? 'wk'
@@ -1776,7 +1789,7 @@ function ExpenseCard({
               )}
             </div>
             {showNormalized && (
-              <div className="text-muted-foreground text-xs tabular-nums">
+              <div className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em] tabular-nums">
                 {formatMoney(monthlyAmount, { currency: expenseCurrency })}/mo
               </div>
             )}
@@ -1801,7 +1814,7 @@ function ExpenseCard({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onSaveAsTemplate}>
                 <Repeat className="size-4" />
-                Save as template
+                Save as Template
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={onDelete}>
@@ -1814,8 +1827,8 @@ function ExpenseCard({
 
         {/* Expandable split details */}
         {isSplit && splitExpanded && (
-          <div className="mt-3 border-t pt-3">
-            <div className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+          <div className="mt-4 border-t border-border/60 pt-4">
+            <div className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]">
               Split breakdown
             </div>
             <div className="space-y-2">
@@ -1824,7 +1837,7 @@ function ExpenseCard({
                 return (
                   <div
                     key={idx}
-                    className="bg-muted/50 flex items-center gap-3 rounded-md px-3 py-2 text-sm"
+                    className="bg-muted/40 flex items-center gap-3 rounded-md px-3 py-2 text-sm"
                   >
                     <span
                       className="size-2 shrink-0 rounded-full"
@@ -1971,7 +1984,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
 
   const isSplit = watch('isSplit');
   const totalAmount = watch('amountDollars');
-  const splits = watch('splits') ?? EMPTY_SPLITS;
+  const splits: ExpenseSplitForm[] = watch('splits') ?? EMPTY_SPLITS;
   const selectedCurrency = watch('currencyCode') ?? defaultCurrency;
   const currencySymbol = getCurrencySymbol(selectedCurrency as CurrencyCode);
 
@@ -2202,7 +2215,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
 
       {/* Non-split: show single bucket/category selection */}
       {!isSplit && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="expense-category">Category</Label>
             <Controller
@@ -2340,7 +2353,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label
                       htmlFor={`split-${index}-bucket`}
@@ -2414,7 +2427,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label
                       htmlFor={`split-${index}-amount`}
@@ -2522,7 +2535,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
         <Label htmlFor="expense-notes">Notes (optional)</Label>
         <Input
           id="expense-notes"
-          placeholder="Any additional notes..."
+          placeholder="Any additional notes…"
           {...register('notes')}
         />
       </div>
@@ -2629,7 +2642,7 @@ function ExpenseForm({ expense, buckets, onSave, onCancel }: ExpenseFormProps) {
           disabled={isSubmitting || (isSplit && !splitsMatch)}
         >
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-          {expense ? 'Save changes' : 'Add expense'}
+          {expense ? 'Save Changes' : 'Add Expense'}
         </Button>
       </div>
     </form>

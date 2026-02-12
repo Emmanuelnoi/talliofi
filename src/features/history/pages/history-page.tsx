@@ -34,14 +34,15 @@ export default function HistoryPage() {
 
   if (snapshotsError) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="History"
           description="View your monthly snapshots and trends."
+          eyebrow="Activity"
         />
         <EmptyState
           icon={Clock}
-          title="Unable to load history"
+          title="Unable to Load History"
           description="There was a problem loading your snapshots. Please try again later."
         />
       </div>
@@ -49,10 +50,11 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="History"
         description="View your monthly snapshots and trends."
+        eyebrow="Activity"
       />
 
       {snapshots.length === 0 ? (

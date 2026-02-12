@@ -237,23 +237,27 @@ export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
                 if (!active || !payload?.length) return null;
                 const data = payload[0].payload as (typeof chartData)[0];
                 return (
-                  <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
-                    <p className="mb-1 font-medium">{data.name}</p>
-                    <p className="text-muted-foreground">
-                      Target:{' '}
-                      {formatMoney(data.targetCents, {
-                        currency: currencyCode,
-                      })}
+                  <div className="border-border/60 bg-card/95 text-foreground/90 rounded-lg border px-3 py-2 text-[11px] shadow-xl backdrop-blur">
+                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                      {data.name}
                     </p>
-                    <p className="text-muted-foreground">
-                      Actual:{' '}
-                      {formatMoney(data.actualCents, {
-                        currency: currencyCode,
-                      })}
-                    </p>
-                    <p className="text-muted-foreground">
-                      Adherence: {data.adherence.toFixed(0)}%
-                    </p>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-muted-foreground tabular-nums">
+                        Target:{' '}
+                        {formatMoney(data.targetCents, {
+                          currency: currencyCode,
+                        })}
+                      </p>
+                      <p className="text-muted-foreground tabular-nums">
+                        Actual:{' '}
+                        {formatMoney(data.actualCents, {
+                          currency: currencyCode,
+                        })}
+                      </p>
+                      <p className="text-muted-foreground tabular-nums">
+                        Adherence: {data.adherence.toFixed(0)}%
+                      </p>
+                    </div>
                   </div>
                 );
               }}

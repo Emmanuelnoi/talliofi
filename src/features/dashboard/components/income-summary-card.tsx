@@ -1,8 +1,13 @@
 import type { PlanSummary } from '@/domain/plan';
 import { formatMoney } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface IncomeSummaryCardProps {
@@ -19,33 +24,45 @@ export function IncomeSummaryCard({
     <Card className={cn(className)}>
       <CardHeader>
         <CardTitle>Income Summary</CardTitle>
+        <CardDescription>Monthly income after estimated tax.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-sm">Gross Income</span>
-          <span className="money text-sm font-medium">
-            {formatMoney(summary.grossMonthlyIncome, {
-              currency: currencyCode,
-            })}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-sm">Estimated Tax</span>
-          <span className="money text-destructive text-sm font-medium">
-            &minus;
-            {formatMoney(summary.estimatedTax, {
-              currency: currencyCode,
-            })}
-          </span>
-        </div>
-        <Separator />
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold">Net Income</span>
-          <span className="money text-surplus text-sm font-bold">
+      <CardContent className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+            Net Income
+          </p>
+          <p className="money text-3xl font-semibold tracking-tight sm:text-4xl">
             {formatMoney(summary.netMonthlyIncome, {
               currency: currencyCode,
             })}
-          </span>
+          </p>
+          <p className="text-muted-foreground text-xs">
+            After estimated tax and deductions.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+              Gross Income
+            </p>
+            <p className="money mt-2 text-base font-semibold">
+              {formatMoney(summary.grossMonthlyIncome, {
+                currency: currencyCode,
+              })}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+              Estimated Tax
+            </p>
+            <p className="money mt-2 text-base font-semibold text-deficit">
+              &minus;
+              {formatMoney(summary.estimatedTax, {
+                currency: currencyCode,
+              })}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

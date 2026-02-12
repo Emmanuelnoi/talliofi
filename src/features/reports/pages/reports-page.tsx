@@ -130,14 +130,15 @@ export default function ReportsPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Reports"
           description="Analyze your financial data with custom date ranges."
+          eyebrow="Insights"
         />
         <EmptyState
           icon={FileBarChart}
-          title="No plan found"
+          title="No Plan Found"
           description="Complete onboarding to access financial reports."
         />
       </div>
@@ -147,11 +148,12 @@ export default function ReportsPage() {
   const hasExpenses = expenses.length > 0;
 
   return (
-    <div className="space-y-6 print:space-y-8">
+    <div className="space-y-8 print:space-y-8">
       {/* Header */}
       <PageHeader
         title="Reports"
         description="Analyze your financial data with custom date ranges."
+        eyebrow="Insights"
         action={
           <Button
             variant="outline"

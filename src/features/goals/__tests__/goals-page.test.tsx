@@ -175,12 +175,12 @@ describe('GoalsPage', () => {
     render(<GoalsPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText('Active Goals')).toBeInTheDocument();
+      expect(screen.getByText('Active goals')).toBeInTheDocument();
     });
 
     // The page shows "Completed" in both stats and badges
     expect(screen.getAllByText('Completed').length).toBeGreaterThan(0);
-    expect(screen.getByText('Overall Progress')).toBeInTheDocument();
+    expect(screen.getByText('Overall progress')).toBeInTheDocument();
   });
 
   it('shows remaining amount for incomplete goals', async () => {

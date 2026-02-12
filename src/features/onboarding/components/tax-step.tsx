@@ -1,8 +1,7 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TaxSimpleInputSchema } from '@/domain/plan/schemas';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Card,
@@ -11,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { PercentInput } from '@/components/forms/percent-input';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 import type { TaxFormData } from '../types';
 
@@ -24,8 +24,8 @@ export function TaxStep({ onNext, onBack }: TaxStepProps) {
   const setTax = useOnboardingDataStore((s) => s.setTax);
 
   const {
-    register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<TaxFormData>({
     resolver: zodResolver(TaxSimpleInputSchema),
@@ -40,6 +40,9 @@ export function TaxStep({ onNext, onBack }: TaxStepProps) {
   return (
     <Card>
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Taxes
+        </p>
         <CardTitle>Estimate your taxes</CardTitle>
         <CardDescription>
           Enter your estimated effective tax rate. This includes federal, state,
@@ -47,22 +50,27 @@ export function TaxStep({ onNext, onBack }: TaxStepProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="effectiveRate">Effective tax rate (%)</Label>
-            <Input
-              id="effectiveRate"
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              placeholder="25"
-              className="money"
-              aria-invalid={!!errors.effectiveRate}
-              {...register('effectiveRate', { valueAsNumber: true })}
+            <Controller
+              control={control}
+              name="effectiveRate"
+              render={({ field }) => (
+                <PercentInput
+                  id="effectiveRate"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  min={0}
+                  max={100}
+                  placeholder="25…"
+                  aria-invalid={!!errors.effectiveRate}
+                />
+              )}
             />
             {errors.effectiveRate && (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs">
                 {errors.effectiveRate.message}
               </p>
             )}
@@ -76,7 +84,7 @@ export function TaxStep({ onNext, onBack }: TaxStepProps) {
             <Button type="button" variant="outline" onClick={onBack}>
               Back
             </Button>
-            <Button type="submit">Continue</Button>
+            <Button type="submit">Continue to Template</Button>
           </div>
         </form>
       </CardContent>

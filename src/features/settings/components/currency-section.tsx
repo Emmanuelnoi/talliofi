@@ -224,7 +224,7 @@ export function CurrencySection() {
                   disabled={isSavingRates || targetCurrencies.length === 0}
                 >
                   <RefreshCw className="size-4" />
-                  {isSavingRates ? 'Saving...' : 'Save Rates'}
+                  {isSavingRates ? 'Saving…' : 'Save Rates'}
                 </Button>
                 <Button
                   variant="ghost"

@@ -115,14 +115,15 @@ export function QuickAddFab({ className }: QuickAddFabProps) {
                 !prefersReducedMotion && [
                   'hover:shadow-xl hover:scale-105',
                   'active:scale-95',
-                  'transition-all duration-200',
+                  'transition-transform duration-200',
+                  'transition-shadow',
                 ],
                 prefersReducedMotion && 'hover:shadow-xl',
                 // Focus ring
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2',
               )}
               onClick={() => setIsOpen(true)}
-              aria-label={`Add expense (${shortcutLabel})`}
+              aria-label={`Add Expense (${shortcutLabel})`}
               aria-haspopup="dialog"
               aria-expanded={isOpen}
             >

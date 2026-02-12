@@ -122,16 +122,36 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="border-b px-4 py-3">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <h1 className="text-lg font-semibold">Talliofi</h1>
-          <span className="text-muted-foreground text-sm">
-            {STEP_TITLES[step]}
-          </span>
+      <header className="border-border/60 bg-background/85 sticky top-0 z-10 border-b px-6 py-5 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="bg-foreground text-background flex size-8 items-center justify-center rounded-lg text-xs font-semibold"
+              aria-hidden="true"
+            >
+              T
+            </div>
+            <div>
+              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+                Talliofi
+              </p>
+              <p className="text-sm font-semibold tracking-tight">
+                Getting Started
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+              Step {step + 1} of {TOTAL_STEPS}
+            </p>
+            <p className="text-sm font-semibold tracking-tight">
+              {STEP_TITLES[step]}
+            </p>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
+      <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
         <OnboardingProgress currentStep={step} totalSteps={TOTAL_STEPS} />
 
         <div className="mt-8">

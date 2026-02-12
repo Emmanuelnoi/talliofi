@@ -45,13 +45,16 @@ export function TemplateStep({ onNext, onBack }: TemplateStepProps) {
   return (
     <Card>
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Starting point
+        </p>
         <CardTitle>Choose a starting point</CardTitle>
         <CardDescription>
           Select a budget template to get started quickly, or create your own
           from scratch. You can always customize the buckets later.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-5">
         <TemplateSelector
           selectedTemplateId={selectedTemplate?.id ?? null}
           onSelectTemplate={handleSelectTemplate}
@@ -60,7 +63,7 @@ export function TemplateStep({ onNext, onBack }: TemplateStepProps) {
 
         {/* Selected template details */}
         {selectedTemplate?.details && (
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-lg border border-border/70 bg-accent/40 p-4">
             <p className="text-sm text-muted-foreground">
               {selectedTemplate.details}
             </p>
@@ -71,7 +74,7 @@ export function TemplateStep({ onNext, onBack }: TemplateStepProps) {
           <Button type="button" variant="outline" onClick={onBack}>
             Back
           </Button>
-          <Button onClick={handleContinue}>Continue</Button>
+          <Button onClick={handleContinue}>Continue to Buckets</Button>
         </div>
       </CardContent>
     </Card>

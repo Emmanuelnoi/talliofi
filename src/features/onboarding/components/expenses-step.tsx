@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MoneyInput } from '@/components/forms/money-input';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 import { CATEGORY_LABELS, FREQUENCY_LABELS } from '../constants';
 
@@ -84,6 +85,9 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
   return (
     <Card>
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Expenses
+        </p>
         <CardTitle>Add recurring expenses</CardTitle>
         <CardDescription>
           Add your regular expenses. This step is optional -- you can always add
@@ -91,24 +95,24 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-4">
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="bg-muted/50 space-y-3 rounded-lg border p-4"
+                className="bg-muted/40 space-y-4 rounded-lg border border-border/60 p-4"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 space-y-2">
                     <Label htmlFor={`expenses.${index}.name`}>Name</Label>
                     <Input
                       id={`expenses.${index}.name`}
-                      placeholder="e.g., Rent"
+                      placeholder="e.g., Rent…"
                       aria-invalid={!!errors.expenses?.[index]?.name}
                       {...register(`expenses.${index}.name`)}
                     />
                     {errors.expenses?.[index]?.name && (
-                      <p className="text-destructive text-sm">
+                      <p className="text-destructive text-xs">
                         {errors.expenses[index].name.message}
                       </p>
                     )}
@@ -125,20 +129,23 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor={`expenses.${index}.amountDollars`}>
                       Amount ($)
                     </Label>
-                    <Input
-                      id={`expenses.${index}.amountDollars`}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="money"
-                      {...register(`expenses.${index}.amountDollars`, {
-                        valueAsNumber: true,
-                      })}
+                    <Controller
+                      control={control}
+                      name={`expenses.${index}.amountDollars`}
+                      render={({ field }) => (
+                        <MoneyInput
+                          id={`expenses.${index}.amountDollars`}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          min={0}
+                        />
+                      )}
                     />
                   </div>
 
@@ -172,7 +179,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor={`expenses.${index}.category`}>
                       Category
@@ -213,7 +220,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                       }
                     >
                       <SelectTrigger id={`expenses.${index}.bucketId`}>
-                        <SelectValue placeholder="Select bucket" />
+                        <SelectValue placeholder="Select bucket…" />
                       </SelectTrigger>
                       <SelectContent>
                         {buckets.map((bucket, bucketIndex) => (
@@ -240,7 +247,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
             onClick={handleAddExpense}
           >
             <Plus className="size-4" />
-            Add expense
+            Add Expense
           </Button>
 
           <div className="flex justify-between">
@@ -254,7 +261,7 @@ export function ExpensesStep({ onNext, onBack }: ExpensesStepProps) {
                 </Button>
               )}
               <Button type="submit" disabled={fields.length === 0}>
-                Continue
+                Continue to Summary
               </Button>
             </div>
           </div>

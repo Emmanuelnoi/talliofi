@@ -103,7 +103,7 @@ export function SuggestionCard({
           </div>
           <div className="bg-secondary h-1.5 w-full overflow-hidden rounded-full">
             <div
-              className="bg-primary h-full transition-all"
+              className="bg-primary h-full transition-[width]"
               style={{ width: `${confidencePercent}%` }}
             />
           </div>

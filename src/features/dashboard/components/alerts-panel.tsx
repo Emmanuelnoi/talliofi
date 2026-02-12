@@ -39,10 +39,13 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="space-y-2">
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Attention
+        </p>
         <CardTitle className="flex items-center gap-2">
-          <TriangleAlert className="text-warning size-5" />
-          {alerts.length} {alerts.length === 1 ? 'Alert' : 'Alerts'}
+          <TriangleAlert className="text-warning size-5" aria-hidden="true" />
+          Alerts
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -53,7 +56,7 @@ export function AlertsPanel({ alerts }: AlertsPanelProps) {
           return (
             <div
               key={`${alert.code}-${alert.relatedEntityId ?? 'global'}`}
-              className="flex items-start gap-3"
+              className="bg-muted/30 flex items-start gap-3 rounded-lg border border-border/60 p-3"
             >
               <Icon
                 className={cn('mt-0.5 size-4 shrink-0', colorClass)}

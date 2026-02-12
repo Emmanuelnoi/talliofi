@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { Plus, Trash2 } from 'lucide-react';
@@ -21,6 +21,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { MoneyInput } from '@/components/forms/money-input';
+import { PercentInput } from '@/components/forms/percent-input';
 import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 
 type BucketsFormData = z.input<typeof BucketsFormSchema>;
@@ -88,6 +90,9 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
   return (
     <Card>
       <CardHeader>
+        <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
+          Buckets
+        </p>
         <CardTitle>Set up your buckets</CardTitle>
         <CardDescription>
           Buckets are spending categories for your budget. Start with a simple
@@ -95,7 +100,7 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="space-y-4">
             {fields.map((field, index) => {
               const bucketValues = watchedBuckets[index];
@@ -107,7 +112,7 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
               return (
                 <div
                   key={field.id}
-                  className="bg-muted/50 space-y-3 rounded-lg border p-4"
+                  className="bg-muted/40 space-y-4 rounded-lg border border-border/60 p-4"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 space-y-2">
@@ -118,7 +123,7 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                         <input
                           type="color"
                           tabIndex={0}
-                          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border"
+                          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-border/60 bg-background"
                           value={colorValue}
                           onChange={(e) =>
                             setValue(`buckets.${index}.color`, e.target.value)
@@ -132,13 +137,13 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                         />
                         <Input
                           id={`buckets.${index}.name`}
-                          placeholder="e.g., Essentials"
+                          placeholder="e.g., Essentials…"
                           aria-invalid={!!errors.buckets?.[index]?.name}
                           {...register(`buckets.${index}.name`)}
                         />
                       </div>
                       {errors.buckets?.[index]?.name && (
-                        <p className="text-destructive text-sm">
+                        <p className="text-destructive text-xs">
                           {errors.buckets[index].name.message}
                         </p>
                       )}
@@ -157,7 +162,7 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor={`buckets.${index}.mode`}>Type</Label>
                       <Select
@@ -185,16 +190,19 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                           <Label htmlFor={`buckets.${index}.targetPercentage`}>
                             Target (%)
                           </Label>
-                          <Input
-                            id={`buckets.${index}.targetPercentage`}
-                            type="number"
-                            step="1"
-                            min="0"
-                            max="100"
-                            className="money"
-                            {...register(`buckets.${index}.targetPercentage`, {
-                              valueAsNumber: true,
-                            })}
+                          <Controller
+                            control={control}
+                            name={`buckets.${index}.targetPercentage`}
+                            render={({ field }) => (
+                              <PercentInput
+                                id={`buckets.${index}.targetPercentage`}
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                min={0}
+                                max={100}
+                              />
+                            )}
                           />
                         </>
                       ) : (
@@ -204,15 +212,17 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
                           >
                             Target ($)
                           </Label>
-                          <Input
-                            id={`buckets.${index}.targetAmountDollars`}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            className="money"
-                            {...register(
-                              `buckets.${index}.targetAmountDollars`,
-                              { valueAsNumber: true },
+                          <Controller
+                            control={control}
+                            name={`buckets.${index}.targetAmountDollars`}
+                            render={({ field }) => (
+                              <MoneyInput
+                                id={`buckets.${index}.targetAmountDollars`}
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                min={0}
+                              />
                             )}
                           />
                         </>
@@ -225,13 +235,13 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
           </div>
 
           {totalPercentage > 0 && totalPercentage !== 100 && (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
+            <p className="text-xs text-amber-600 dark:text-amber-400">
               Percentage buckets sum to {totalPercentage}% (100% recommended)
             </p>
           )}
 
           {errors.buckets?.root && (
-            <p className="text-destructive text-sm">
+            <p className="text-destructive text-xs">
               {errors.buckets.root.message}
             </p>
           )}
@@ -243,14 +253,14 @@ export function BucketsStep({ onNext, onBack }: BucketsStepProps) {
             onClick={handleAddBucket}
           >
             <Plus className="size-4" />
-            Add bucket
+            Add Bucket
           </Button>
 
           <div className="flex justify-between">
             <Button type="button" variant="outline" onClick={onBack}>
               Back
             </Button>
-            <Button type="submit">Continue</Button>
+            <Button type="submit">Continue to Expenses</Button>
           </div>
         </form>
       </CardContent>

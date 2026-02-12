@@ -39,7 +39,7 @@ export function TemplateCard({
         }
       }}
       className={cn(
-        'cursor-pointer transition-all hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'cursor-pointer transition-colors transition-shadow hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isSelected && 'border-primary ring-2 ring-primary/20',
       )}
     >
@@ -64,7 +64,7 @@ export function TemplateCard({
             {template.buckets.map((bucket, index) => (
               <div
                 key={`${template.id}-bucket-${index}`}
-                className="transition-all"
+                className="transition-[width]"
                 style={{
                   width: `${bucket.targetPercentage}%`,
                   backgroundColor: bucket.color,

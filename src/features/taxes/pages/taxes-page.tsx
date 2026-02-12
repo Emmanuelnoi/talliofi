@@ -165,10 +165,11 @@ export default function TaxesPage() {
 
   if (!plan) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Taxes"
           description="Complete onboarding to configure taxes."
+          eyebrow="Compliance"
         />
       </div>
     );
@@ -177,10 +178,11 @@ export default function TaxesPage() {
   const saveStatus = isItemized ? 'idle' : simpleStatus;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Taxes"
         description="Configure how taxes are estimated for your budget."
+        eyebrow="Compliance"
         action={
           <SaveIndicator
             status={saveStatus === 'error' ? 'idle' : saveStatus}
@@ -196,8 +198,8 @@ export default function TaxesPage() {
             Use a single effective rate or itemize individual tax components.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3">
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
             <Label htmlFor="tax-mode-toggle" className="text-sm">
               Simple
             </Label>
@@ -224,7 +226,7 @@ export default function TaxesPage() {
               return for a more accurate number. Typical range: 15-30%.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="effectiveRate">Rate</Label>
               <Controller
@@ -278,7 +280,7 @@ export default function TaxesPage() {
               calculated automatically.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             {taxComponents.map((component) => (
               <TaxComponentRow
                 key={component.id}

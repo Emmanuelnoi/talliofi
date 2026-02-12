@@ -17,7 +17,7 @@ import { AuthForm } from '@/features/auth/components/auth-form';
 
 const STATUS_LABELS: Record<string, string> = {
   idle: 'Up to date',
-  syncing: 'Syncing...',
+  syncing: 'Syncing…',
   error: 'Sync error',
   offline: 'Offline',
 };

@@ -37,14 +37,15 @@ export default function DashboardPage() {
 
   if (!plan || !summary) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <PageHeader
           title="Dashboard"
           description="Overview of your financial plan."
+          eyebrow="Overview"
         />
         <EmptyState
           icon={LayoutDashboard}
-          title="No plan yet"
+          title="No Plan Yet"
           description="Complete onboarding to see your financial overview."
         />
       </div>
@@ -52,23 +53,29 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title="Dashboard"
         description="Overview of your financial plan."
+        eyebrow="Overview"
       />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <IncomeSummaryCard summary={summary} className="lg:col-span-2" />
-        <ExpenseDonutChart data={expenseCategoryData} />
+      <div className="grid gap-6 xl:grid-cols-12">
+        <IncomeSummaryCard summary={summary} className="xl:col-span-7" />
+        <ExpenseDonutChart
+          data={expenseCategoryData}
+          className="xl:col-span-5"
+        />
       </div>
       <KeyNumbersGrid summary={summary} />
-      <NetWorthCard
-        totalAssets={netWorthSummary.totalAssets}
-        totalLiabilities={netWorthSummary.totalLiabilities}
-        netWorth={netWorthSummary.netWorth}
-      />
       <ExpenseTrendChart expensesByCategory={summary.expensesByCategory} />
-      <AlertsPanel alerts={summary.alerts} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <NetWorthCard
+          totalAssets={netWorthSummary.totalAssets}
+          totalLiabilities={netWorthSummary.totalLiabilities}
+          netWorth={netWorthSummary.netWorth}
+        />
+        <AlertsPanel alerts={summary.alerts} />
+      </div>
     </div>
   );
 }

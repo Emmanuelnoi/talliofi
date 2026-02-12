@@ -203,9 +203,13 @@ function BreakdownPieChart({
               if (!active || !payload?.length) return null;
               const datum = payload[0].payload as ChartDatum;
               return (
-                <div className="bg-background border-border/50 rounded-lg border px-3 py-2 text-xs shadow-xl">
-                  <p className="mb-1 font-medium">{datum.name}</p>
-                  <p className="text-muted-foreground">{datum.formatted}</p>
+                <div className="border-border/60 bg-card/95 text-foreground/90 rounded-lg border px-3 py-2 text-[11px] shadow-xl backdrop-blur">
+                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.2em]">
+                    {datum.name}
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums">
+                    {datum.formatted}
+                  </p>
                 </div>
               );
             }}

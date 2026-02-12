@@ -25,7 +25,7 @@ export function SaveIndicator({ status, className }: SaveIndicatorProps) {
   return (
     <div
       className={cn(
-        'text-muted-foreground flex items-center gap-1.5 text-xs',
+        'text-muted-foreground flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em]',
         status === 'saved' && 'animate-in fade-in duration-300',
         className,
       )}
@@ -35,7 +35,7 @@ export function SaveIndicator({ status, className }: SaveIndicatorProps) {
       {status === 'saving' && (
         <>
           <Loader2 className="size-3 animate-spin" />
-          <span>Saving...</span>
+          <span>Saving…</span>
         </>
       )}
       {status === 'saved' && (
