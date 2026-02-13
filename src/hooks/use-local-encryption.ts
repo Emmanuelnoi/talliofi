@@ -3,9 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { vaultRepo } from '@/data/local-encryption/vault-repo';
 import {
   buildVaultPayload,
+  clearVaultKey,
   restoreVaultPayload,
   encryptVaultPayload,
   decryptVaultPayload,
+  hasActiveVaultKey,
 } from '@/data/local-encryption/vault-service';
 import { clearAllData } from '@/data/db';
 import { useEncryptionStore } from '@/stores/encryption-store';
@@ -26,29 +28,29 @@ export interface UseLocalEncryptionResult {
 
 export function useLocalEncryption(): UseLocalEncryptionResult {
   const queryClient = useQueryClient();
-  const { enabled, setEnabled, password, setPassword } = useEncryptionStore();
+  const { enabled, unlocked, setEnabled, setUnlocked } = useEncryptionStore();
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isLocked = useMemo(() => enabled && !password, [enabled, password]);
+  const isLocked = useMemo(() => enabled && !unlocked, [enabled, unlocked]);
 
   const saveVault = useCallback(async () => {
-    if (!enabled || !password) return;
+    if (!enabled || !unlocked || !hasActiveVaultKey()) return;
     const payload = await buildVaultPayload();
-    const encrypted = await encryptVaultPayload(payload, password);
+    const encrypted = await encryptVaultPayload(payload);
     await vaultRepo.set(encrypted);
-  }, [enabled, password]);
+  }, [enabled, unlocked]);
 
   const scheduleVaultSave = useCallback(() => {
-    if (!enabled || !password) return;
+    if (!enabled || !unlocked || !hasActiveVaultKey()) return;
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
     saveTimerRef.current = setTimeout(() => {
       void saveVault();
     }, VAULT_SAVE_DEBOUNCE_MS);
-  }, [enabled, password, saveVault]);
+  }, [enabled, unlocked, saveVault]);
 
   const enableEncryption = useCallback(
     async (nextPassword: string) => {
@@ -59,9 +61,10 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
         const encrypted = await encryptVaultPayload(payload, nextPassword);
         await vaultRepo.set(encrypted);
         setEnabled(true);
-        setPassword(nextPassword);
+        setUnlocked(true);
         queryClient.clear();
       } catch (err) {
+        clearVaultKey();
         setError(
           err instanceof Error ? err.message : 'Failed to enable encryption.',
         );
@@ -70,7 +73,7 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
         setIsBusy(false);
       }
     },
-    [queryClient, setEnabled, setPassword],
+    [queryClient, setEnabled, setUnlocked],
   );
 
   const unlock = useCallback(
@@ -84,9 +87,10 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
         }
         const payload = await decryptVaultPayload(record.payload, nextPassword);
         await restoreVaultPayload(payload);
-        setPassword(nextPassword);
+        setUnlocked(true);
         queryClient.clear();
       } catch (err) {
+        clearVaultKey();
         setError(
           err instanceof Error ? err.message : 'Failed to unlock vault.',
         );
@@ -95,17 +99,18 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
         setIsBusy(false);
       }
     },
-    [queryClient, setPassword],
+    [queryClient, setUnlocked],
   );
 
   const lock = useCallback(async () => {
-    if (!enabled || !password) return;
+    if (!enabled || !unlocked) return;
     setIsBusy(true);
     setError(null);
     try {
       await saveVault();
       await clearAllData({ keepVault: true });
-      setPassword(null);
+      clearVaultKey();
+      setUnlocked(false);
       queryClient.clear();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to lock vault.');
@@ -113,15 +118,16 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
     } finally {
       setIsBusy(false);
     }
-  }, [enabled, password, saveVault, setPassword, queryClient]);
+  }, [enabled, unlocked, saveVault, setUnlocked, queryClient]);
 
   const disableEncryption = useCallback(async () => {
     setIsBusy(true);
     setError(null);
     try {
       await vaultRepo.clear();
+      clearVaultKey();
       setEnabled(false);
-      setPassword(null);
+      setUnlocked(false);
       queryClient.clear();
     } catch (err) {
       setError(
@@ -131,7 +137,7 @@ export function useLocalEncryption(): UseLocalEncryptionResult {
     } finally {
       setIsBusy(false);
     }
-  }, [queryClient, setEnabled, setPassword]);
+  }, [queryClient, setEnabled, setUnlocked]);
 
   useEffect(() => {
     return () => {

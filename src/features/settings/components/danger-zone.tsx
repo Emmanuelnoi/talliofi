@@ -29,7 +29,7 @@ export function DangerZone() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setEncryptionEnabled = useEncryptionStore((s) => s.setEnabled);
-  const setEncryptionPassword = useEncryptionStore((s) => s.setPassword);
+  const setEncryptionUnlocked = useEncryptionStore((s) => s.setUnlocked);
   const [isClearing, setIsClearing] = useState(false);
 
   async function handleClearAllData() {
@@ -37,7 +37,7 @@ export function DangerZone() {
     try {
       await clearAllData();
       setEncryptionEnabled(false);
-      setEncryptionPassword(null);
+      setEncryptionUnlocked(false);
       queryClient.clear();
       await queryClient.invalidateQueries();
       toast.success('All data has been cleared.');
@@ -63,7 +63,7 @@ export function DangerZone() {
           <AlertDialogTrigger asChild>
             <Button variant="destructive" disabled={isClearing}>
               {isClearing ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Trash2 className="size-4" />
               )}

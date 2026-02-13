@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Talliofi icon mask">
+  <path fill="#000" d="M8 8h48v10H37v38H27V18H8z" />
+  <rect x="40" y="34" width="4" height="22" rx="1.5" fill="#000" />
+  <rect x="46" y="30" width="4" height="26" rx="1.5" fill="#000" />
+  <rect x="52" y="24" width="4" height="32" rx="1.5" fill="#000" />
+</svg>

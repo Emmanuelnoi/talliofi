@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Loader2, Plus, Target, Filter, X } from 'lucide-react';
+import { Plus, Target, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryStates, parseAsString } from 'nuqs';
 import type { Goal, GoalType } from '@/domain/plan';
@@ -40,9 +40,11 @@ import {
   useDeleteGoal,
 } from '@/hooks/use-plan-mutations';
 import { GOAL_TYPE_LABELS, GOAL_COLORS } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
 import { GoalCard } from '../components/goal-card';
 import { GoalForm } from '../components/goal-form';
 import type { GoalFormData } from '../components/goal-form';
+import { GoalsSkeleton } from '../components/goals-skeleton';
 
 type GoalFilter = 'all' | 'active' | 'completed';
 type GoalTypeFilter = 'all' | GoalType;
@@ -201,8 +203,8 @@ export default function GoalsPage() {
         }
         setSheetOpen(false);
         setEditingGoal(null);
-      } catch {
-        toast.error('Failed to save goal');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save goal.'));
       }
     },
     [plan, editingGoal, createGoal, updateGoal],
@@ -217,8 +219,8 @@ export default function GoalsPage() {
       });
       toast.success('Goal deleted');
       setDeletingGoal(null);
-    } catch {
-      toast.error('Failed to delete goal. Please try again.');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete goal.'));
     }
   }, [deletingGoal, plan, deleteGoal]);
 
@@ -233,8 +235,8 @@ export default function GoalsPage() {
         };
         await updateGoal.mutateAsync(updated);
         toast.success('Congratulations! Goal completed!');
-      } catch {
-        toast.error('Failed to update goal');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to update goal.'));
       }
     },
     [plan, updateGoal],
@@ -243,11 +245,7 @@ export default function GoalsPage() {
   const isLoading = planLoading || goalsLoading;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
-      </div>
-    );
+    return <GoalsSkeleton />;
   }
 
   if (!plan) {

@@ -28,6 +28,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { getErrorMessage } from '@/lib/error-message';
 import type { IncomeVsExpensesReport as ReportData } from '../types';
 import {
   exportIncomeVsExpensesCSV,
@@ -94,12 +95,12 @@ export function IncomeVsExpensesReport({
         downloadReportCSV(csv, 'income-vs-expenses');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportIncomeVsExpensesPDF(report, currencyCode);
+        const blob = await exportIncomeVsExpensesPDF(report, currencyCode);
         downloadReportPDF(blob, 'income-vs-expenses');
         toast.success('PDF exported successfully');
       }
-    } catch {
-      toast.error('Failed to export report');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to export report.'));
     } finally {
       setExporting(null);
     }
@@ -143,7 +144,7 @@ export function IncomeVsExpensesReport({
               className="print:hidden"
             >
               {exporting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Download className="size-4" />
               )}

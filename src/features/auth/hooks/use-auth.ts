@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import { extractFactors, type MfaFactor } from '@/lib/mfa-utils';
+import { mapSupabaseAuthError } from '@/lib/auth-errors';
+
+const SESSION_BOOTSTRAP_TIMEOUT_MS = 8_000;
 
 interface AuthState {
   user: User | null;
@@ -29,28 +32,59 @@ export function useAuth(): AuthState {
 
   // Start as not loading when supabase is unconfigured; avoids sync setState in effect
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
-  const initialised = useRef(false);
 
   useEffect(() => {
-    if (!supabase || initialised.current) return;
-    initialised.current = true;
+    if (!supabase) return;
+    let mounted = true;
+    let fallbackTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     // Fetch initial session
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+    fallbackTimeoutId = setTimeout(() => {
+      if (!mounted) return;
+      if (import.meta.env.DEV) {
+        console.warn(
+          '[auth] Session bootstrap timeout reached; continuing without blocking UI.',
+        );
+      }
       setIsLoading(false);
-    });
+    }, SESSION_BOOTSTRAP_TIMEOUT_MS);
+
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.warn('[auth] Failed to bootstrap session', error);
+        }
+      })
+      .finally(() => {
+        if (fallbackTimeoutId) {
+          clearTimeout(fallbackTimeoutId);
+          fallbackTimeoutId = null;
+        }
+        if (mounted) {
+          setIsLoading(false);
+        }
+      });
 
     // Subscribe to auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
     });
 
     return () => {
+      mounted = false;
+      if (fallbackTimeoutId) {
+        clearTimeout(fallbackTimeoutId);
+      }
       subscription.unsubscribe();
     };
   }, []);
@@ -61,7 +95,14 @@ export function useAuth(): AuthState {
       email,
       password,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(
+        mapSupabaseAuthError(
+          error,
+          'Unable to sign in. Check your credentials and try again.',
+        ),
+      );
+    }
 
     if (data.session) {
       return { status: 'signed_in' } satisfies SignInResult;
@@ -69,7 +110,14 @@ export function useAuth(): AuthState {
 
     const { data: factorData, error: factorError } =
       await supabase.auth.mfa.listFactors();
-    if (factorError) throw new Error(factorError.message);
+    if (factorError) {
+      throw new Error(
+        mapSupabaseAuthError(
+          factorError,
+          'Unable to complete sign-in. Please try again.',
+        ),
+      );
+    }
     const factors = extractFactors(factorData);
     if (factors.length === 0) {
       throw new Error('Multi-factor authentication required.');
@@ -80,13 +128,24 @@ export function useAuth(): AuthState {
   const signUp = useCallback(async (email: string, password: string) => {
     if (!supabase) throw new Error('Supabase is not configured.');
     const { error } = await supabase.auth.signUp({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(
+        mapSupabaseAuthError(
+          error,
+          'Unable to create account. Please try again.',
+        ),
+      );
+    }
   }, []);
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(
+        mapSupabaseAuthError(error, 'Unable to sign out. Please try again.'),
+      );
+    }
   }, []);
 
   return { user, session, isLoading, signIn, signUp, signOut };

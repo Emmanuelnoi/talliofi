@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { getErrorMessage } from '@/lib/error-message';
 import type { TopExpensesReport as ReportData } from '../types';
 import {
   exportTopExpensesCSV,
@@ -47,12 +48,12 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
         downloadReportCSV(csv, 'top-expenses');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportTopExpensesPDF(report, currencyCode);
+        const blob = await exportTopExpensesPDF(report, currencyCode);
         downloadReportPDF(blob, 'top-expenses');
         toast.success('PDF exported successfully');
       }
-    } catch {
-      toast.error('Failed to export report');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to export report.'));
     } finally {
       setExporting(null);
     }
@@ -93,7 +94,7 @@ export function TopExpensesReport({ report }: TopExpensesReportProps) {
               className="print:hidden"
             >
               {exporting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Download className="size-4" />
               )}

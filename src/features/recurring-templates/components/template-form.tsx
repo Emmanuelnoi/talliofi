@@ -366,7 +366,9 @@ export function TemplateForm({
           Cancel
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting && (
+            <Loader2 className="size-4 motion-safe:animate-spin" />
+          )}
           {template ? 'Save changes' : 'Create template'}
         </Button>
       </div>

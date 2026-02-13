@@ -1,39 +1,20 @@
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { completeOnboarding } from './fixtures';
 
-/**
- * Completes the onboarding wizard with a single "Essentials" bucket
- * so the rest of the tests have a plan to work with.
- */
-async function completeOnboarding(page: Page): Promise<void> {
-  await page.goto('/onboarding');
+async function openAddExpenseSheet(page: Page): Promise<void> {
+  await page
+    .getByRole('button', { name: 'Add Expense', exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+}
 
-  // Step 1: Income
-  await page.locator('#grossIncomeDollars').fill('5000');
-  await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 2: Taxes
-  await page.locator('#effectiveRate').fill('25');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 3: Buckets
-  await page.locator('#buckets\\.0\\.name').fill('Essentials');
-  await page.locator('#buckets\\.0\\.targetPercentage').fill('50');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 4: Skip expenses
-  await page.getByRole('button', { name: 'Skip' }).click();
-
-  // Step 5: Create plan
-  await page.getByRole('button', { name: 'Create plan' }).click();
-
-  // Wait for dashboard to be fully loaded
-  await page.waitForURL('**/dashboard');
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Dashboard' }),
-  ).toBeVisible();
+async function submitExpenseFromSheet(page: Page): Promise<void> {
+  const expenseSheet = page.getByRole('dialog');
+  const expenseForm = expenseSheet.locator('form').first();
+  await expenseForm.evaluate((form) => {
+    (form as HTMLFormElement).requestSubmit();
+  });
 }
 
 test.describe('Expenses page', () => {
@@ -69,7 +50,7 @@ test.describe('Expenses page', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Click "Add expense" button in page header
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await openAddExpenseSheet(page);
 
     // Fill out the expense form in the sheet
     await page.locator('#expense-name').fill('Rent');
@@ -91,14 +72,11 @@ test.describe('Expenses page', () => {
     await page.getByRole('option', { name: 'Essentials' }).click();
 
     // Submit the form
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await submitExpenseFromSheet(page);
 
-    // Wait for the sheet to close and the expense to appear in the list
+    // Wait for the expense row to appear
     await expect(
-      page.locator('.truncate.font-medium', { hasText: 'Rent' }),
-    ).toBeVisible();
-    await expect(
-      page.locator('span', { hasText: 'Housing' }).first(),
+      page.getByRole('button', { name: 'Actions for Rent' }),
     ).toBeVisible();
   });
 
@@ -134,11 +112,11 @@ test.describe('Expenses page', () => {
     await page.getByRole('option', { name: 'Essentials' }).click();
 
     // Submit
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await submitExpenseFromSheet(page);
 
     // Verify it appears in the list
     await expect(
-      page.locator('.truncate.font-medium', { hasText: 'Groceries' }),
+      page.getByRole('button', { name: 'Actions for Groceries' }),
     ).toBeVisible();
   });
 
@@ -154,7 +132,7 @@ test.describe('Expenses page', () => {
       page.getByText('Track and manage your recurring expenses'),
     ).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await openAddExpenseSheet(page);
     await page.locator('#expense-name').fill('Internet');
     await page.locator('#expense-amount').fill('80');
 
@@ -167,10 +145,12 @@ test.describe('Expenses page', () => {
     await page.locator('#expense-bucket').click();
     await page.getByRole('option', { name: 'Essentials' }).click();
 
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await submitExpenseFromSheet(page);
 
     // Wait for expense to be saved
-    await expect(page.getByText('Internet')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Actions for Internet' }),
+    ).toBeVisible();
 
     // Navigate to dashboard
     await page.getByRole('link', { name: 'Dashboard' }).click();

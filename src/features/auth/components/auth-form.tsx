@@ -12,6 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AUTH_MAX_ATTEMPTS, AUTH_RATE_LIMIT_WINDOW_MS } from '@/lib/constants';
+import {
+  getMissingServerAuthControls,
+  shouldBlockCloudAuthInCurrentBuild,
+} from '@/lib/security-controls';
+import { mapSupabaseAuthError } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 import type { MfaFactor } from '@/lib/mfa-utils';
 import { useAuth } from '../hooks/use-auth';
@@ -21,6 +26,7 @@ type AuthMode = 'login' | 'signup';
 /**
  * Simple client-side rate limiter for auth attempts.
  * Tracks timestamps of recent attempts and enforces a limit.
+ * This improves UX but must be paired with server-side limits.
  */
 function useRateLimiter(maxAttempts: number, windowMs: number) {
   const attemptsRef = useRef<number[]>([]);
@@ -64,6 +70,8 @@ function useRateLimiter(maxAttempts: number, windowMs: number) {
 
 export function AuthForm() {
   const { signIn, signUp } = useAuth();
+  const shouldBlockCloudAuth = shouldBlockCloudAuthInCurrentBuild();
+  const missingServerControls = getMissingServerAuthControls();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,7 +116,14 @@ export function AuthForm() {
         await supabase.auth.mfa.challenge({
           factorId: mfaFactorId,
         });
-      if (challengeError) throw new Error(challengeError.message);
+      if (challengeError) {
+        throw new Error(
+          mapSupabaseAuthError(
+            challengeError,
+            'Unable to verify your authentication code.',
+          ),
+        );
+      }
       if (!challenge?.id) throw new Error('Unable to verify MFA challenge.');
 
       const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -116,15 +131,24 @@ export function AuthForm() {
         challengeId: challenge.id,
         code: trimmedCode,
       });
-      if (verifyError) throw new Error(verifyError.message);
+      if (verifyError) {
+        throw new Error(
+          mapSupabaseAuthError(
+            verifyError,
+            'Unable to verify your authentication code.',
+          ),
+        );
+      }
 
       toast.success('Signed in successfully.');
       setMfaFactorId(null);
       setMfaCode('');
     } catch (error) {
       rateLimiter.recordAttempt();
-      const message =
-        error instanceof Error ? error.message : 'Verification failed.';
+      const message = mapSupabaseAuthError(
+        error,
+        'Verification failed. Please try again.',
+      );
       toast.error(message);
     } finally {
       setIsMfaVerifying(false);
@@ -190,6 +214,37 @@ export function AuthForm() {
 
   const isLogin = mode === 'login';
   const isMfaStep = isLogin && mfaFactorId !== null;
+
+  if (shouldBlockCloudAuth) {
+    return (
+      <Card className="mx-auto w-full max-w-sm border-destructive/40">
+        <CardHeader>
+          <p className="text-destructive text-[11px] font-semibold uppercase tracking-[0.2em]">
+            Security Block
+          </p>
+          <CardTitle>Cloud auth is disabled in this build</CardTitle>
+          <CardDescription>
+            Production cloud sign-in is blocked until required server-side
+            controls are configured.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p className="text-muted-foreground">Missing controls:</p>
+          <ul className="space-y-1 text-muted-foreground">
+            {missingServerControls.map((control) => (
+              <li key={control} className="flex items-start gap-2">
+                <span
+                  className="mt-1.5 block size-1.5 shrink-0 rounded-full bg-destructive"
+                  aria-hidden="true"
+                />
+                {control}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mx-auto w-full max-w-sm">
@@ -275,7 +330,10 @@ export function AuthForm() {
             disabled={isSubmitting || isMfaVerifying}
           >
             {(isSubmitting || isMfaVerifying) && (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              <Loader2
+                className="size-4 motion-safe:animate-spin"
+                aria-hidden="true"
+              />
             )}
             {isMfaStep ? 'Verify Code' : isLogin ? 'Sign In' : 'Sign Up'}
           </Button>

@@ -6,13 +6,44 @@ import { PlanSchema } from '@/domain/plan/schemas';
 /** Key for persisting active plan ID in localStorage */
 const ACTIVE_PLAN_KEY = 'talliofi-active-plan-id';
 
+function logLocalStorageError(action: string, error: unknown): void {
+  if (import.meta.env.DEV) {
+    console.warn(`[planRepo] Failed to ${action} localStorage`, error);
+  }
+}
+
+function safeGetLocalStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    logLocalStorageError(`read key "${key}" from`, error);
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    logLocalStorageError(`write key "${key}" to`, error);
+  }
+}
+
+function safeRemoveLocalStorage(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    logLocalStorageError(`remove key "${key}" from`, error);
+  }
+}
+
 export const planRepo = {
   /**
    * Returns the active plan based on localStorage preference.
    * Falls back to the first plan by creation date if no preference exists.
    */
   async getActive(): Promise<Plan | undefined> {
-    const activePlanId = localStorage.getItem(ACTIVE_PLAN_KEY);
+    const activePlanId = safeGetLocalStorage(ACTIVE_PLAN_KEY);
     if (activePlanId) {
       const plan = await db.plans.get(activePlanId);
       if (plan) return plan;
@@ -26,7 +57,7 @@ export const planRepo = {
    * Sets the active plan by ID and persists to localStorage.
    */
   setActivePlanId(planId: string): void {
-    localStorage.setItem(ACTIVE_PLAN_KEY, planId);
+    safeSetLocalStorage(ACTIVE_PLAN_KEY, planId);
   },
 
   /**
@@ -117,9 +148,9 @@ export const planRepo = {
       );
 
       // Clear active plan if it was the deleted one
-      const activePlanId = localStorage.getItem(ACTIVE_PLAN_KEY);
+      const activePlanId = safeGetLocalStorage(ACTIVE_PLAN_KEY);
       if (activePlanId === id) {
-        localStorage.removeItem(ACTIVE_PLAN_KEY);
+        safeRemoveLocalStorage(ACTIVE_PLAN_KEY);
       }
     } catch (error) {
       if (error instanceof Dexie.DatabaseClosedError) {

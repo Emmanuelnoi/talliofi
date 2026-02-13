@@ -1,36 +1,5 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-
-/**
- * Completes the onboarding wizard at the current viewport size.
- */
-async function completeOnboarding(page: Page): Promise<void> {
-  await page.goto('/onboarding');
-
-  // Step 1: Income
-  await page.locator('#grossIncomeDollars').fill('5000');
-  await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 2: Taxes
-  await page.locator('#effectiveRate').fill('25');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 3: Buckets
-  await page.locator('#buckets\\.0\\.name').fill('Essentials');
-  await page.locator('#buckets\\.0\\.targetPercentage').fill('50');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 4: Skip expenses
-  await page.getByRole('button', { name: 'Skip' }).click();
-
-  // Step 5: Create plan
-  await page.getByRole('button', { name: 'Create plan' }).click();
-
-  // Wait for dashboard
-  await page.waitForURL('**/dashboard');
-}
+import { completeOnboarding } from './fixtures';
 
 test.describe('Responsive layout (mobile)', () => {
   test.use({ viewport: { width: 375, height: 667 } });
@@ -39,7 +8,10 @@ test.describe('Responsive layout (mobile)', () => {
     await page.goto('/onboarding');
 
     // Verify step indicator is visible
-    await expect(page.getByText('Step 1 of 5')).toBeVisible();
+    await expect(page.getByText('What is your gross income?')).toBeVisible();
+    await expect(
+      page.getByRole('progressbar', { name: 'Onboarding progress' }),
+    ).toHaveAttribute('aria-valuenow', '1');
 
     // Verify the income form is accessible
     await expect(page.locator('#grossIncomeDollars')).toBeVisible();
@@ -70,8 +42,8 @@ test.describe('Responsive layout (mobile)', () => {
 
     // Verify bottom nav items
     await expect(mobileNav.getByText('Dashboard')).toBeVisible();
-    await expect(mobileNav.getByText('Buckets')).toBeVisible();
     await expect(mobileNav.getByText('Expenses')).toBeVisible();
+    await expect(mobileNav.getByText('Goals')).toBeVisible();
     await expect(mobileNav.getByText('History')).toBeVisible();
     await expect(mobileNav.getByText('Settings')).toBeVisible();
   });
@@ -90,11 +62,11 @@ test.describe('Responsive layout (mobile)', () => {
       page.getByRole('heading', { level: 1, name: 'Expenses' }),
     ).toBeVisible();
 
-    // Navigate to Buckets
-    await mobileNav.getByText('Buckets').click();
-    await page.waitForURL('**/buckets');
+    // Navigate to Goals
+    await mobileNav.getByText('Goals').click();
+    await page.waitForURL('**/goals');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Buckets' }),
+      page.getByRole('heading', { level: 1, name: 'Goals' }),
     ).toBeVisible();
 
     // Navigate to Settings

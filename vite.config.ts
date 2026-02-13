@@ -4,11 +4,82 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const CSP_META_REGEX =
+  /(<meta[^>]*http-equiv=["']Content-Security-Policy["'][^>]*content=")([^"]*)("[^>]*>)/i;
+
+function relaxCspForDev(html: string): string {
+  return html.replace(CSP_META_REGEX, (_match, prefix, content, suffix) => {
+    let next = content;
+
+    if (!/script-src[^;]*'unsafe-inline'/i.test(next)) {
+      next = next.replace(
+        /script-src\s+([^;]+)/i,
+        (_directive: string, sources: string) =>
+          `script-src ${sources} 'unsafe-inline'`,
+      );
+    }
+
+    next = next.replace(
+      /connect-src\s+([^;]+)/i,
+      (_directive: string, sources: string) =>
+        `connect-src ${sources} ws://localhost:* wss://localhost:*`,
+    );
+
+    next = next.replace(/;\s*upgrade-insecure-requests\s*;?/i, ';');
+
+    return `${prefix}${next}${suffix}`;
+  });
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router'],
+          'radix-ui': [
+            '@radix-ui/react-alert-dialog',
+            '@radix-ui/react-collapsible',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-label',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-select',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slider',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-tooltip',
+          ],
+          'data-layer': ['dexie', '@tanstack/react-query', 'zustand', 'zod'],
+          'date-utils': ['date-fns'],
+          forms: ['react-hook-form', '@hookform/resolvers'],
+          supabase: ['@supabase/supabase-js'],
+          'ui-utils': [
+            'sonner',
+            'nuqs',
+            'cmdk',
+            'lucide-react',
+            'class-variance-authority',
+            'clsx',
+            'tailwind-merge',
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),
+    {
+      name: 'dev-csp-relaxation',
+      apply: 'serve',
+      transformIndexHtml(html) {
+        return relaxCspForDev(html);
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -42,6 +113,13 @@ export default defineConfig({
       workbox: {
         // Cache all static assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Keep heavy optional/reporting assets out of first-load precache.
+        globIgnores: [
+          '**/jspdf*',
+          '**/html2canvas*',
+          '**/chart-*.js',
+          '**/index.es-*.js',
+        ],
         // Runtime caching strategies
         runtimeCaching: [
           {

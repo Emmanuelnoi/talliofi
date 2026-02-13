@@ -168,7 +168,7 @@ export function ImportSection() {
               disabled={isImporting}
             >
               {isImporting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Upload className="size-4" />
               )}

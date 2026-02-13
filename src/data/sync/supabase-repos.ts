@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
 import type {
   Plan,
@@ -6,6 +7,13 @@ import type {
   ExpenseItem,
   MonthlySnapshot,
 } from '@/domain/plan/types';
+import {
+  BucketAllocationSchema,
+  CentsSchema,
+  ExpenseItemSchema,
+  PlanSchema,
+  TaxComponentSchema,
+} from '@/domain/plan/schemas';
 
 /**
  * Column-name mapping helpers: camelCase (client) <-> snake_case (Postgres).
@@ -24,7 +32,7 @@ function toSnake(obj: object): Record<string, unknown> {
   return result;
 }
 
-function toCamel<T>(obj: Record<string, unknown>): T {
+function toCamel(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     const camelKey = key.replace(/_([a-z])/g, (_, ch: string) =>
@@ -32,7 +40,7 @@ function toCamel<T>(obj: Record<string, unknown>): T {
     );
     result[camelKey] = value;
   }
-  return result as T;
+  return result;
 }
 
 function assertClient(): NonNullable<typeof supabase> {
@@ -42,6 +50,57 @@ function assertClient(): NonNullable<typeof supabase> {
     );
   }
   return supabase;
+}
+
+const BucketSummarySchema = z.object({
+  bucketId: z.string(),
+  bucketName: z.string(),
+  allocatedCents: CentsSchema,
+  spentCents: CentsSchema,
+  remainingCents: CentsSchema,
+});
+
+const MonthlySnapshotSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  grossIncomeCents: CentsSchema,
+  netIncomeCents: CentsSchema,
+  totalExpensesCents: CentsSchema,
+  bucketSummaries: z.array(BucketSummarySchema),
+  createdAt: z.string().datetime(),
+});
+
+function formatZodError(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 4)
+    .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
+    .join('; ');
+}
+
+function parseSupabaseRow<T>(
+  schema: z.ZodTypeAny,
+  row: Record<string, unknown>,
+  entityName: string,
+): T {
+  const camel = toCamel(row);
+  const result = schema.safeParse(camel);
+  if (!result.success) {
+    throw new Error(
+      `Invalid ${entityName} row from Supabase: ${formatZodError(
+        result.error,
+      )}`,
+    );
+  }
+  return result.data as T;
+}
+
+function parseSupabaseRows<T>(
+  schema: z.ZodTypeAny,
+  rows: Record<string, unknown>[],
+  entityName: string,
+): T[] {
+  return rows.map((row) => parseSupabaseRow(schema, row, entityName));
 }
 
 // --- Plan ---
@@ -56,7 +115,7 @@ export const supabasePlanRepo = {
       .limit(1)
       .single();
     if (error || !data) return undefined;
-    return toCamel<Plan>(data);
+    return parseSupabaseRow<Plan>(PlanSchema, data, 'plan');
   },
 
   async getById(id: string): Promise<Plan | undefined> {
@@ -67,7 +126,7 @@ export const supabasePlanRepo = {
       .eq('id', id)
       .single();
     if (error || !data) return undefined;
-    return toCamel<Plan>(data);
+    return parseSupabaseRow<Plan>(PlanSchema, data, 'plan');
   },
 
   async create(plan: Plan): Promise<Plan> {
@@ -105,7 +164,7 @@ export const supabasePlanRepo = {
       .select('*')
       .order('created_at', { ascending: true });
     if (error) throw new Error(`Failed to fetch plans: ${error.message}`);
-    return (data ?? []).map((row) => toCamel<Plan>(row));
+    return parseSupabaseRows<Plan>(PlanSchema, data ?? [], 'plan');
   },
 
   async duplicate(planId: string, newName: string): Promise<Plan> {
@@ -138,7 +197,11 @@ export const supabaseBucketRepo = {
       .eq('plan_id', planId)
       .order('sort_order', { ascending: true });
     if (error) throw new Error(`Failed to fetch buckets: ${error.message}`);
-    return (data ?? []).map((row) => toCamel<BucketAllocation>(row));
+    return parseSupabaseRows<BucketAllocation>(
+      BucketAllocationSchema,
+      data ?? [],
+      'bucket',
+    );
   },
 
   async create(bucket: BucketAllocation): Promise<BucketAllocation> {
@@ -177,7 +240,11 @@ export const supabaseTaxComponentRepo = {
       .order('sort_order', { ascending: true });
     if (error)
       throw new Error(`Failed to fetch tax components: ${error.message}`);
-    return (data ?? []).map((row) => toCamel<TaxComponent>(row));
+    return parseSupabaseRows<TaxComponent>(
+      TaxComponentSchema,
+      data ?? [],
+      'tax component',
+    );
   },
 
   async create(component: TaxComponent): Promise<TaxComponent> {
@@ -219,7 +286,11 @@ export const supabaseExpenseRepo = {
       .select('*')
       .eq('plan_id', planId);
     if (error) throw new Error(`Failed to fetch expenses: ${error.message}`);
-    return (data ?? []).map((row) => toCamel<ExpenseItem>(row));
+    return parseSupabaseRows<ExpenseItem>(
+      ExpenseItemSchema,
+      data ?? [],
+      'expense',
+    );
   },
 
   async getByBucketId(bucketId: string): Promise<ExpenseItem[]> {
@@ -229,7 +300,11 @@ export const supabaseExpenseRepo = {
       .select('*')
       .eq('bucket_id', bucketId);
     if (error) throw new Error(`Failed to fetch expenses: ${error.message}`);
-    return (data ?? []).map((row) => toCamel<ExpenseItem>(row));
+    return parseSupabaseRows<ExpenseItem>(
+      ExpenseItemSchema,
+      data ?? [],
+      'expense',
+    );
   },
 
   async create(expense: ExpenseItem): Promise<ExpenseItem> {
@@ -302,11 +377,11 @@ export const supabaseSnapshotRepo = {
       .eq('plan_id', planId)
       .order('year_month', { ascending: true });
     if (error) throw new Error(`Failed to fetch snapshots: ${error.message}`);
-    return (data ?? []).map((row) => {
-      const snapshot = toCamel<MonthlySnapshot>(row);
-      // bucket_summaries is stored as JSONB, already camelCase within
-      return snapshot;
-    });
+    return parseSupabaseRows<MonthlySnapshot>(
+      MonthlySnapshotSchema,
+      data ?? [],
+      'snapshot',
+    );
   },
 
   async getByPlanAndMonth(
@@ -321,7 +396,11 @@ export const supabaseSnapshotRepo = {
       .eq('year_month', yearMonth)
       .single();
     if (error || !data) return undefined;
-    return toCamel<MonthlySnapshot>(data);
+    return parseSupabaseRow<MonthlySnapshot>(
+      MonthlySnapshotSchema,
+      data,
+      'snapshot',
+    );
   },
 
   async upsert(snapshot: MonthlySnapshot): Promise<void> {

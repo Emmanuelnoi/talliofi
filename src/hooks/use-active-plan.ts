@@ -5,6 +5,7 @@ import { useUIStore } from '@/stores/ui-store';
 
 export const ACTIVE_PLAN_QUERY_KEY = ['active-plan'] as const;
 export const ALL_PLANS_QUERY_KEY = ['all-plans'] as const;
+const ACTIVE_PLAN_LOAD_TIMEOUT_MS = 8_000;
 
 /**
  * Hook to get the currently active plan.
@@ -13,8 +14,26 @@ export function useActivePlan() {
   return useQuery({
     queryKey: ACTIVE_PLAN_QUERY_KEY,
     queryFn: async () => {
-      const plan = await planRepo.getActive();
-      return plan ?? null;
+      const planPromise = planRepo.getActive().then((plan) => plan ?? null);
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let timedOut = false;
+      const timeoutPromise = new Promise<null>((resolve) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          resolve(null);
+        }, ACTIVE_PLAN_LOAD_TIMEOUT_MS);
+      });
+
+      const plan = await Promise.race([planPromise, timeoutPromise]);
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      if (timedOut && import.meta.env.DEV) {
+        console.warn(
+          '[useActivePlan] Plan lookup timed out. Falling back to onboarding.',
+        );
+      }
+      return plan;
     },
   });
 }
@@ -45,25 +64,22 @@ export function useSwitchPlan() {
     async (planId: string) => {
       planRepo.setActivePlanId(planId);
       // Invalidate all plan-related queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
-      // Also invalidate plan-specific data queries
-      await queryClient.invalidateQueries({ queryKey: ['buckets'] });
-      await queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      await queryClient.invalidateQueries({ queryKey: ['tax-components'] });
-      await queryClient.invalidateQueries({ queryKey: ['goals'] });
-      await queryClient.invalidateQueries({ queryKey: ['assets'] });
-      await queryClient.invalidateQueries({ queryKey: ['liabilities'] });
-      await queryClient.invalidateQueries({ queryKey: ['snapshots'] });
-      await queryClient.invalidateQueries({
-        queryKey: ['net-worth-snapshots'],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ['recurring-templates'],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ['recurring-templates-active'],
-      });
-      await queryClient.invalidateQueries({ queryKey: ['plan-summary'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ['buckets'] }),
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['tax-components'] }),
+        queryClient.invalidateQueries({ queryKey: ['goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['assets'] }),
+        queryClient.invalidateQueries({ queryKey: ['liabilities'] }),
+        queryClient.invalidateQueries({ queryKey: ['snapshots'] }),
+        queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] }),
+        queryClient.invalidateQueries({ queryKey: ['recurring-templates'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['recurring-templates-active'],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['plan-summary'] }),
+      ]);
       incrementVersion();
     },
     [queryClient, incrementVersion],

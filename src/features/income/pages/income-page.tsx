@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { z } from 'zod';
 import { IncomeInputSchema } from '@/domain/plan/schemas';
@@ -31,6 +30,8 @@ import { useAutoSave } from '@/hooks/use-auto-save';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
 import { FREQUENCY_LABELS } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
+import { IncomeSkeleton } from '../components/income-skeleton';
 
 type IncomeFormData = z.infer<typeof IncomeInputSchema>;
 
@@ -73,8 +74,8 @@ export default function IncomePage() {
       };
       try {
         await updatePlan.mutateAsync(updated);
-      } catch {
-        toast.error('Failed to save income changes');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save income changes.'));
       }
     },
   });
@@ -84,11 +85,7 @@ export default function IncomePage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
-      </div>
-    );
+    return <IncomeSkeleton />;
   }
 
   if (!plan) {

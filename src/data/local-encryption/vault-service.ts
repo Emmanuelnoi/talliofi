@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type {
   Plan,
   BucketAllocation,
@@ -12,13 +13,29 @@ import type {
   ChangeLogEntry,
   RecurringTemplate,
 } from '@/domain/plan/types';
-import type { ExchangeRateRecord } from '@/domain/money';
-import { db, clearAllData } from '@/data/db';
+import { SUPPORTED_CURRENCIES, type ExchangeRateRecord } from '@/domain/money';
 import {
-  encrypt,
-  decrypt,
-  type EncryptedPayload,
-} from '@/data/sync/encryption';
+  AssetSchema,
+  BucketAllocationSchema,
+  CentsSchema,
+  CurrencyCodeSchema,
+  ExpenseItemSchema,
+  GoalSchema,
+  LiabilitySchema,
+  NetWorthSnapshotSchema,
+  PlanSchema,
+  RecurringTemplateSchema,
+  TaxComponentSchema,
+} from '@/domain/plan/schemas';
+import { db, clearAllData } from '@/data/db';
+import type { EncryptedPayload } from '@/data/sync/encryption';
+import {
+  activateVaultKey,
+  clearActiveVaultKey,
+  decryptWithPasswordAndActivateVaultKey,
+  encryptWithActiveVaultKey,
+  hasActiveVaultKey,
+} from './vault-key-manager';
 
 export const VAULT_VERSION = 1 as const;
 
@@ -49,6 +66,112 @@ export interface VaultPayload {
   readonly changelog: ChangeLogEntry[];
   readonly recurringTemplates: RecurringTemplate[];
   readonly exchangeRates: ExchangeRateRecord[];
+}
+
+const EncryptedPayloadSchema = z.object({
+  iv: z.string().min(1),
+  ciphertext: z.string().min(1),
+  salt: z.string().min(1),
+});
+
+const SerializableAttachmentSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  fileName: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(100),
+  size: z.number().int().nonnegative(),
+  blobBase64: z.string(),
+  createdAt: z.string().datetime(),
+});
+
+const BucketSummarySchema = z.object({
+  bucketId: z.string(),
+  bucketName: z.string(),
+  allocatedCents: CentsSchema,
+  spentCents: CentsSchema,
+  remainingCents: CentsSchema,
+});
+
+const MonthlySnapshotSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  grossIncomeCents: CentsSchema,
+  netIncomeCents: CentsSchema,
+  totalExpensesCents: CentsSchema,
+  bucketSummaries: z.array(BucketSummarySchema),
+  createdAt: z.string().datetime(),
+});
+
+const ChangeLogEntrySchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  entityType: z.enum([
+    'plan',
+    'expense',
+    'bucket',
+    'tax_component',
+    'snapshot',
+    'goal',
+    'asset',
+    'liability',
+    'net_worth_snapshot',
+    'recurring_template',
+  ]),
+  entityId: z.string(),
+  operation: z.enum(['create', 'update', 'delete']),
+  timestamp: z.string().datetime(),
+  payload: z.string().optional(),
+});
+
+const ExchangeRateRecordSchema = z
+  .object({
+    id: z.string().uuid(),
+    planId: z.string().uuid(),
+    baseCurrency: CurrencyCodeSchema,
+    rates: z.record(z.string(), z.number().positive()),
+    updatedAt: z.string().datetime(),
+  })
+  .superRefine((value, ctx) => {
+    for (const code of Object.keys(value.rates)) {
+      if (
+        !SUPPORTED_CURRENCIES.includes(
+          code as (typeof SUPPORTED_CURRENCIES)[number],
+        )
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rates', code],
+          message: `Unsupported currency code: ${code}`,
+        });
+      }
+    }
+  });
+
+const VaultPayloadSchema = z.object({
+  version: z.number().int().positive(),
+  exportedAt: z.string().datetime(),
+  plans: z.array(PlanSchema),
+  buckets: z.array(BucketAllocationSchema),
+  taxComponents: z.array(TaxComponentSchema),
+  expenses: z.array(ExpenseItemSchema),
+  attachments: z.array(SerializableAttachmentSchema),
+  goals: z.array(GoalSchema),
+  assets: z.array(AssetSchema),
+  liabilities: z.array(LiabilitySchema),
+  snapshots: z.array(MonthlySnapshotSchema),
+  netWorthSnapshots: z.array(NetWorthSnapshotSchema),
+  changelog: z.array(ChangeLogEntrySchema),
+  recurringTemplates: z.array(RecurringTemplateSchema),
+  exchangeRates: z.array(ExchangeRateRecordSchema),
+});
+
+function formatSchemaError(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 4)
+    .map((issue) => `${issue.path.join('.') || 'root'}: ${issue.message}`)
+    .join('; ');
 }
 
 function encodeBase64(bytes: Uint8Array): string {
@@ -280,9 +403,12 @@ export async function restoreVaultPayload(
 
 export async function encryptVaultPayload(
   payload: VaultPayload,
-  password: string,
+  password?: string,
 ): Promise<string> {
-  const encrypted = await encrypt(JSON.stringify(payload), password);
+  if (password) {
+    await activateVaultKey(password);
+  }
+  const encrypted = await encryptWithActiveVaultKey(JSON.stringify(payload));
   return JSON.stringify(encrypted);
 }
 
@@ -290,27 +416,51 @@ export async function decryptVaultPayload(
   payload: string,
   password: string,
 ): Promise<VaultPayload> {
-  const parsed = JSON.parse(payload) as EncryptedPayload;
-  const decrypted = await decrypt(parsed, password);
-  const data = JSON.parse(decrypted) as VaultPayload;
+  let encryptedUnknown: unknown;
+  try {
+    encryptedUnknown = JSON.parse(payload);
+  } catch {
+    throw new Error('Invalid encrypted vault payload JSON.');
+  }
 
-  if (
-    typeof data !== 'object' ||
-    data === null ||
-    typeof data.version !== 'number' ||
-    !Array.isArray(data.plans) ||
-    !Array.isArray(data.expenses)
-  ) {
+  const encryptedResult = EncryptedPayloadSchema.safeParse(encryptedUnknown);
+  if (!encryptedResult.success) {
     throw new Error(
-      'Invalid vault payload structure. The vault may be corrupted.',
+      `Invalid encrypted vault payload structure: ${formatSchemaError(
+        encryptedResult.error,
+      )}`,
     );
   }
 
+  const decrypted = await decryptWithPasswordAndActivateVaultKey(
+    encryptedResult.data as EncryptedPayload,
+    password,
+  );
+
+  let dataUnknown: unknown;
+  try {
+    dataUnknown = JSON.parse(decrypted);
+  } catch {
+    throw new Error('Invalid decrypted vault JSON.');
+  }
+
+  const result = VaultPayloadSchema.safeParse(dataUnknown);
+  if (!result.success) {
+    clearActiveVaultKey();
+    throw new Error(
+      `Invalid vault payload structure: ${formatSchemaError(result.error)}`,
+    );
+  }
+  const data = result.data;
+
   if (data.version !== VAULT_VERSION) {
+    clearActiveVaultKey();
     throw new Error(
       `Vault version mismatch: expected ${VAULT_VERSION}, got ${data.version}. A future update may be required to read this vault.`,
     );
   }
 
-  return data;
+  return data as unknown as VaultPayload;
 }
+
+export { clearActiveVaultKey as clearVaultKey, hasActiveVaultKey };

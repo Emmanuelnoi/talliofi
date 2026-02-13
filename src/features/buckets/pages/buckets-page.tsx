@@ -66,6 +66,8 @@ import {
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
 import { BUCKET_COLORS } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
+import { BucketsSkeleton } from '../components/buckets-skeleton';
 
 type BucketFormData = z.input<typeof BucketInputSchema>;
 
@@ -168,8 +170,8 @@ export default function BucketsPage() {
       }
       setSheetOpen(false);
       setEditingBucket(null);
-    } catch {
-      toast.error('Failed to save bucket');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to save bucket.'));
     }
   };
 
@@ -191,19 +193,15 @@ export default function BucketsPage() {
         toast.success('Bucket deleted');
       }
       setDeletingBucket(null);
-    } catch {
-      toast.error('Failed to delete bucket. Please try again.');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete bucket.'));
     }
   };
 
   const isLoading = planLoading || bucketsLoading;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
-      </div>
-    );
+    return <BucketsSkeleton />;
   }
 
   if (!plan) {
@@ -621,7 +619,9 @@ function BucketForm({
           className="flex-1"
           disabled={isSubmitting || wouldExceed}
         >
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting && (
+            <Loader2 className="size-4 motion-safe:animate-spin" />
+          )}
           {bucket ? 'Save changes' : 'Create bucket'}
         </Button>
       </div>

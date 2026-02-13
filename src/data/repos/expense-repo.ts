@@ -2,7 +2,6 @@ import Dexie from 'dexie';
 import { db } from '../db';
 import type { ExpenseItem } from '@/domain/plan/types';
 import { ExpenseItemSchema } from '@/domain/plan/schemas';
-import { attachmentRepo } from './attachment-repo';
 
 export const expenseRepo = {
   async getByPlanId(planId: string): Promise<ExpenseItem[]> {
@@ -71,14 +70,18 @@ export const expenseRepo = {
   },
 
   async delete(id: string): Promise<void> {
-    await db.expenses.delete(id);
-    await attachmentRepo.deleteByExpenseId(id);
+    await db.transaction('rw', [db.expenses, db.attachments], async () => {
+      await db.expenses.delete(id);
+      await db.attachments.where('expenseId').equals(id).delete();
+    });
   },
 
   async bulkDelete(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
-    await db.expenses.bulkDelete(ids);
-    await attachmentRepo.deleteByExpenseIds(ids);
+    await db.transaction('rw', [db.expenses, db.attachments], async () => {
+      await db.expenses.bulkDelete(ids);
+      await db.attachments.where('expenseId').anyOf(ids).delete();
+    });
   },
 
   async deleteByPlanId(planId: string): Promise<void> {

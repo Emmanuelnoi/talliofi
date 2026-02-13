@@ -53,6 +53,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ASSET_CATEGORY_LABELS, ASSET_CATEGORY_COLORS } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
 
 type AssetFormData = z.infer<typeof AssetFormSchema>;
 
@@ -118,8 +119,8 @@ export function AssetList({
         }
         setSheetOpen(false);
         setEditingAsset(null);
-      } catch {
-        toast.error('Failed to save asset');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save asset.'));
       }
     },
     [planId, editingAsset, onCreateAsset, onUpdateAsset],
@@ -131,8 +132,8 @@ export function AssetList({
       await onDeleteAsset(deletingAsset.id);
       toast.success('Asset deleted');
       setDeletingAsset(null);
-    } catch {
-      toast.error('Failed to delete asset');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete asset.'));
     }
   }, [deletingAsset, onDeleteAsset]);
 
@@ -431,7 +432,9 @@ function AssetForm({ asset, onSave, onCancel }: AssetFormProps) {
           Cancel
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting && (
+            <Loader2 className="size-4 motion-safe:animate-spin" />
+          )}
           {asset ? 'Save changes' : 'Add asset'}
         </Button>
       </div>

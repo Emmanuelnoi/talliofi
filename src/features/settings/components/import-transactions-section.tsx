@@ -213,7 +213,7 @@ function FileDropzone({
           disabled={isProcessing}
         />
         {isProcessing ? (
-          <Loader2 className="size-10 animate-spin text-muted-foreground" />
+          <Loader2 className="size-10 motion-safe:animate-spin text-muted-foreground" />
         ) : (
           <Upload className="size-10 text-muted-foreground" />
         )}
@@ -1120,7 +1120,7 @@ export function ImportTransactionsSection() {
             <div className="flex gap-2">
               <Button onClick={handleImport} disabled={state.isImporting}>
                 {state.isImporting ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <Upload className="size-4" />
                 )}

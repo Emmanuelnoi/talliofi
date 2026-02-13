@@ -218,7 +218,9 @@ describe('useAuth', () => {
         act(async () => {
           await result.current.signIn('user@example.com', 'wrongpassword');
         }),
-      ).rejects.toThrow('Invalid credentials');
+      ).rejects.toThrow(
+        'Unable to sign in. Check your credentials and try again.',
+      );
     });
 
     it('returns MFA required when session is missing', async () => {
@@ -302,7 +304,7 @@ describe('useAuth', () => {
         act(async () => {
           await result.current.signUp('existing@example.com', 'password');
         }),
-      ).rejects.toThrow('Email already registered');
+      ).rejects.toThrow('Unable to create account. Please try again.');
     });
   });
 
@@ -337,7 +339,7 @@ describe('useAuth', () => {
         act(async () => {
           await result.current.signOut();
         }),
-      ).rejects.toThrow('Network error');
+      ).rejects.toThrow('Network error. Check your connection and try again.');
     });
   });
 

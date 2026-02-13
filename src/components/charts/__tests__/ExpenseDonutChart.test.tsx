@@ -35,9 +35,11 @@ describe('ExpenseDonutChart', () => {
   it('renders empty state when no data', () => {
     render(<ExpenseDonutChart data={[]} />);
 
-    expect(screen.getByText('No Expenses Yet')).toBeInTheDocument();
+    expect(screen.getByText('No expenses recorded')).toBeInTheDocument();
     expect(
-      screen.getByText('Add expenses to see a premium category breakdown.'),
+      screen.getByText(
+        'Start by adding a transaction to see your spending patterns here.',
+      ),
     ).toBeInTheDocument();
   });
 });

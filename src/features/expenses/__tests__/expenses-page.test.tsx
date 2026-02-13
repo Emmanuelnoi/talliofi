@@ -134,6 +134,30 @@ async function seedMultipleExpenses() {
   return { plan, bucket };
 }
 
+async function seedLargeExpenseSet(count: number) {
+  const { plan, bucket } = await seedData();
+  const now = new Date().toISOString();
+
+  await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      expenseRepo.create({
+        id: crypto.randomUUID(),
+        planId: plan.id,
+        bucketId: bucket.id,
+        name: `Expense ${index + 1}`,
+        amountCents: cents(1000 + index) as Cents,
+        frequency: 'monthly',
+        category: 'other',
+        isFixed: false,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ),
+  );
+
+  return { plan, bucket };
+}
+
 describe('ExpensesPage', () => {
   it('renders page header', async () => {
     await seedData();
@@ -396,5 +420,22 @@ describe('ExpensesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Jan 15, 2026')).toBeInTheDocument();
     });
+  });
+
+  it('virtualizes large expense lists', async () => {
+    await seedLargeExpenseSet(1000);
+    render(createElement(ExpensesPage), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/1001 expenses/)).toBeInTheDocument();
+    });
+
+    // We should not render all items when virtualization is active.
+    const renderedExpenseCheckboxes =
+      screen.getAllByLabelText(/Select expense/i);
+    expect(renderedExpenseCheckboxes.length).toBeLessThan(120);
+    expect(
+      screen.getByLabelText('Virtualized expenses list'),
+    ).toBeInTheDocument();
   });
 });

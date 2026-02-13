@@ -17,6 +17,7 @@ import { BucketsStep } from '../components/buckets-step';
 import { ExpensesStep } from '../components/expenses-step';
 import { SummaryStep } from '../components/summary-step';
 import { OnboardingProgress } from '../components/onboarding-progress';
+import { useOnboardingDataStore } from '../stores/onboarding-data-store';
 import type { OnboardingData } from '../types';
 
 const TOTAL_STEPS = 6;
@@ -67,13 +68,11 @@ export default function OnboardingPage() {
 
       // Build a name→UUID map so expenses can reference the correct bucket ID
       const bucketNameToId = new Map<string, string>();
-
-      for (let i = 0; i < data.buckets.length; i++) {
-        const b = data.buckets[i];
+      const bucketsToCreate: BucketAllocation[] = data.buckets.map((b, i) => {
         const bucketId = crypto.randomUUID();
         bucketNameToId.set(b.name, bucketId);
 
-        const bucket: BucketAllocation = {
+        return {
           id: bucketId,
           planId,
           name: b.name,
@@ -89,14 +88,24 @@ export default function OnboardingPage() {
           sortOrder: i,
           createdAt: now,
         };
-        await bucketRepo.create(bucket);
-      }
+      });
 
-      for (const e of data.expenses) {
-        const expense: ExpenseItem = {
+      await Promise.all(
+        bucketsToCreate.map((bucket) => bucketRepo.create(bucket)),
+      );
+
+      const expensesToCreate: ExpenseItem[] = data.expenses.map((e) => {
+        const resolvedBucketId = bucketNameToId.get(e.bucketId);
+        if (!resolvedBucketId) {
+          throw new Error(
+            `Invalid onboarding expense bucket reference: "${e.bucketId}"`,
+          );
+        }
+
+        return {
           id: crypto.randomUUID(),
           planId,
-          bucketId: bucketNameToId.get(e.bucketId) ?? '',
+          bucketId: resolvedBucketId,
           name: e.name,
           amountCents: dollarsToCents(e.amountDollars),
           frequency: e.frequency as Frequency,
@@ -106,16 +115,23 @@ export default function OnboardingPage() {
           createdAt: now,
           updatedAt: now,
         };
-        await expenseRepo.create(expense);
-      }
-
-      await queryClient.invalidateQueries({
-        queryKey: ACTIVE_PLAN_QUERY_KEY,
       });
 
+      await Promise.all(
+        expensesToCreate.map((expense) => expenseRepo.create(expense)),
+      );
+
+      // Set active plan ID so getActive() finds it immediately
+      planRepo.setActivePlanId(planId);
+
+      // Update the query cache directly so AppLayout sees the plan
+      // before we navigate (avoids race with invalidateQueries refetch)
+      queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, plan);
+
       scheduleVaultSave();
-      navigate('/dashboard', { replace: true });
+      useOnboardingDataStore.getState().reset();
       setStep(0);
+      navigate('/dashboard', { replace: true });
     },
     [navigate, queryClient, setStep, scheduleVaultSave],
   );

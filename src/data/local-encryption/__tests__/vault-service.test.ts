@@ -75,10 +75,10 @@ function createEmptyPayload(): VaultPayload {
 }
 
 async function seedVaultData() {
-  const planId = 'plan-1';
-  const bucketId = 'bucket-1';
-  const expenseId = 'expense-1';
-  const attachmentId = 'attachment-1';
+  const planId = '11111111-1111-4111-8111-111111111111';
+  const bucketId = '22222222-2222-4222-8222-222222222222';
+  const expenseId = '33333333-3333-4333-8333-333333333333';
+  const attachmentId = '44444444-4444-4444-8444-444444444444';
 
   const plan: Plan = {
     id: planId,
@@ -105,7 +105,7 @@ async function seedVaultData() {
   };
 
   const taxComponent: TaxComponent = {
-    id: 'tax-1',
+    id: '55555555-5555-4555-8555-555555555555',
     planId,
     name: 'Federal',
     ratePercent: 10,
@@ -139,7 +139,7 @@ async function seedVaultData() {
   };
 
   const goal: Goal = {
-    id: 'goal-1',
+    id: '66666666-6666-4666-8666-666666666666',
     planId,
     name: 'Emergency Fund',
     type: 'savings',
@@ -152,7 +152,7 @@ async function seedVaultData() {
   };
 
   const asset: Asset = {
-    id: 'asset-1',
+    id: '77777777-7777-4777-8777-777777777777',
     planId,
     name: 'Savings Account',
     category: 'cash',
@@ -162,7 +162,7 @@ async function seedVaultData() {
   };
 
   const liability: Liability = {
-    id: 'liability-1',
+    id: '88888888-8888-4888-8888-888888888888',
     planId,
     name: 'Credit Card',
     category: 'credit_card',
@@ -174,7 +174,7 @@ async function seedVaultData() {
   };
 
   const snapshot: MonthlySnapshot = {
-    id: 'snapshot-1',
+    id: '99999999-9999-4999-8999-999999999999',
     planId,
     yearMonth: '2026-01',
     grossIncomeCents: cents(500_000),
@@ -193,7 +193,7 @@ async function seedVaultData() {
   };
 
   const netWorthSnapshot: NetWorthSnapshot = {
-    id: 'networth-1',
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     planId,
     yearMonth: '2026-01',
     totalAssetsCents: cents(300_000),
@@ -209,7 +209,7 @@ async function seedVaultData() {
   };
 
   const changelog: ChangeLogEntry = {
-    id: 'change-1',
+    id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     planId,
     entityType: 'expense',
     entityId: expenseId,
@@ -219,7 +219,7 @@ async function seedVaultData() {
   };
 
   const recurringTemplate: RecurringTemplate = {
-    id: 'template-1',
+    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
     planId,
     name: 'Gym Membership',
     amountCents: cents(4_500),
@@ -233,7 +233,7 @@ async function seedVaultData() {
   };
 
   const exchangeRate: ExchangeRateRecord = {
-    id: 'rate-1',
+    id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
     planId,
     baseCurrency: 'USD',
     rates: { EUR: 0.92 },
@@ -332,7 +332,7 @@ describe('vault-service', () => {
       ...createEmptyPayload(),
       plans: [
         {
-          id: 'plan-1',
+          id: '12121212-1212-4121-8121-121212121212',
           name: 'Round Trip',
           grossIncomeCents: cents(200_000),
           incomeFrequency: 'monthly',
@@ -363,7 +363,7 @@ describe('vault-service', () => {
 
   it('restoreVaultPayload clears existing data but keeps vault', async () => {
     await db.plans.add({
-      id: 'old-plan',
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
       name: 'Old Plan',
       grossIncomeCents: cents(100_000),
       incomeFrequency: 'monthly',
@@ -385,7 +385,7 @@ describe('vault-service', () => {
       ...createEmptyPayload(),
       plans: [
         {
-          id: 'new-plan',
+          id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
           name: 'New Plan',
           grossIncomeCents: cents(300_000),
           incomeFrequency: 'monthly',
@@ -404,7 +404,7 @@ describe('vault-service', () => {
     const vaults = await db.vault.toArray();
 
     expect(plans).toHaveLength(1);
-    expect(plans[0]?.id).toBe('new-plan');
+    expect(plans[0]?.id).toBe('ffffffff-ffff-4fff-8fff-ffffffffffff');
     expect(vaults).toHaveLength(1);
     expect(vaults[0]?.id).toBe('vault-1');
   });

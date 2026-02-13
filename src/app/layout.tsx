@@ -13,6 +13,7 @@ import {
   Settings,
   Loader2,
   Layers,
+  BookOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivePlan } from '@/hooks/use-active-plan';
@@ -41,10 +42,12 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
 import { EncryptionLockScreen } from '@/components/feedback/encryption-lock-screen';
 import { KeyboardShortcutsDialog } from '@/components/feedback/keyboard-shortcuts-dialog';
 import { QuickAddFab } from '@/components/quick-add';
+import { DEMO_PLAN_ID } from '@/features/demo/lib/ensure-demo-plan';
 
 interface NavItem {
   label: string;
@@ -63,6 +66,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: 'History', to: '/history', icon: Clock },
   { label: 'Reports', to: '/reports', icon: FileBarChart },
   { label: 'Settings', to: '/settings', icon: Settings },
+  { label: 'Help', to: '/help', icon: BookOpen },
 ] as const;
 
 /** Bottom tab items for mobile -- 5 most important */
@@ -89,7 +93,7 @@ function LoadingFallback() {
       <Loader2
         className={cn(
           'text-muted-foreground size-6',
-          !prefersReducedMotion && 'animate-spin',
+          !prefersReducedMotion && 'motion-safe:animate-spin',
         )}
         aria-hidden="true"
       />
@@ -220,7 +224,7 @@ export default function AppLayout() {
         <Loader2
           className={cn(
             'text-muted-foreground size-8',
-            !prefersReducedMotion && 'animate-spin',
+            !prefersReducedMotion && 'motion-safe:animate-spin',
           )}
           aria-hidden="true"
         />
@@ -250,9 +254,19 @@ export default function AppLayout() {
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
                   Active plan
                 </p>
-                <p className="text-sm font-semibold tracking-tight">
-                  {plan.name}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold tracking-tight">
+                    {plan.name}
+                  </p>
+                  {plan.id === DEMO_PLAN_ID && (
+                    <Badge
+                      variant="destructive"
+                      className="h-5 px-2 text-[10px]"
+                    >
+                      Demo Mode
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <NavLink to="/plans" className="shrink-0">

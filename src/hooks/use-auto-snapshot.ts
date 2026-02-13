@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { snapshotRepo } from '@/data/repos/snapshot-repo';
 import { createMonthlySnapshot } from '@/domain/plan/snapshot';
-import { getRolloverMapFromSnapshots } from '@/domain/plan';
+import {
+  getCurrentYearMonth,
+  getRolloverMapFromSnapshots,
+} from '@/domain/plan';
 import { useActivePlan } from './use-active-plan';
 import {
   useBuckets,
@@ -14,11 +17,6 @@ import { useSnapshots } from './use-snapshots';
 import { useLocalEncryption } from './use-local-encryption';
 import { convertExpensesToBase } from '@/lib/currency-conversion';
 import { DEFAULT_CURRENCY } from '@/domain/money';
-
-function getCurrentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /**
  * Auto-creates a monthly snapshot on app load if one doesn't exist for

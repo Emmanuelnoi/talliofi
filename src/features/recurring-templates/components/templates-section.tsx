@@ -43,6 +43,7 @@ import {
   useDeleteRecurringTemplate,
   useToggleRecurringTemplate,
 } from '@/hooks/use-plan-mutations';
+import { getErrorMessage } from '@/lib/error-message';
 import { TemplateList } from './template-list';
 import { TemplateForm } from './template-form';
 import { SuggestionCard } from './suggestion-card';
@@ -151,8 +152,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         }
         setSheetOpen(false);
         setEditingTemplate(null);
-      } catch {
-        toast.error('Failed to save template');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save template.'));
       }
     },
     [planId, editingTemplate, createTemplate, updateTemplate],
@@ -167,8 +168,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
       });
       toast.success('Template deleted');
       setDeletingTemplate(null);
-    } catch {
-      toast.error('Failed to delete template');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete template.'));
     }
   }, [deletingTemplate, planId, deleteTemplate]);
 
@@ -182,8 +183,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         toast.success(
           template.isActive ? 'Template paused' : 'Template activated',
         );
-      } catch {
-        toast.error('Failed to update template');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to update template.'));
       }
     },
     [planId, toggleTemplate],
@@ -195,8 +196,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         await recurringService.generateNow(template.id);
         scheduleVaultSave();
         toast.success(`Generated expense from "${template.name}"`);
-      } catch {
-        toast.error('Failed to generate expense');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to generate expense.'));
       }
     },
     [scheduleVaultSave],
@@ -216,8 +217,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
           `Found ${detected.length} potential recurring pattern(s)`,
         );
       }
-    } catch {
-      toast.error('Failed to detect patterns');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to detect patterns.'));
     } finally {
       setIsDetecting(false);
     }
@@ -248,8 +249,8 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
         prev.filter((s) => s.name !== activeSuggestion.name),
       );
       setActiveSuggestion(null);
-    } catch {
-      toast.error('Failed to create template');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to create template.'));
     }
   }, [
     planId,
@@ -274,7 +275,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
+        <Loader2 className="text-muted-foreground size-6 motion-safe:animate-spin" />
       </div>
     );
   }
@@ -297,7 +298,7 @@ export function TemplatesSection({ planId, buckets }: TemplatesSectionProps) {
             disabled={isDetecting}
           >
             {isDetecting ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 motion-safe:animate-spin" />
             ) : (
               <Sparkles className="size-4" />
             )}

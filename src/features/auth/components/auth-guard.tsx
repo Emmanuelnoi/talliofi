@@ -1,10 +1,8 @@
-import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { useSyncStore } from '@/stores/sync-store';
-import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { cn } from '@/lib/utils';
+import { shouldBlockCloudAuthInCurrentBuild } from '@/lib/security-controls';
 import { useAuth } from '../hooks/use-auth';
-import { AuthForm } from './auth-form';
 import type { ReactNode } from 'react';
 
 interface AuthGuardProps {
@@ -13,46 +11,32 @@ interface AuthGuardProps {
 
 /**
  * Wraps protected content so that:
- * - In local-only mode, children render unconditionally.
- * - In cloud mode, an auth form is shown until the user signs in.
+ * - Local-first mode always renders the app shell.
+ * - Cloud mode degrades to local mode when there is no active session.
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const storageMode = useSyncStore((s) => s.storageMode);
-  const { user, isLoading } = useAuth();
-  const prefersReducedMotion = useReducedMotion();
+  const setStorageMode = useSyncStore((s) => s.setStorageMode);
+  const { user, isLoading, signOut } = useAuth();
+  const cloudAuthBlocked = shouldBlockCloudAuthInCurrentBuild();
+  const isCloudMode = storageMode === 'cloud';
 
-  // Local-only: no auth required
-  if (storageMode === 'local' || !isSupabaseConfigured) {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    if (!cloudAuthBlocked || !isCloudMode) return;
+    setStorageMode('local');
+    if (user) {
+      void signOut().catch(() => {
+        // Best-effort sign out when enforcing production cloud-auth block.
+      });
+    }
+  }, [cloudAuthBlocked, isCloudMode, setStorageMode, signOut, user]);
 
-  // Cloud mode: wait for session check
-  if (isLoading) {
-    return (
-      <div
-        className="flex min-h-[50vh] items-center justify-center"
-        role="status"
-        aria-label="Loading account status"
-      >
-        <Loader2
-          className={cn(
-            'text-muted-foreground size-6',
-            !prefersReducedMotion && 'animate-spin',
-          )}
-          aria-hidden="true"
-        />
-      </div>
-    );
-  }
-
-  // Cloud mode but not authenticated
-  if (!user) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center p-4">
-        <AuthForm />
-      </div>
-    );
-  }
+  useEffect(() => {
+    // Local-first fallback: if cloud mode is selected but no valid session
+    // exists, continue in local mode instead of forcing login.
+    if (!isCloudMode || !isSupabaseConfigured || isLoading || user) return;
+    setStorageMode('local');
+  }, [isCloudMode, isLoading, setStorageMode, user]);
 
   return <>{children}</>;
 }

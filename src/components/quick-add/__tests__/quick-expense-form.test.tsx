@@ -184,18 +184,25 @@ describe('QuickExpenseForm', () => {
   });
 
   it('defaults to today for transaction date', () => {
-    renderWithProviders(<QuickExpenseForm />);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-15T12:00:00'));
 
-    const dateButton = screen.getByLabelText(/date/i);
-    const today = new Date();
-    const expectedFormat = today.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    try {
+      renderWithProviders(<QuickExpenseForm />);
 
-    // The button should show today's date
-    expect(dateButton).toHaveTextContent(new RegExp(expectedFormat, 'i'));
+      const dateButton = screen.getByLabelText(/date/i);
+      const today = new Date();
+      const expectedFormat = today.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+      // The button should show today's date
+      expect(dateButton).toHaveTextContent(new RegExp(expectedFormat, 'i'));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders category select with default value', () => {

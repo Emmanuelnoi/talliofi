@@ -1,15 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import env from '@/env';
 
 /**
  * Reads Supabase configuration from Vite env vars.
  * Both must be present for cloud sync to be available.
  * The app works fully in local-only mode when these are absent.
  */
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as
-  | string
-  | undefined;
+const supabaseUrl = env.VITE_SUPABASE_URL;
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 
 /** Whether Supabase is configured and cloud features are available */
 export const isSupabaseConfigured =
@@ -27,7 +26,9 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
       auth: {
         flowType: 'pkce',
         autoRefreshToken: true,
-        persistSession: true,
+        // Security default: avoid persistent browser token storage.
+        // Can be explicitly enabled for trusted deployments.
+        persistSession: env.VITE_SUPABASE_PERSIST_SESSION,
         detectSessionInUrl: true,
       },
     })

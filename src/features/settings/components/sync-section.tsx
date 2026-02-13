@@ -11,6 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import {
+  getMissingServerAuthControls,
+  shouldBlockCloudAuthInCurrentBuild,
+} from '@/lib/security-controls';
 import { useSyncStore } from '@/stores/sync-store';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { AuthForm } from '@/features/auth/components/auth-form';
@@ -47,6 +51,8 @@ function SyncSectionContent() {
   const { user, isLoading: isAuthLoading, signOut } = useAuth();
   const { storageMode, setStorageMode, syncStatus, lastSyncedAt } =
     useSyncStore();
+  const shouldBlockCloudAuth = shouldBlockCloudAuthInCurrentBuild();
+  const missingServerControls = getMissingServerAuthControls();
   const [isSyncing, setIsSyncing] = useState(false);
 
   const isCloud = storageMode === 'cloud';
@@ -103,12 +109,44 @@ function SyncSectionContent() {
             size="sm"
             role="radio"
             aria-checked={isCloud}
-            onClick={() => setStorageMode('cloud')}
+            onClick={() => {
+              if (shouldBlockCloudAuth) {
+                toast.error(
+                  'Cloud Sync is disabled in production until server-side auth controls are configured.',
+                );
+                return;
+              }
+              setStorageMode('cloud');
+            }}
+            disabled={shouldBlockCloudAuth}
           >
             <Cloud className="size-4" />
             Cloud Sync
           </Button>
         </div>
+
+        {shouldBlockCloudAuth && (
+          <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive">
+              Cloud Sync is blocked in this production build
+            </p>
+            <p className="text-muted-foreground">
+              Configure these server-side controls, then set the matching
+              security env vars before enabling cloud authentication:
+            </p>
+            <ul className="space-y-1 text-muted-foreground">
+              {missingServerControls.map((control) => (
+                <li key={control} className="flex items-start gap-2">
+                  <span
+                    className="mt-1.5 block size-1.5 shrink-0 rounded-full bg-destructive"
+                    aria-hidden="true"
+                  />
+                  {control}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Auth UI when cloud is selected */}
         {isCloud && !isAuthLoading && !user && (
@@ -147,7 +185,7 @@ function SyncSectionContent() {
                 disabled={isSyncing || syncStatus === 'syncing'}
               >
                 {isSyncing ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <RefreshCw className="size-4" />
                 )}

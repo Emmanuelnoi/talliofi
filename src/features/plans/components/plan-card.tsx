@@ -62,7 +62,7 @@ export function PlanCard({
           <div className="flex items-center gap-2">
             <CardTitle className="text-base">{plan.name}</CardTitle>
             {isActive && (
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="destructive" className="gap-1">
                 <Check className="size-3" />
                 Active
               </Badge>

@@ -25,6 +25,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { getErrorMessage } from '@/lib/error-message';
 import type { SpendingByCategoryReport as ReportData } from '../types';
 import {
   exportSpendingByCategoryCSV,
@@ -101,12 +102,12 @@ export function SpendingByCategoryReport({
         downloadReportCSV(csv, 'spending-by-category');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportSpendingByCategoryPDF(report, currencyCode);
+        const blob = await exportSpendingByCategoryPDF(report, currencyCode);
         downloadReportPDF(blob, 'spending-by-category');
         toast.success('PDF exported successfully');
       }
-    } catch {
-      toast.error('Failed to export report');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to export report.'));
     } finally {
       setExporting(null);
     }
@@ -156,7 +157,7 @@ export function SpendingByCategoryReport({
               className="print:hidden"
             >
               {exporting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Download className="size-4" />
               )}

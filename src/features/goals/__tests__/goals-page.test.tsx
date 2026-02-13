@@ -80,12 +80,12 @@ describe('GoalsPage', () => {
     await db.goals.clear();
   });
 
-  it('shows loading spinner initially', () => {
+  it('shows loading skeleton initially', () => {
     render(<GoalsPage />, { wrapper: createWrapper() });
 
-    // Look for the spinner by class
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).toBeTruthy();
+    expect(
+      screen.getByRole('status', { name: /loading goals page/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows empty state when no goals exist', async () => {

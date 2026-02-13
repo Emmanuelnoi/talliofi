@@ -36,6 +36,7 @@ import { useActivePlan } from '@/hooks/use-active-plan';
 import { useBuckets } from '@/hooks/use-plan-data';
 import { useCreateExpense } from '@/hooks/use-plan-mutations';
 import { FREQUENCY_LABELS, CATEGORY_LABELS } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
 
 /**
  * Quick expense form schema with essential fields required,
@@ -160,8 +161,8 @@ export function QuickExpenseForm({
       await createExpense.mutateAsync(expense);
       toast.success('Expense added');
       onSuccess?.();
-    } catch {
-      toast.error('Failed to add expense');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to add expense.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -401,7 +402,9 @@ export function QuickExpenseForm({
           Cancel
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting && (
+            <Loader2 className="size-4 motion-safe:animate-spin" />
+          )}
           Add Expense
         </Button>
       </div>

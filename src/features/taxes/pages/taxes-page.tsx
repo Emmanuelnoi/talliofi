@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { z } from 'zod';
 import { TaxSimpleInputSchema } from '@/domain/plan/schemas';
@@ -43,6 +43,8 @@ import {
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { UnsavedChangesDialog } from '@/components/feedback/unsaved-changes-dialog';
+import { getErrorMessage } from '@/lib/error-message';
+import { TaxesSkeleton } from '../components/taxes-skeleton';
 
 type TaxSimpleFormData = z.infer<typeof TaxSimpleInputSchema>;
 
@@ -86,8 +88,8 @@ export default function TaxesPage() {
       };
       try {
         await updatePlan.mutateAsync(updated);
-      } catch {
-        toast.error('Failed to save tax rate');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save tax rate.'));
       }
     },
   });
@@ -102,8 +104,8 @@ export default function TaxesPage() {
     };
     try {
       await updatePlan.mutateAsync(updated);
-    } catch {
-      toast.error('Failed to switch tax mode');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to switch tax mode.'));
     }
   }, [plan, isItemized, updatePlan]);
 
@@ -119,8 +121,8 @@ export default function TaxesPage() {
     };
     try {
       await createTaxComponent.mutateAsync(component);
-    } catch {
-      toast.error('Failed to add tax component');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to add tax component.'));
     }
   }, [plan, taxComponents.length, createTaxComponent]);
 
@@ -128,8 +130,8 @@ export default function TaxesPage() {
     async (component: TaxComponent) => {
       try {
         await updateTaxComponent.mutateAsync(component);
-      } catch {
-        toast.error('Failed to update tax component');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to update tax component.'));
       }
     },
     [updateTaxComponent],
@@ -140,8 +142,8 @@ export default function TaxesPage() {
       if (!plan) return;
       try {
         await deleteTaxComponent.mutateAsync({ id, planId: plan.id });
-      } catch {
-        toast.error('Failed to delete tax component');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to delete tax component.'));
       }
     },
     [plan, deleteTaxComponent],
@@ -156,11 +158,7 @@ export default function TaxesPage() {
   const isLoading = planLoading || taxLoading;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-muted-foreground size-6 animate-spin" />
-      </div>
-    );
+    return <TaxesSkeleton />;
   }
 
   if (!plan) {

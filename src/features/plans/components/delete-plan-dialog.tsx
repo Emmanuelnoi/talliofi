@@ -94,7 +94,9 @@ export function DeletePlanDialog({
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isDeleting && (
+                <Loader2 className="mr-2 size-4 motion-safe:animate-spin" />
+              )}
               Delete Plan
             </AlertDialogAction>
           )}

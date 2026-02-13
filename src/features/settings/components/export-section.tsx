@@ -94,7 +94,7 @@ export function ExportSection() {
             aria-label="Download financial data as JSON"
           >
             {exportingFormat === 'json' ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 motion-safe:animate-spin" />
             ) : (
               <FileJson className="size-4" />
             )}
@@ -108,7 +108,7 @@ export function ExportSection() {
             aria-label="Download financial data as CSV"
           >
             {exportingFormat === 'csv' ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 motion-safe:animate-spin" />
             ) : (
               <FileSpreadsheet className="size-4" />
             )}
@@ -122,7 +122,7 @@ export function ExportSection() {
             aria-label="Download financial report as PDF"
           >
             {exportingFormat === 'pdf' ? (
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-4 motion-safe:animate-spin" />
             ) : (
               <FileText className="size-4" />
             )}

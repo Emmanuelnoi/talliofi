@@ -112,7 +112,9 @@ export function DuplicatePlanDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="mr-2 size-4 motion-safe:animate-spin" />
+              )}
               Duplicate Plan
             </Button>
           </DialogFooter>

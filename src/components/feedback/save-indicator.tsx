@@ -34,7 +34,7 @@ export function SaveIndicator({ status, className }: SaveIndicatorProps) {
     >
       {status === 'saving' && (
         <>
-          <Loader2 className="size-3 animate-spin" />
+          <Loader2 className="size-3 motion-safe:animate-spin" />
           <span>Saving…</span>
         </>
       )}

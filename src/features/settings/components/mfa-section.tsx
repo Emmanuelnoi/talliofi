@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { extractFactors, type MfaFactor } from '@/lib/mfa-utils';
+import { mapSupabaseAuthError } from '@/lib/auth-errors';
 
 interface AssuranceLevelData {
   currentLevel: string;
@@ -78,17 +79,29 @@ function MfaSectionContent() {
       ]);
 
       if (factorResult.error) {
-        throw new Error(factorResult.error.message);
+        throw new Error(
+          mapSupabaseAuthError(
+            factorResult.error,
+            'Failed to load two-factor authentication status.',
+          ),
+        );
       }
       if (assuranceResult.error) {
-        throw new Error(assuranceResult.error.message);
+        throw new Error(
+          mapSupabaseAuthError(
+            assuranceResult.error,
+            'Failed to load two-factor authentication status.',
+          ),
+        );
       }
 
       setFactors(extractFactors(factorResult.data));
       setAssuranceLevel(assuranceResult.data as AssuranceLevelData);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to load MFA status.';
+      const message = mapSupabaseAuthError(
+        error,
+        'Failed to load two-factor authentication status.',
+      );
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -110,7 +123,9 @@ function MfaSectionContent() {
       });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(
+          mapSupabaseAuthError(error, 'Failed to start two-factor setup.'),
+        );
       }
       if (!data?.id) {
         throw new Error('Unable to start MFA enrollment.');
@@ -123,8 +138,10 @@ function MfaSectionContent() {
       });
       setCode('');
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to enroll MFA.';
+      const message = mapSupabaseAuthError(
+        error,
+        'Failed to start two-factor setup.',
+      );
       toast.error(message);
     } finally {
       setIsEnrolling(false);
@@ -148,7 +165,12 @@ function MfaSectionContent() {
         });
 
       if (challengeError) {
-        throw new Error(challengeError.message);
+        throw new Error(
+          mapSupabaseAuthError(
+            challengeError,
+            'Unable to verify your authentication code.',
+          ),
+        );
       }
       if (!challenge?.id) {
         throw new Error('Unable to verify MFA challenge.');
@@ -161,7 +183,12 @@ function MfaSectionContent() {
       });
 
       if (verifyError) {
-        throw new Error(verifyError.message);
+        throw new Error(
+          mapSupabaseAuthError(
+            verifyError,
+            'Unable to verify your authentication code.',
+          ),
+        );
       }
 
       toast.success('Two-factor authentication enabled.');
@@ -169,8 +196,10 @@ function MfaSectionContent() {
       setCode('');
       await loadMfaState();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Verification failed.';
+      const message = mapSupabaseAuthError(
+        error,
+        'Verification failed. Please try again.',
+      );
       toast.error(message);
     } finally {
       setIsVerifying(false);
@@ -187,7 +216,12 @@ function MfaSectionContent() {
       });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(
+          mapSupabaseAuthError(
+            error,
+            'Failed to disable two-factor authentication.',
+          ),
+        );
       }
 
       toast.success('Two-factor authentication disabled.');
@@ -195,8 +229,10 @@ function MfaSectionContent() {
       setCode('');
       await loadMfaState();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to disable MFA.';
+      const message = mapSupabaseAuthError(
+        error,
+        'Failed to disable two-factor authentication.',
+      );
       toast.error(message);
     } finally {
       setIsDisabling(false);
@@ -260,7 +296,7 @@ function MfaSectionContent() {
                 disabled={isEnrolling || hasEnabledMfa}
               >
                 {isEnrolling ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <ShieldCheck className="size-4" />
                 )}
@@ -282,7 +318,7 @@ function MfaSectionContent() {
                 disabled={!hasEnabledMfa || isDisabling}
               >
                 {isDisabling ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <ShieldAlert className="size-4" />
                 )}
@@ -337,7 +373,7 @@ function MfaSectionContent() {
                       disabled={isVerifying || !isCodeValid}
                     >
                       {isVerifying && (
-                        <Loader2 className="size-4 animate-spin" />
+                        <Loader2 className="size-4 motion-safe:animate-spin" />
                       )}
                       Verify
                     </Button>

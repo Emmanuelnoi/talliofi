@@ -176,7 +176,10 @@ export function SummaryStep({ onBack, onComplete }: SummaryStepProps) {
           <Button onClick={handleComplete} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                <Loader2
+                  className="size-4 motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
                 Creating Plan…
               </>
             ) : (

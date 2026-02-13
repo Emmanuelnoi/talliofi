@@ -1,8 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router';
-import { Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import AppLayout from '@/app/layout';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { cn } from '@/lib/utils';
+import { AuthGuard } from '@/features/auth/components/auth-guard';
 
 const OnboardingPage = lazy(
   () => import('@/features/onboarding/pages/onboarding-page'),
@@ -26,77 +29,130 @@ const SettingsPage = lazy(
   () => import('@/features/settings/pages/settings-page'),
 );
 const PlansPage = lazy(() => import('@/features/plans/pages/plans-page'));
+const DemoEntryPage = lazy(
+  () => import('@/features/demo/pages/demo-entry-page'),
+);
+const HelpPage = lazy(() => import('@/features/help/pages/help-page'));
 
 function PageLoading() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <div className="flex min-h-svh items-center justify-center">
-      <Loader2 className="text-muted-foreground size-6 animate-spin" />
+      <Loader2
+        className={cn(
+          'text-muted-foreground size-6',
+          !prefersReducedMotion && 'motion-safe:animate-spin',
+        )}
+      />
     </div>
+  );
+}
+
+function PageErrorFallback() {
+  return (
+    <div className="border-destructive/30 bg-destructive/5 rounded-xl border p-6">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="text-destructive mt-0.5 size-5 shrink-0" />
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold tracking-tight">
+            This page crashed
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Try refreshing. You can still navigate to other sections.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function wrapPage(page: ReactNode) {
+  return (
+    <ErrorBoundary fallback={<PageErrorFallback />}>
+      <Suspense fallback={<PageLoading />}>{page}</Suspense>
+    </ErrorBoundary>
   );
 }
 
 export const router = createBrowserRouter([
   {
     path: '/onboarding',
-    element: (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoading />}>
-          <OnboardingPage />
-        </Suspense>
-      </ErrorBoundary>
-    ),
+    element: wrapPage(<OnboardingPage />),
   },
   {
-    path: '/',
-    element: <AppLayout />,
+    path: '/demo',
+    element: wrapPage(<DemoEntryPage />),
+  },
+  {
+    path: '/help',
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: wrapPage(<HelpPage />),
+      },
+    ],
+  },
+  {
+    path: '/',
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
+    children: [
+      {
+        index: true,
+        element: wrapPage(<DashboardPage />),
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: wrapPage(<DashboardPage />),
       },
       {
         path: 'income',
-        element: <IncomePage />,
+        element: wrapPage(<IncomePage />),
       },
       {
         path: 'taxes',
-        element: <TaxesPage />,
+        element: wrapPage(<TaxesPage />),
       },
       {
         path: 'expenses',
-        element: <ExpensesPage />,
+        element: wrapPage(<ExpensesPage />),
       },
       {
         path: 'buckets',
-        element: <BucketsPage />,
+        element: wrapPage(<BucketsPage />),
       },
       {
         path: 'goals',
-        element: <GoalsPage />,
+        element: wrapPage(<GoalsPage />),
       },
       {
         path: 'net-worth',
-        element: <NetWorthPage />,
+        element: wrapPage(<NetWorthPage />),
       },
       {
         path: 'history',
-        element: <HistoryPage />,
+        element: wrapPage(<HistoryPage />),
       },
       {
         path: 'reports',
-        element: <ReportsPage />,
+        element: wrapPage(<ReportsPage />),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: wrapPage(<SettingsPage />),
       },
       {
         path: 'plans',
-        element: <PlansPage />,
+        element: wrapPage(<PlansPage />),
       },
     ],
   },

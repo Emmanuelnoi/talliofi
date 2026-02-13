@@ -56,6 +56,7 @@ import {
   LIABILITY_CATEGORY_LABELS,
   LIABILITY_CATEGORY_COLORS,
 } from '@/lib/constants';
+import { getErrorMessage } from '@/lib/error-message';
 
 type LiabilityFormData = z.infer<typeof LiabilityFormSchema>;
 
@@ -133,8 +134,8 @@ export function LiabilityList({
         }
         setSheetOpen(false);
         setEditingLiability(null);
-      } catch {
-        toast.error('Failed to save liability');
+      } catch (error) {
+        toast.error(getErrorMessage(error, 'Failed to save liability.'));
       }
     },
     [planId, editingLiability, onCreateLiability, onUpdateLiability],
@@ -146,8 +147,8 @@ export function LiabilityList({
       await onDeleteLiability(deletingLiability.id);
       toast.success('Liability deleted');
       setDeletingLiability(null);
-    } catch {
-      toast.error('Failed to delete liability');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to delete liability.'));
     }
   }, [deletingLiability, onDeleteLiability]);
 
@@ -504,7 +505,9 @@ function LiabilityForm({ liability, onSave, onCancel }: LiabilityFormProps) {
           Cancel
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+          {isSubmitting && (
+            <Loader2 className="size-4 motion-safe:animate-spin" />
+          )}
           {liability ? 'Save changes' : 'Add liability'}
         </Button>
       </div>

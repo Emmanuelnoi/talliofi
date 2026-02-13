@@ -28,6 +28,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { getErrorMessage } from '@/lib/error-message';
 import type { CategoryTrendsReport as ReportData } from '../types';
 import {
   exportCategoryTrendsCSV,
@@ -104,12 +105,12 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
         downloadReportCSV(csv, 'category-trends');
         toast.success('CSV exported successfully');
       } else {
-        const blob = exportCategoryTrendsPDF(report, currencyCode);
+        const blob = await exportCategoryTrendsPDF(report, currencyCode);
         downloadReportPDF(blob, 'category-trends');
         toast.success('PDF exported successfully');
       }
-    } catch {
-      toast.error('Failed to export report');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to export report.'));
     } finally {
       setExporting(null);
     }
@@ -152,7 +153,7 @@ export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
               className="print:hidden"
             >
               {exporting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 motion-safe:animate-spin" />
               ) : (
                 <Download className="size-4" />
               )}

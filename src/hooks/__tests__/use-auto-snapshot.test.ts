@@ -7,12 +7,8 @@ import { useAutoSnapshot } from '../use-auto-snapshot';
 import { planRepo } from '@/data/repos/plan-repo';
 import { snapshotRepo } from '@/data/repos/snapshot-repo';
 import { cents } from '@/domain/money';
+import { getCurrentYearMonth } from '@/domain/plan';
 import type { Plan, MonthlySnapshot } from '@/domain/plan/types';
-
-function getCurrentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 
 function createWrapper() {
   const queryClient = new QueryClient({

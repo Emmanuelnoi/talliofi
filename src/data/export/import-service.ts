@@ -6,7 +6,7 @@ import {
   TaxComponentSchema,
   ExpenseItemSchema,
 } from '@/domain/plan/schemas';
-import { db, clearAllData } from '@/data/db';
+import { db } from '@/data/db';
 import { cents } from '@/domain/money';
 import type {
   Plan,
@@ -167,12 +167,42 @@ export function parseAndValidateImport(jsonString: string): ExportPayload {
  * (with plain numbers) to domain types (with branded Cents).
  */
 export async function importData(payload: ExportPayload): Promise<void> {
-  await clearAllData();
-
   await db.transaction(
     'rw',
-    [db.plans, db.buckets, db.taxComponents, db.expenses, db.snapshots],
+    [
+      db.plans,
+      db.buckets,
+      db.taxComponents,
+      db.expenses,
+      db.goals,
+      db.assets,
+      db.liabilities,
+      db.snapshots,
+      db.netWorthSnapshots,
+      db.changelog,
+      db.recurringTemplates,
+      db.attachments,
+      db.exchangeRates,
+      db.vault,
+    ],
     async () => {
+      // Keep clear+write in one transaction so failed imports do not leave
+      // the app with an empty database.
+      await db.plans.clear();
+      await db.buckets.clear();
+      await db.taxComponents.clear();
+      await db.expenses.clear();
+      await db.goals.clear();
+      await db.assets.clear();
+      await db.liabilities.clear();
+      await db.snapshots.clear();
+      await db.netWorthSnapshots.clear();
+      await db.changelog.clear();
+      await db.recurringTemplates.clear();
+      await db.attachments.clear();
+      await db.exchangeRates.clear();
+      await db.vault.clear();
+
       await db.plans.add(toPlan(payload.plan));
 
       if (payload.buckets.length > 0) {

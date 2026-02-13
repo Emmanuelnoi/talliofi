@@ -10,6 +10,7 @@ import type {
 import type { Cents } from '@/domain/money';
 import { cents, subtractMoney, percentOf, addMoney } from '@/domain/money';
 import { normalizeToMonthly } from './normalize';
+import { getCurrentYearMonth } from './rollover';
 import { generateAlerts } from './rules';
 
 /** Variance threshold (%) within which a bucket is considered on-target */
@@ -211,9 +212,4 @@ function computeBucketAnalysis(
       status,
     };
   });
-}
-
-function getCurrentYearMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }

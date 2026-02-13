@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { safeGetLocalStorage, safeSetLocalStorage } from '@/lib/safe-storage';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -11,7 +12,7 @@ let currentTheme: Theme = readStoredTheme();
 
 function readStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'system';
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = safeGetLocalStorage(STORAGE_KEY);
   if (stored && VALID_THEMES.includes(stored as Theme)) {
     return stored as Theme;
   }
@@ -70,7 +71,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
 
   const setTheme = useCallback((newTheme: Theme) => {
     currentTheme = newTheme;
-    localStorage.setItem(STORAGE_KEY, newTheme);
+    safeSetLocalStorage(STORAGE_KEY, newTheme);
     applyThemeToDOM(newTheme);
     emitChange();
   }, []);

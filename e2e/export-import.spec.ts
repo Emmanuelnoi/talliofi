@@ -1,37 +1,5 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-
-/**
- * Completes the onboarding wizard with a single "Essentials" bucket
- * so the rest of the tests have a plan to work with.
- */
-async function completeOnboarding(page: Page): Promise<void> {
-  await page.goto('/onboarding');
-
-  // Step 1: Income
-  await page.locator('#grossIncomeDollars').fill('5000');
-  await page.locator('#incomeFrequency').click();
-  await page.getByRole('option', { name: 'Monthly', exact: true }).click();
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 2: Taxes
-  await page.locator('#effectiveRate').fill('25');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 3: Buckets
-  await page.locator('#buckets\\.0\\.name').fill('Essentials');
-  await page.locator('#buckets\\.0\\.targetPercentage').fill('50');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Step 4: Skip expenses
-  await page.getByRole('button', { name: 'Skip' }).click();
-
-  // Step 5: Create plan
-  await page.getByRole('button', { name: 'Create plan' }).click();
-
-  // Wait for dashboard
-  await page.waitForURL('**/dashboard');
-}
+import { completeOnboarding } from './fixtures';
 
 test.describe('Export and Import', () => {
   test('exports data as JSON file', async ({ page }) => {
@@ -80,7 +48,10 @@ test.describe('Export and Import', () => {
     await expect(page).toHaveURL(/\/onboarding/);
 
     // Onboarding should show step 1
-    await expect(page.getByText('Step 1 of 5')).toBeVisible();
+    await expect(page.getByText('What is your gross income?')).toBeVisible();
+    await expect(
+      page.getByRole('progressbar', { name: 'Onboarding progress' }),
+    ).toHaveAttribute('aria-valuenow', '1');
   });
 
   test('export then delete roundtrip', async ({ page }) => {

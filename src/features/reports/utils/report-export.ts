@@ -1,7 +1,8 @@
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { formatMoney, type Cents, type CurrencyCode } from '@/domain/money';
 import { CATEGORY_LABELS, FREQUENCY_LABELS } from '@/lib/constants';
+import { escapeCSVValue } from '@/lib/csv';
 import type {
   SpendingByCategoryReport,
   IncomeVsExpensesReport,
@@ -11,26 +12,6 @@ import type {
   DateRange,
 } from '../types';
 import { formatDateRange } from './report-calculations';
-
-/**
- * Escapes a value for safe CSV output.
- * Prevents CSV injection by prefixing dangerous characters.
- */
-function escapeCSVValue(value: string | number | boolean): string {
-  const str = String(value);
-  const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
-  const needsPrefix = dangerousChars.some((char) => str.startsWith(char));
-  const sanitized = needsPrefix ? `'${str}` : str;
-
-  if (
-    sanitized.includes(',') ||
-    sanitized.includes('"') ||
-    sanitized.includes('\n')
-  ) {
-    return `"${sanitized.replace(/"/g, '""')}"`;
-  }
-  return sanitized;
-}
 
 /**
  * Triggers a file download in the browser.
@@ -216,7 +197,17 @@ interface PDFContext {
   contentWidth: number;
 }
 
-function createPDFContext(): PDFContext {
+let jsPDFModulePromise: Promise<typeof import('jspdf')> | null = null;
+
+async function loadJsPDF() {
+  if (!jsPDFModulePromise) {
+    jsPDFModulePromise = import('jspdf');
+  }
+  return jsPDFModulePromise;
+}
+
+async function createPDFContext(): Promise<PDFContext> {
+  const { jsPDF } = await loadJsPDF();
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
@@ -280,12 +271,12 @@ function addPageNumbers(doc: jsPDF): void {
   }
 }
 
-export function exportSpendingByCategoryPDF(
+export async function exportSpendingByCategoryPDF(
   report: SpendingByCategoryReport,
   currency: CurrencyCode,
-): Blob {
+): Promise<Blob> {
   const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
-  const ctx = createPDFContext();
+  const ctx = await createPDFContext();
 
   addReportHeader(ctx, 'Spending by Category', report.dateRange);
 
@@ -337,12 +328,12 @@ export function exportSpendingByCategoryPDF(
   return ctx.doc.output('blob');
 }
 
-export function exportIncomeVsExpensesPDF(
+export async function exportIncomeVsExpensesPDF(
   report: IncomeVsExpensesReport,
   currency: CurrencyCode,
-): Blob {
+): Promise<Blob> {
   const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
-  const ctx = createPDFContext();
+  const ctx = await createPDFContext();
 
   addReportHeader(ctx, 'Income vs Expenses', report.dateRange);
 
@@ -406,12 +397,12 @@ export function exportIncomeVsExpensesPDF(
   return ctx.doc.output('blob');
 }
 
-export function exportBudgetAdherencePDF(
+export async function exportBudgetAdherencePDF(
   report: BudgetAdherenceReport,
   currency: CurrencyCode,
-): Blob {
+): Promise<Blob> {
   const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
-  const ctx = createPDFContext();
+  const ctx = await createPDFContext();
 
   addReportHeader(ctx, 'Budget Adherence', report.dateRange);
 
@@ -465,12 +456,12 @@ export function exportBudgetAdherencePDF(
   return ctx.doc.output('blob');
 }
 
-export function exportCategoryTrendsPDF(
+export async function exportCategoryTrendsPDF(
   report: CategoryTrendsReport,
   currency: CurrencyCode,
-): Blob {
+): Promise<Blob> {
   const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
-  const ctx = createPDFContext();
+  const ctx = await createPDFContext();
 
   addReportHeader(ctx, 'Category Trends', report.dateRange);
 
@@ -509,12 +500,12 @@ export function exportCategoryTrendsPDF(
   return ctx.doc.output('blob');
 }
 
-export function exportTopExpensesPDF(
+export async function exportTopExpensesPDF(
   report: TopExpensesReport,
   currency: CurrencyCode,
-): Blob {
+): Promise<Blob> {
   const formatAmount = (amount: Cents) => formatMoney(amount, { currency });
-  const ctx = createPDFContext();
+  const ctx = await createPDFContext();
 
   addReportHeader(ctx, 'Top Expenses', report.dateRange);
 

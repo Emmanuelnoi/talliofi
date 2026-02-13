@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import { planRepo } from '@/data/repos/plan-repo';
 import { bucketRepo } from '@/data/repos/bucket-repo';
 import { taxComponentRepo } from '@/data/repos/tax-component-repo';
@@ -6,6 +5,7 @@ import { expenseRepo } from '@/data/repos/expense-repo';
 import { snapshotRepo } from '@/data/repos/snapshot-repo';
 import { addMoney, cents, formatMoney, normalizeToMonthly } from '@/domain';
 import { DEFAULT_CURRENCY } from '@/domain/money';
+import { escapeCSVValue } from '@/lib/csv';
 import type {
   Plan,
   BucketAllocation,
@@ -101,30 +101,6 @@ async function getExportData(planId: string): Promise<ExportData> {
   ]);
 
   return { plan, buckets, taxComponents, expenses };
-}
-
-/**
- * Escapes a value for safe CSV output.
- * Prevents CSV injection by prefixing dangerous characters that spreadsheet
- * applications might interpret as formulas (=, +, -, @, \t, \r).
- */
-function escapeCSVValue(value: string | number | boolean): string {
-  const str = String(value);
-
-  // Prefix dangerous characters to prevent formula injection (OWASP CSV Injection)
-  const dangerousChars = ['=', '+', '-', '@', '\t', '\r'];
-  const needsPrefix = dangerousChars.some((char) => str.startsWith(char));
-  const sanitized = needsPrefix ? `'${str}` : str;
-
-  // Apply standard CSV escaping for commas, quotes, and newlines
-  if (
-    sanitized.includes(',') ||
-    sanitized.includes('"') ||
-    sanitized.includes('\n')
-  ) {
-    return `"${sanitized.replace(/"/g, '""')}"`;
-  }
-  return sanitized;
 }
 
 /**
@@ -233,6 +209,7 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
     await getExportData(planId);
   const baseCurrency = plan.currencyCode ?? DEFAULT_CURRENCY;
   const bucketMap = new Map(buckets.map((b) => [b.id, b.name]));
+  const { jsPDF } = await import('jspdf');
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();

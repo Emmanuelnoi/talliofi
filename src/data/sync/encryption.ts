@@ -18,8 +18,8 @@ export interface EncryptedPayload {
 const SALT_BYTES = 16;
 const IV_BYTES = 12; // 96-bit IV recommended for AES-GCM
 
-function toBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+export function encodeBase64(buffer: Uint8Array | ArrayBuffer): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
@@ -27,7 +27,7 @@ function toBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-function fromBase64(base64: string): Uint8Array<ArrayBuffer> {
+export function decodeBase64(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -42,7 +42,7 @@ function fromBase64(base64: string): Uint8Array<ArrayBuffer> {
  */
 export async function deriveKey(
   password: string,
-  salt: Uint8Array<ArrayBuffer>,
+  salt: Uint8Array,
 ): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -75,21 +75,33 @@ export async function encrypt(
   data: string,
   password: string,
 ): Promise<EncryptedPayload> {
-  const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
-  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const key = await deriveKey(password, salt);
 
+  return encryptWithKey(data, key, encodeBase64(salt));
+}
+
+/**
+ * Encrypts plaintext with an already-derived AES-GCM key.
+ * Callers must provide the key derivation salt used for this key.
+ */
+export async function encryptWithKey(
+  data: string,
+  key: CryptoKey,
+  saltBase64: string,
+): Promise<EncryptedPayload> {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv as BufferSource },
+    { name: 'AES-GCM', iv },
     key,
     encoder.encode(data),
   );
 
   return {
-    iv: toBase64(iv.buffer as ArrayBuffer),
-    ciphertext: toBase64(ciphertext),
-    salt: toBase64(salt.buffer as ArrayBuffer),
+    iv: encodeBase64(iv),
+    ciphertext: encodeBase64(ciphertext),
+    salt: saltBase64,
   };
 }
 
@@ -101,10 +113,21 @@ export async function decrypt(
   payload: EncryptedPayload,
   password: string,
 ): Promise<string> {
-  const salt = fromBase64(payload.salt);
-  const iv = fromBase64(payload.iv);
-  const ciphertext = fromBase64(payload.ciphertext);
+  const salt = decodeBase64(payload.salt);
   const key = await deriveKey(password, salt);
+
+  return decryptWithKey(payload, key);
+}
+
+/**
+ * Decrypts an EncryptedPayload with an already-derived AES-GCM key.
+ */
+export async function decryptWithKey(
+  payload: EncryptedPayload,
+  key: CryptoKey,
+): Promise<string> {
+  const iv = decodeBase64(payload.iv);
+  const ciphertext = decodeBase64(payload.ciphertext);
 
   const plaintext = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: iv as BufferSource },

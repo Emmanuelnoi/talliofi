@@ -31,3 +31,13 @@ dist-ssr
 
 # Test coverage
 /coverage/
+
+# Docs
+.agents
+.claude
+docs
+public/charts.png
+AGENTS.md
+CLAUDE.md
+TRADEOFFS.md
+UI_UX_GUIDELINES.md

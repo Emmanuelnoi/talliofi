@@ -157,7 +157,7 @@ describe('useAutoSave', () => {
     expect(result.current.status).toBe('idle');
   });
 
-  it('cancels in-flight save when new data arrives', async () => {
+  it('cancels pending debounced save when newer data arrives', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 
     const { rerender } = renderHook(
@@ -211,7 +211,58 @@ describe('useAutoSave', () => {
       resolvePromise!();
     });
 
-    // No error thrown — abort signal prevents state update
+    // No error thrown and no post-unmount state update occurs.
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores stale save completion when a newer save is in flight', async () => {
+    let resolveFirst: (() => void) | undefined;
+    let resolveSecond: (() => void) | undefined;
+
+    const onSave = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+
+    const { result, rerender } = renderHook(
+      ({ data }) => useAutoSave({ data, onSave, debounceMs: 100 }),
+      { initialProps: { data: { value: 1 } } },
+    );
+
+    rerender({ data: { value: 2 } });
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+
+    rerender({ data: { value: 3 } });
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe('saving');
+
+    await act(async () => {
+      resolveFirst?.();
+    });
+
+    // First completion is stale and should not set status to saved.
+    expect(result.current.status).toBe('saving');
+
+    await act(async () => {
+      resolveSecond?.();
+    });
+
+    expect(result.current.status).toBe('saved');
   });
 });
