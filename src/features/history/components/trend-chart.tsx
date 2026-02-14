@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import type { CategoricalChartFunc } from 'recharts/types/chart/types';
 import type { MonthlySnapshot } from '@/domain/plan/types';
 import { centsToDollars, formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
@@ -19,10 +20,6 @@ import { format } from 'date-fns';
 
 interface TrendChartProps {
   snapshots: MonthlySnapshot[];
-}
-
-interface ChartClickState {
-  activePayload?: Array<{ payload?: { yearMonth?: string } }>;
 }
 
 const chartConfig = {
@@ -79,12 +76,16 @@ export function TrendChart({ snapshots }: TrendChartProps) {
     [navigate],
   );
 
-  const handleChartClick = useCallback(
-    (state: ChartClickState) => {
-      const yearMonth = state?.activePayload?.[0]?.payload?.yearMonth;
+  const handleChartClick = useCallback<CategoricalChartFunc>(
+    (state) => {
+      const index =
+        typeof state?.activeTooltipIndex === 'number'
+          ? state.activeTooltipIndex
+          : -1;
+      const yearMonth = index >= 0 ? chartData[index]?.yearMonth : undefined;
       handleMonthClick(yearMonth);
     },
-    [handleMonthClick],
+    [handleMonthClick, chartData],
   );
 
   // Generate accessible description for screen readers
