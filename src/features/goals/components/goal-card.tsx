@@ -3,6 +3,7 @@ import { MoreHorizontal, Pencil, Trash2, Target, Check } from 'lucide-react';
 import type { Goal } from '@/domain/plan';
 import { formatMoney, cents } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
+import { formatMonthYear, formatDisplayDate } from '@/features/expenses/utils/date-utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,10 +58,7 @@ function calculateProjectedCompletion(
  * Formats a date in a user-friendly way (e.g., "Mar 2026").
  */
 function formatProjectedDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric',
-  });
+  return formatMonthYear(date);
 }
 
 /**
@@ -187,7 +185,7 @@ export function GoalCard({
                 <>
                   <span aria-hidden="true">&middot;</span>
                   <span>
-                    Target: {new Date(goal.targetDate).toLocaleDateString()}
+                    Target: {formatDisplayDate(goal.targetDate!)}
                   </span>
                 </>
               )}

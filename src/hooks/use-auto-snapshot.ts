@@ -85,8 +85,11 @@ export function useAutoSnapshot(): { isCreating: boolean } {
           queryKey: ['snapshots', currentPlan.id],
         });
         scheduleVaultSave();
-      } catch {
+      } catch (error) {
         // Snapshot creation is best-effort; do not crash the app
+        if (import.meta.env.DEV) {
+          console.warn('[auto-snapshot] Failed to create snapshot', error);
+        }
       } finally {
         setIsCreating(false);
       }

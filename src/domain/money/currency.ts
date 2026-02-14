@@ -24,6 +24,20 @@ export function getCurrencySymbol(currency: CurrencyCode): string {
   return CURRENCY_SYMBOLS[currency] ?? '$';
 }
 
+/** BCP 47 locale tags used for number formatting per currency. */
+export const CURRENCY_LOCALES: Record<CurrencyCode, string> = {
+  USD: 'en-US',
+  EUR: 'de-DE',
+  GBP: 'en-GB',
+  JPY: 'ja-JP',
+  CAD: 'en-CA',
+  AUD: 'en-AU',
+};
+
+export function getCurrencyLocale(currency: CurrencyCode): string {
+  return CURRENCY_LOCALES[currency] ?? 'en-US';
+}
+
 export interface ExchangeRates {
   readonly baseCurrency: CurrencyCode;
   readonly rates: Partial<Record<CurrencyCode, number>>;

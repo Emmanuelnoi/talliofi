@@ -1,10 +1,10 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type {
   ExchangeRateRecord,
   ExchangeRates,
   CurrencyCode,
 } from '@/domain/money';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 const DEFAULT_ID = 'default';
 
@@ -21,12 +21,7 @@ export const exchangeRateRepo = {
     try {
       await db.exchangeRates.put(record);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Exchange rate', record.id);
     }
     return record;
   },

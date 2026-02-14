@@ -5,8 +5,14 @@ import {
   AUTO_SYNC_INTERVAL_MS,
 } from '@/lib/constants';
 import { changelogRepo } from '@/data/repos/changelog-repo';
-import { encrypt, type EncryptedPayload } from './encryption';
+import { encrypt, decrypt, type EncryptedPayload } from './encryption';
+import { db } from '@/data/db';
+import {
+  safeGetLocalStorage,
+  safeSetLocalStorage,
+} from '@/lib/safe-storage';
 import type { ChangeLogEntry } from '@/domain/plan/types';
+import type { Table } from 'dexie';
 
 export type SyncState =
   | 'idle'
@@ -15,7 +21,47 @@ export type SyncState =
   | 'retry_pending'
   | 'offline';
 
-export type StorageMode = 'local' | 'cloud' | 'encrypted';
+import type { StorageMode } from '@/stores/sync-store';
+export type { StorageMode } from '@/stores/sync-store';
+
+/** Prefix for sync watermark localStorage keys */
+const SYNC_WATERMARK_PREFIX = 'talliofi-sync-watermark-';
+
+/**
+ * Maps a ChangeLogEntry entityType to the corresponding Dexie table.
+ * Returns undefined if the entity type is not recognized.
+ */
+function getTableForEntityType(
+  entityType: ChangeLogEntry['entityType'],
+): Table | undefined {
+  const tableMap: Record<ChangeLogEntry['entityType'], Table> = {
+    plan: db.plans,
+    expense: db.expenses,
+    bucket: db.buckets,
+    tax_component: db.taxComponents,
+    snapshot: db.snapshots,
+    goal: db.goals,
+    asset: db.assets,
+    liability: db.liabilities,
+    net_worth_snapshot: db.netWorthSnapshots,
+    recurring_template: db.recurringTemplates,
+  };
+  return tableMap[entityType];
+}
+
+/**
+ * Supabase row shape returned from the changelog table (snake_case columns).
+ */
+interface SupabaseChangelogRow {
+  id: string;
+  plan_id: string;
+  entity_type: ChangeLogEntry['entityType'];
+  entity_id: string;
+  operation: ChangeLogEntry['operation'];
+  timestamp: string;
+  payload: string | null;
+  is_encrypted: boolean;
+}
 
 /**
  * Configuration for the sync engine.
@@ -38,23 +84,30 @@ interface SyncEngineOptions {
   onLastSyncedAtChange?: (timestamp: string | null) => void;
   /** Encryption password for encrypted sync mode (required when storageMode is 'encrypted') */
   getEncryptionPassword?: () => string | null;
+  /** Called after pull completes with the number of applied entries */
+  onPullComplete?: (count: number) => void;
 }
 
 /**
  * Change-log-based sync engine with exponential backoff.
  *
  * Reads unsynced ChangeLogEntry rows from the local Dexie changelog
- * table and pushes them to Supabase. Listens to `navigator.onLine`
- * for offline detection.
+ * table and pushes them to Supabase. Pulls remote changes and applies
+ * them locally using last-writer-wins conflict resolution. Listens to
+ * `navigator.onLine` for offline detection.
  *
  * Uses dependency injection for store interactions to maintain clean
  * architecture boundaries (data layer should not import from stores).
  */
+const MAX_RETRY_ATTEMPTS = 5;
+const SYNC_DEBOUNCE_MS = 500;
+
 export function createSyncEngine(options: SyncEngineOptions) {
   let state: SyncState = 'idle';
   let retryCount = 0;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let autoSyncInterval: ReturnType<typeof setInterval> | null = null;
+  let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
 
   function setState(next: SyncState): void {
@@ -109,6 +162,21 @@ export function createSyncEngine(options: SyncEngineOptions) {
   }
 
   /**
+   * Decrypts a payload string using the configured encryption password.
+   * Returns the decrypted plaintext.
+   */
+  async function decryptPayload(payload: string): Promise<string> {
+    const password = options.getEncryptionPassword?.();
+    if (!password) {
+      throw new Error(
+        'Encryption password is required for encrypted sync mode',
+      );
+    }
+    const encryptedData: EncryptedPayload = JSON.parse(payload) as EncryptedPayload;
+    return decrypt(encryptedData, password);
+  }
+
+  /**
    * Pushes changelog entries to Supabase.
    * When in encrypted mode, payloads are encrypted before transmission.
    */
@@ -152,6 +220,139 @@ export function createSyncEngine(options: SyncEngineOptions) {
     }
   }
 
+  /**
+   * Pulls changelog entries from Supabase that are newer than the last
+   * sync watermark and applies them to the local Dexie database.
+   *
+   * Uses last-writer-wins conflict resolution:
+   * - For entries with the same entityId + entityType, the later timestamp wins.
+   * - Delete operations always win regardless of timestamp.
+   */
+  async function pullChanges(
+    planId: string,
+    isEncrypted: boolean,
+  ): Promise<number> {
+    if (!supabase) return 0;
+
+    const watermarkKey = `${SYNC_WATERMARK_PREFIX}${planId}`;
+    const lastWatermark = safeGetLocalStorage(watermarkKey);
+
+    // Fetch remote entries newer than the watermark
+    let query = supabase
+      .from('changelog')
+      .select('*')
+      .eq('plan_id', planId)
+      .order('timestamp', { ascending: true });
+
+    if (lastWatermark) {
+      query = query.gt('timestamp', lastWatermark);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Supabase pull failed: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return 0;
+    }
+
+    const remoteEntries = data as SupabaseChangelogRow[];
+
+    // Fetch local changelog entries for conflict resolution
+    const localEntries = await changelogRepo.getByPlanId(planId);
+    const localEntryMap = new Map<string, ChangeLogEntry>();
+    for (const entry of localEntries) {
+      // Key by entityType + entityId for conflict lookup
+      const key = `${entry.entityType}:${entry.entityId}`;
+      const existing = localEntryMap.get(key);
+      // Keep the latest local entry per entity
+      if (!existing || entry.timestamp > existing.timestamp) {
+        localEntryMap.set(key, entry);
+      }
+    }
+
+    let appliedCount = 0;
+    let latestTimestamp = lastWatermark ?? '';
+
+    for (const row of remoteEntries) {
+      // Track the latest timestamp for watermark update
+      if (row.timestamp > latestTimestamp) {
+        latestTimestamp = row.timestamp;
+      }
+
+      const conflictKey = `${row.entity_type}:${row.entity_id}`;
+      const localEntry = localEntryMap.get(conflictKey);
+
+      // Conflict resolution: delete always wins, otherwise last-writer-wins
+      if (row.operation !== 'delete' && localEntry) {
+        if (localEntry.timestamp >= row.timestamp) {
+          // Local entry is newer or equal, skip this remote entry
+          continue;
+        }
+      }
+
+      // Apply the remote change to the local Dexie database
+      const applied = await applyRemoteEntry(row, isEncrypted);
+      if (applied) {
+        appliedCount++;
+      }
+    }
+
+    // Persist the watermark after successful application
+    if (latestTimestamp) {
+      safeSetLocalStorage(watermarkKey, latestTimestamp);
+    }
+
+    return appliedCount;
+  }
+
+  /**
+   * Applies a single remote changelog entry to the local Dexie database.
+   * Handles create, update, and delete operations by routing to the
+   * appropriate Dexie table based on entityType.
+   *
+   * Returns true if the entry was successfully applied.
+   */
+  async function applyRemoteEntry(
+    row: SupabaseChangelogRow,
+    isEncrypted: boolean,
+  ): Promise<boolean> {
+    const table = getTableForEntityType(row.entity_type);
+    if (!table) {
+      return false;
+    }
+
+    try {
+      if (row.operation === 'delete') {
+        await table.delete(row.entity_id);
+        return true;
+      }
+
+      // For create/update, payload is required
+      if (!row.payload) {
+        return false;
+      }
+
+      // Decrypt if the entry was encrypted
+      let payloadStr = row.payload;
+      if (row.is_encrypted && isEncrypted) {
+        payloadStr = await decryptPayload(payloadStr);
+      }
+
+      const entity: unknown = JSON.parse(payloadStr);
+
+      // Upsert: works for both create and update
+      await table.put(entity);
+      return true;
+    } catch {
+      // Individual entry failures should not abort the entire pull.
+      // The entry will be retried on the next sync cycle.
+      return false;
+    }
+  }
+
   async function triggerSync(): Promise<void> {
     if (!isSupabaseConfigured || !supabase) return;
     if (state === 'syncing') return;
@@ -189,12 +390,19 @@ export function createSyncEngine(options: SyncEngineOptions) {
         return;
       }
 
-      // Fetch changelog entries for the active plan
+      // --- Push local changes to Supabase ---
       const entries = await changelogRepo.getByPlanId(planId);
 
       if (entries.length > 0) {
         await pushChanges(entries, isEncrypted);
       }
+
+      // --- Pull remote changes from Supabase ---
+      const pullCount = await pullChanges(planId, isEncrypted);
+      options.onPullComplete?.(pullCount);
+
+      // --- Cleanup old changelog entries ---
+      await changelogRepo.cleanup(planId);
 
       retryCount = 0;
       setState('idle');
@@ -203,6 +411,12 @@ export function createSyncEngine(options: SyncEngineOptions) {
       const err = error instanceof Error ? error : new Error(String(error));
       options.onError?.(err);
       retryCount += 1;
+
+      if (retryCount >= MAX_RETRY_ATTEMPTS) {
+        setState('error');
+        return;
+      }
+
       setState('retry_pending');
 
       clearRetryTimer();
@@ -236,9 +450,29 @@ export function createSyncEngine(options: SyncEngineOptions) {
     window.removeEventListener('offline', handleOffline);
   }
 
+  /**
+   * Debounced sync trigger — coalesces rapid calls into one sync after SYNC_DEBOUNCE_MS.
+   * Useful for UI-driven changes that fire rapidly (e.g., auto-save).
+   */
+  function debouncedSync(): void {
+    if (syncDebounceTimer !== null) {
+      clearTimeout(syncDebounceTimer);
+    }
+    syncDebounceTimer = setTimeout(() => {
+      syncDebounceTimer = null;
+      if (!disposed) {
+        void triggerSync();
+      }
+    }, SYNC_DEBOUNCE_MS);
+  }
+
   function dispose(): void {
     disposed = true;
     clearRetryTimer();
+    if (syncDebounceTimer !== null) {
+      clearTimeout(syncDebounceTimer);
+      syncDebounceTimer = null;
+    }
     disableAutoSync();
   }
 
@@ -247,6 +481,7 @@ export function createSyncEngine(options: SyncEngineOptions) {
       return state;
     },
     triggerSync,
+    debouncedSync,
     enableAutoSync,
     disableAutoSync,
     dispose,

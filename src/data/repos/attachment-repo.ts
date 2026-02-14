@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { ExpenseAttachment } from '@/domain/plan/types';
 import { ExpenseAttachmentSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -125,15 +125,7 @@ export const attachmentRepo = {
     try {
       await db.attachments.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Attachment with id ${attachment.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Attachment', attachment.id);
     }
     return validated;
   },
@@ -151,12 +143,7 @@ export const attachmentRepo = {
     try {
       await db.attachments.bulkAdd(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Attachment');
     }
     return validated;
   },

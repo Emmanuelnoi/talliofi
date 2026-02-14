@@ -231,6 +231,27 @@ export const NetWorthSnapshotSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
+// --- Snapshot Sub-Schemas (shared by supabase-repos, vault-service, export) ---
+
+export const BucketSummarySchema = z.object({
+  bucketId: z.string(),
+  bucketName: z.string(),
+  allocatedCents: CentsSchema,
+  spentCents: CentsSchema,
+  remainingCents: CentsSchema,
+});
+
+export const MonthlySnapshotSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  grossIncomeCents: CentsSchema,
+  netIncomeCents: CentsSchema,
+  totalExpensesCents: CentsSchema,
+  bucketSummaries: z.array(BucketSummarySchema),
+  createdAt: z.string().datetime(),
+});
+
 // --- Form Input Schemas ---
 
 export const IncomeInputSchema = z.object({
@@ -433,24 +454,5 @@ export const ExportSchema = z.object({
   buckets: z.array(BucketAllocationSchema),
   taxComponents: z.array(TaxComponentSchema),
   expenses: z.array(ExpenseItemSchema),
-  snapshots: z.array(
-    z.object({
-      id: z.string().uuid(),
-      planId: z.string().uuid(),
-      yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-      grossIncomeCents: CentsSchema,
-      netIncomeCents: CentsSchema,
-      totalExpensesCents: CentsSchema,
-      bucketSummaries: z.array(
-        z.object({
-          bucketId: z.string(),
-          bucketName: z.string(),
-          allocatedCents: CentsSchema,
-          spentCents: CentsSchema,
-          remainingCents: CentsSchema,
-        }),
-      ),
-      createdAt: z.string().datetime(),
-    }),
-  ),
+  snapshots: z.array(MonthlySnapshotSchema),
 });

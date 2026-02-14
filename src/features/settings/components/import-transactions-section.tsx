@@ -923,12 +923,37 @@ export function ImportTransactionsSection() {
         currencyCode: planCurrency,
       });
 
-      // Import one by one to handle potential errors
+      // Import in chunks of 50 with per-item retry on failure
+      const CHUNK_SIZE = 50;
       let importedCount = 0;
-      for (const item of expenseItems) {
-        const id = crypto.randomUUID();
-        await expenseRepo.create({ ...item, id });
-        importedCount++;
+      const failedItems: { name: string; error: string }[] = [];
+
+      for (let i = 0; i < expenseItems.length; i += CHUNK_SIZE) {
+        const chunk = expenseItems.slice(i, i + CHUNK_SIZE);
+        try {
+          for (const item of chunk) {
+            const id = crypto.randomUUID();
+            await expenseRepo.create({ ...item, id });
+            importedCount++;
+          }
+        } catch {
+          // Chunk failed — retry items individually
+          for (const item of chunk) {
+            try {
+              const id = crypto.randomUUID();
+              await expenseRepo.create({ ...item, id });
+              importedCount++;
+            } catch (itemError) {
+              failedItems.push({
+                name: item.name,
+                error:
+                  itemError instanceof Error
+                    ? itemError.message
+                    : 'Unknown error',
+              });
+            }
+          }
+        }
       }
 
       await queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -941,7 +966,13 @@ export function ImportTransactionsSection() {
         importedCount,
       }));
 
-      toast.success(`Successfully imported ${importedCount} transactions`);
+      if (failedItems.length > 0) {
+        toast.warning(
+          `Imported ${importedCount} of ${expenseItems.length} transactions. ${failedItems.length} failed.`,
+        );
+      } else {
+        toast.success(`Successfully imported ${importedCount} transactions`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Import failed';
       toast.error(message);

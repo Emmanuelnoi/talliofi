@@ -1,6 +1,7 @@
 import { Copy, MoreVertical, Pencil, Trash2, Check } from 'lucide-react';
 import type { Plan } from '@/domain/plan/types';
 import { DEFAULT_CURRENCY, formatMoney, type Cents } from '@/domain/money';
+import { formatDisplayDate } from '@/features/expenses/utils/date-utils';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,11 +34,7 @@ export function PlanCard({
   onDuplicate,
   onDelete,
 }: PlanCardProps) {
-  const createdDate = new Date(plan.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const createdDate = formatDisplayDate(plan.createdAt);
   const currencyCode = plan.currencyCode ?? DEFAULT_CURRENCY;
 
   return (

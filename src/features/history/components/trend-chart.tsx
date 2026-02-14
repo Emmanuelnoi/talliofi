@@ -5,6 +5,7 @@ import type { MonthlySnapshot } from '@/domain/plan/types';
 import { centsToDollars, formatMoney } from '@/domain/money';
 import type { Cents } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
+import { formatMonthOnly } from '@/features/expenses/utils/date-utils';
 import { EmptyState } from '@/components/feedback/empty-state';
 import {
   ChartContainer,
@@ -34,11 +35,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 /** Formats a yearMonth string (e.g. "2026-01") into a short label. */
-function formatShortMonth(yearMonth: string): string {
-  const [year, month] = yearMonth.split('-');
-  const date = new Date(Number(year), Number(month) - 1);
-  return date.toLocaleDateString('en-US', { month: 'short' });
-}
+const formatShortMonth = formatMonthOnly;
 
 export function TrendChart({ snapshots }: TrendChartProps) {
   const navigate = useNavigate();

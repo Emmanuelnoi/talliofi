@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useQueryStates, parseAsString } from 'nuqs';
-import { parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { formatDisplayDate } from '@/features/expenses/utils/date-utils';
 import { FileBarChart, Printer } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
@@ -11,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useActivePlan } from '@/hooks/use-active-plan';
 import {
   useBuckets,
-  useExpenses,
+  useExpensesByDateRange,
   useTaxComponents,
 } from '@/hooks/use-plan-data';
 import { useExchangeRates } from '@/hooks/use-plan-data';
@@ -40,20 +41,6 @@ import { TopExpensesReport } from '../components/top-expenses-report';
  */
 export default function ReportsPage() {
   const { data: plan, isLoading: planLoading } = useActivePlan();
-  const { data: expenses = [], isLoading: expensesLoading } = useExpenses(
-    plan?.id,
-  );
-  const { data: buckets = [], isLoading: bucketsLoading } = useBuckets(
-    plan?.id,
-  );
-  const { data: taxComponents = [], isLoading: taxLoading } = useTaxComponents(
-    plan?.id,
-  );
-  const { data: snapshots = [], isLoading: snapshotsLoading } = useSnapshots(
-    plan?.id,
-  );
-  const { data: exchangeRates, isLoading: exchangeRatesLoading } =
-    useExchangeRates(plan?.id);
 
   // URL-based filter state
   const [filters, setFilters] = useQueryStates({
@@ -76,6 +63,31 @@ export default function ReportsPage() {
     }
     return getDateRangeFromPreset(preset);
   }, [preset, filters.start, filters.end]);
+
+  // Format date range as ISO strings for scoped expense query
+  const startDateISO = useMemo(
+    () => format(dateRange.start, 'yyyy-MM-dd'),
+    [dateRange.start],
+  );
+  const endDateISO = useMemo(
+    () => format(dateRange.end, 'yyyy-MM-dd'),
+    [dateRange.end],
+  );
+
+  // Fetch only expenses within the report date range
+  const { data: expenses = [], isLoading: expensesLoading } =
+    useExpensesByDateRange(plan?.id, startDateISO, endDateISO);
+  const { data: buckets = [], isLoading: bucketsLoading } = useBuckets(
+    plan?.id,
+  );
+  const { data: taxComponents = [], isLoading: taxLoading } = useTaxComponents(
+    plan?.id,
+  );
+  const { data: snapshots = [], isLoading: snapshotsLoading } = useSnapshots(
+    plan?.id,
+  );
+  const { data: exchangeRates, isLoading: exchangeRatesLoading } =
+    useExchangeRates(plan?.id);
 
   // Compute all report data
   const reportData = useReportData({
@@ -205,11 +217,11 @@ export default function ReportsPage() {
       <div className="hidden print:block">
         <h1 className="text-2xl font-bold">Talliofi Financial Reports</h1>
         <p className="text-muted-foreground">
-          Period: {dateRange.start.toLocaleDateString()} -{' '}
-          {dateRange.end.toLocaleDateString()}
+          Period: {formatDisplayDate(dateRange.start)} -{' '}
+          {formatDisplayDate(dateRange.end)}
         </p>
         <p className="text-muted-foreground text-sm">
-          Generated: {new Date().toLocaleDateString()}
+          Generated: {formatDisplayDate(new Date())}
         </p>
       </div>
 

@@ -190,6 +190,8 @@ export function QuickExpenseForm({
           id="quick-expense-name"
           placeholder="e.g., Coffee, Groceries"
           aria-invalid={!!errors.name}
+          aria-required
+          aria-describedby={errors.name ? 'quick-expense-name-error' : undefined}
           {...register('name')}
           ref={(e) => {
             // Combine register's ref with our nameInputRef for focus management
@@ -199,7 +201,7 @@ export function QuickExpenseForm({
           }}
         />
         {errors.name && (
-          <p className="text-destructive text-sm">{errors.name.message}</p>
+          <p id="quick-expense-name-error" role="alert" className="text-destructive text-sm">{errors.name.message}</p>
         )}
       </div>
 
@@ -218,9 +220,12 @@ export function QuickExpenseForm({
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   min={0}
+                  aria-invalid={!!fieldState.error}
+                  aria-required
+                  errorId={fieldState.error ? 'quick-expense-amount-error' : undefined}
                 />
                 {fieldState.error && (
-                  <p className="text-destructive text-sm">
+                  <p id="quick-expense-amount-error" role="alert" className="text-destructive text-sm">
                     {fieldState.error.message}
                   </p>
                 )}
@@ -261,7 +266,12 @@ export function QuickExpenseForm({
           render={({ field, fieldState }) => (
             <>
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="quick-expense-bucket">
+                <SelectTrigger
+                  id="quick-expense-bucket"
+                  aria-invalid={!!fieldState.error}
+                  aria-required
+                  aria-describedby={fieldState.error ? 'quick-expense-bucket-error' : undefined}
+                >
                   <SelectValue placeholder="Select bucket" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,6 +280,7 @@ export function QuickExpenseForm({
                       <span
                         className="mr-1.5 inline-block size-2 rounded-full"
                         style={{ backgroundColor: b.color }}
+                        aria-hidden="true"
                       />
                       {b.name}
                     </SelectItem>
@@ -277,7 +288,7 @@ export function QuickExpenseForm({
                 </SelectContent>
               </Select>
               {fieldState.error && (
-                <p className="text-destructive text-sm">
+                <p id="quick-expense-bucket-error" role="alert" className="text-destructive text-sm">
                   {fieldState.error.message}
                 </p>
               )}

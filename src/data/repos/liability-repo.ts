@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { Liability } from '@/domain/plan/types';
 import { LiabilitySchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const liabilityRepo = {
   async getByPlanId(planId: string): Promise<Liability[]> {
@@ -24,15 +24,7 @@ export const liabilityRepo = {
     try {
       await db.liabilities.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Liability with id ${liability.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Liability', liability.id);
     }
     return validated;
   },
@@ -45,12 +37,7 @@ export const liabilityRepo = {
     try {
       await db.liabilities.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Liability', liability.id);
     }
     return validated;
   },

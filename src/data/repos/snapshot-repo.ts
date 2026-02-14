@@ -1,6 +1,6 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { MonthlySnapshot } from '@/domain/plan/types';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const snapshotRepo = {
   async getByPlanId(planId: string): Promise<MonthlySnapshot[]> {
@@ -21,12 +21,7 @@ export const snapshotRepo = {
     try {
       await db.snapshots.put(snapshot);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Snapshot');
     }
   },
 

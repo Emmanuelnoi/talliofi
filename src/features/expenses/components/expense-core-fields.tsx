@@ -72,10 +72,12 @@ export function ExpenseCoreFields({
           id="expense-name"
           placeholder="e.g., Rent"
           aria-invalid={!!errors.name}
+          aria-required
+          aria-describedby={errors.name ? 'expense-name-error' : undefined}
           {...register('name')}
         />
         {errors.name && (
-          <p className="text-destructive text-sm">{errors.name.message}</p>
+          <p id="expense-name-error" role="alert" className="text-destructive text-sm">{errors.name.message}</p>
         )}
       </div>
 
@@ -93,10 +95,13 @@ export function ExpenseCoreFields({
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   min={0}
+                  aria-invalid={!!fieldState.error}
+                  aria-required
+                  errorId={fieldState.error ? 'expense-amount-error' : undefined}
                   currencyCode={watch('currencyCode') ?? defaultCurrency}
                 />
                 {fieldState.error && (
-                  <p className="text-destructive text-sm">
+                  <p id="expense-amount-error" role="alert" className="text-destructive text-sm">
                     {fieldState.error.message}
                   </p>
                 )}
@@ -207,7 +212,12 @@ export function ExpenseCoreFields({
               render={({ field, fieldState }) => (
                 <>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="expense-bucket">
+                    <SelectTrigger
+                      id="expense-bucket"
+                      aria-invalid={!!fieldState.error}
+                      aria-required
+                      aria-describedby={fieldState.error ? 'expense-bucket-error' : undefined}
+                    >
                       <SelectValue placeholder="Select bucket" />
                     </SelectTrigger>
                     <SelectContent>
@@ -216,6 +226,7 @@ export function ExpenseCoreFields({
                           <span
                             className="mr-1.5 inline-block size-2 rounded-full"
                             style={{ backgroundColor: bucket.color }}
+                            aria-hidden="true"
                           />
                           {bucket.name}
                         </SelectItem>
@@ -223,7 +234,7 @@ export function ExpenseCoreFields({
                     </SelectContent>
                   </Select>
                   {fieldState.error && (
-                    <p className="text-destructive text-sm">
+                    <p id="expense-bucket-error" role="alert" className="text-destructive text-sm">
                       {fieldState.error.message}
                     </p>
                   )}

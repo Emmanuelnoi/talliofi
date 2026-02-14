@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { useCurrencyStore } from '@/stores/currency-store';
-import { getCurrencySymbol, type CurrencyCode } from '@/domain/money';
+import { getCurrencySymbol, getCurrencyLocale, type CurrencyCode } from '@/domain/money';
 
 interface MoneyInputProps extends Omit<
   React.ComponentProps<'input'>,
@@ -17,6 +17,8 @@ interface MoneyInputProps extends Omit<
   max?: number;
   /** Override currency code for the prefix symbol */
   currencyCode?: CurrencyCode;
+  /** ID of the error message element for aria-describedby */
+  errorId?: string;
 }
 
 /**
@@ -38,6 +40,7 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
       onBlur,
       onFocus,
       currencyCode,
+      errorId,
       name,
       autoComplete,
       ...props
@@ -49,14 +52,16 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
     );
     const [isFocused, setIsFocused] = React.useState(false);
     const defaultCurrency = useCurrencyStore((s) => s.currencyCode);
-    const symbol = getCurrencySymbol(currencyCode ?? defaultCurrency);
+    const activeCurrency = currencyCode ?? defaultCurrency;
+    const symbol = getCurrencySymbol(activeCurrency);
+    const locale = getCurrencyLocale(activeCurrency);
 
     // Sync from external value changes when not focused
     React.useEffect(() => {
       if (!isFocused) {
-        setDisplayValue(formatDollars(value));
+        setDisplayValue(formatDollars(value, locale));
       }
-    }, [value, isFocused]);
+    }, [value, isFocused, locale]);
 
     function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
       setIsFocused(true);
@@ -73,28 +78,39 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
       if (!Number.isNaN(parsed)) {
         const clamped = clamp(parsed, min, max);
         onChange(clamped);
-        setDisplayValue(formatDollars(clamped));
+        setDisplayValue(formatDollars(clamped, locale));
       } else {
-        setDisplayValue(formatDollars(value));
+        setDisplayValue(formatDollars(value, locale));
       }
       onBlur?.(e);
     }
 
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
       const raw = e.target.value;
+
+      // Block leading minus when min >= 0 (negative not allowed)
+      if (min != null && min >= 0 && raw.startsWith('-')) return;
+
       // Allow digits, single decimal, and leading minus
       if (raw === '' || /^-?\d*\.?\d{0,2}$/.test(raw)) {
         setDisplayValue(raw);
-        const parsed = parseFloat(raw);
-        if (!Number.isNaN(parsed)) {
-          onChange(clamp(parsed, min, max));
+        // Only propagate to parent when the value is a complete, parseable number
+        // (skip intermediate states like "-", ".", "-.")
+        if (raw !== '' && raw !== '-' && raw !== '.' && raw !== '-.') {
+          const parsed = parseFloat(raw);
+          if (!Number.isNaN(parsed)) {
+            onChange(clamp(parsed, min, max));
+          }
         }
       }
     }
 
     return (
       <div className="relative">
-        <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+        <span
+          aria-hidden="true"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm"
+        >
           {symbol}
         </span>
         <input
@@ -114,6 +130,7 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
           onBlur={handleBlur}
           name={name ?? props.id}
           autoComplete={autoComplete ?? 'off'}
+          aria-describedby={errorId}
           {...props}
         />
       </div>
@@ -123,9 +140,9 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
 
 MoneyInput.displayName = 'MoneyInput';
 
-function formatDollars(value: number | undefined): string {
+function formatDollars(value: number | undefined, locale = 'en-US'): string {
   if (value == null || Number.isNaN(value)) return '';
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

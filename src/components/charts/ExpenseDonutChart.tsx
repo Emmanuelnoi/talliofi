@@ -288,10 +288,6 @@ export function ExpenseDonutChart({
                           filter: isActive
                             ? 'drop-shadow(0 8px 16px rgba(15,23,42,0.2))'
                             : undefined,
-                          transform:
-                            !prefersReducedMotion && mounted
-                              ? undefined
-                              : undefined,
                         }}
                       />
                     );

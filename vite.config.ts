@@ -80,6 +80,19 @@ export default defineConfig({
         return relaxCspForDev(html);
       },
     },
+    {
+      name: 'prod-csp-supabase-scope',
+      apply: 'build',
+      transformIndexHtml(html) {
+        const supabaseUrl = process.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl) return html;
+        // Narrow wildcard *.supabase.co to specific project URL
+        const host = new URL(supabaseUrl).host;
+        return html
+          .replace('https://*.supabase.co', `https://${host}`)
+          .replace('wss://*.supabase.co', `wss://${host}`);
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],

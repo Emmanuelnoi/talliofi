@@ -648,14 +648,16 @@ export function autoCategorize(description: string): ExpenseCategory {
 
 /**
  * Generates a unique key for a transaction to detect duplicates.
- * Uses date + amount + first 20 chars of description.
+ * Uses date + amount + first 50 chars of description to reduce false
+ * positives for similar descriptions like "Amazon.com Purchase - Item A"
+ * vs "Amazon.com Purchase - Item B".
  */
 export function generateTransactionKey(transaction: {
   date: string;
   amountCents: Cents;
   description: string;
 }): string {
-  const descKey = transaction.description.toLowerCase().slice(0, 20).trim();
+  const descKey = transaction.description.toLowerCase().slice(0, 50).trim();
   return `${transaction.date}|${transaction.amountCents}|${descKey}`;
 }
 

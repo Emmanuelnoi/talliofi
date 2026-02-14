@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Lint & Type Check
+  install:
+    name: Install Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +24,36 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - name: Cache node_modules
+        id: cache-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        if: steps.cache-modules.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+  quality:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    needs: [install]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Lint
         run: pnpm run lint
@@ -38,6 +67,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: [install]
     steps:
       - uses: actions/checkout@v6
 
@@ -48,7 +78,11 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Run unit tests
         run: pnpm run test:run
@@ -56,6 +90,7 @@ jobs:
   security:
     name: Dependency Security Audit
     runs-on: ubuntu-latest
+    needs: [install]
     steps:
       - uses: actions/checkout@v6
 
@@ -66,7 +101,11 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Run pnpm audit
         run: pnpm audit --audit-level=moderate
@@ -85,10 +124,21 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Build
         run: pnpm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
 
   e2e:
     name: E2E Tests
@@ -104,13 +154,34 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
-      - run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E tests
         run: pnpm run test:e2e
+        env:
+          PLAYWRIGHT_HOST: '127.0.0.1'
+          PLAYWRIGHT_PORT: '4173'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v6

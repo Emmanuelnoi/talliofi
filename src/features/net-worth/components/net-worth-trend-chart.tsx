@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartDataTable } from '@/components/accessibility';
+import { formatShortMonth } from '@/features/expenses/utils/date-utils';
 
 interface NetWorthTrendChartProps {
   snapshots: NetWorthSnapshot[];
@@ -33,13 +34,6 @@ const chartConfig = {
     color: 'var(--deficit)',
   },
 } satisfies ChartConfig;
-
-/** Formats a yearMonth string (e.g. "2026-01") into a short label. */
-function formatShortMonth(yearMonth: string): string {
-  const [year, month] = yearMonth.split('-');
-  const date = new Date(Number(year), Number(month) - 1);
-  return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-}
 
 export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
   const currencyCode = useCurrencyStore((s) => s.currencyCode);

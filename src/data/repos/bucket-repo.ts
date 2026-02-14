@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import { db } from '../db';
 import type { BucketAllocation } from '@/domain/plan/types';
 import { BucketAllocationSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const bucketRepo = {
   async getByPlanId(planId: string): Promise<BucketAllocation[]> {
@@ -13,15 +14,7 @@ export const bucketRepo = {
     try {
       await db.buckets.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Bucket with id ${bucket.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Bucket', bucket.id);
     }
     return validated;
   },
@@ -31,12 +24,7 @@ export const bucketRepo = {
     try {
       await db.buckets.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Bucket', bucket.id);
     }
     return validated;
   },

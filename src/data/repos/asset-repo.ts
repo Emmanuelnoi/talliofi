@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { Asset } from '@/domain/plan/types';
 import { AssetSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const assetRepo = {
   async getByPlanId(planId: string): Promise<Asset[]> {
@@ -24,15 +24,7 @@ export const assetRepo = {
     try {
       await db.assets.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Asset with id ${asset.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Asset', asset.id);
     }
     return validated;
   },
@@ -45,12 +37,7 @@ export const assetRepo = {
     try {
       await db.assets.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Asset', asset.id);
     }
     return validated;
   },

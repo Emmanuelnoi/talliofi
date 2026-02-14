@@ -1,6 +1,7 @@
 export {
   type Cents,
   cents,
+  nonNegativeCents,
   dollarsToCents,
   centsToDollars,
   formatMoney,
@@ -20,6 +21,7 @@ export {
   type ExchangeRates,
   type ExchangeRateRecord,
   getCurrencySymbol,
+  getCurrencyLocale,
 } from './currency';
 
-export { convertCents } from './conversion';
+export { convertCents, convertCentsTagged, type ConversionResult } from './conversion';

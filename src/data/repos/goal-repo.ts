@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { Goal } from '@/domain/plan/types';
 import { GoalSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const goalRepo = {
   async getByPlanId(planId: string): Promise<Goal[]> {
@@ -33,15 +33,7 @@ export const goalRepo = {
     try {
       await db.goals.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Goal with id ${goal.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Goal', goal.id);
     }
     return validated;
   },
@@ -54,12 +46,7 @@ export const goalRepo = {
     try {
       await db.goals.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Goal', goal.id);
     }
     return validated;
   },

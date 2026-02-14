@@ -1,11 +1,28 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { ExpenseItem } from '@/domain/plan/types';
 import { ExpenseItemSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const expenseRepo = {
   async getByPlanId(planId: string): Promise<ExpenseItem[]> {
     return db.expenses.where('planId').equals(planId).toArray();
+  },
+
+  async getByPlanIdAndDateRange(
+    planId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ExpenseItem[]> {
+    return db.expenses
+      .where('planId')
+      .equals(planId)
+      .and(
+        (e) =>
+          e.transactionDate != null &&
+          e.transactionDate >= startDate &&
+          e.transactionDate <= endDate,
+      )
+      .toArray();
   },
 
   async getByBucketId(bucketId: string): Promise<ExpenseItem[]> {
@@ -17,15 +34,7 @@ export const expenseRepo = {
     try {
       await db.expenses.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Expense with id ${expense.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Expense', expense.id);
     }
     return validated;
   },
@@ -38,12 +47,7 @@ export const expenseRepo = {
     try {
       await db.expenses.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Expense', expense.id);
     }
     return validated;
   },
@@ -59,12 +63,7 @@ export const expenseRepo = {
     try {
       await db.expenses.bulkPut(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Expense');
     }
     return validated;
   },

@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isCI = !!process.env.CI;
 const host = process.env.PLAYWRIGHT_HOST ?? '127.0.0.1';
-const port = process.env.PLAYWRIGHT_PORT ?? '5173';
+const port = process.env.PLAYWRIGHT_PORT ?? (isCI ? '4173' : '5173');
 const baseURL = `http://${host}:${port}`;
 
 export default defineConfig({
@@ -22,8 +23,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm exec vite --host ${host} --port ${port}`,
+    command: isCI
+      ? `pnpm exec vite preview --host ${host} --port ${port}`
+      : `pnpm exec vite --host ${host} --port ${port}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !isCI,
   },
 });

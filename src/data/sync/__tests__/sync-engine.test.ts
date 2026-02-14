@@ -96,9 +96,10 @@ describe('createSyncEngine', () => {
 
     await engine.triggerSync();
 
-    // With no Supabase configured, it should stay idle or return early
-    // The exact behavior depends on isSupabaseConfigured check
-    expect(engine.state).toBe('idle');
+    // The callback should have been invoked at least once
+    expect(statuses.length).toBeGreaterThan(0);
+    // First status should be 'syncing'
+    expect(statuses[0]).toBe('syncing');
   });
 
   it('uses dependency injection for plan ID resolution', async () => {

@@ -10,6 +10,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { clearAllData } from '@/data/db';
 
 interface ErrorBoundaryProps {
@@ -20,6 +30,7 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  showClearDialog: boolean;
 }
 
 export class ErrorBoundary extends Component<
@@ -28,10 +39,10 @@ export class ErrorBoundary extends Component<
 > {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, showClearDialog: false };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { hasError: true, error };
   }
 
@@ -43,14 +54,17 @@ export class ErrorBoundary extends Component<
     window.location.reload();
   };
 
-  private handleClearData = async () => {
-    const confirmed = window.confirm(
-      'This will delete all your financial data. This action cannot be undone. Continue?',
-    );
-    if (confirmed) {
-      await clearAllData();
-      window.location.href = '/';
-    }
+  private handleClearDataClick = () => {
+    this.setState({ showClearDialog: true });
+  };
+
+  private handleClearDataConfirm = async () => {
+    await clearAllData();
+    window.location.href = '/';
+  };
+
+  private handleClearDataCancel = () => {
+    this.setState({ showClearDialog: false });
   };
 
   render() {
@@ -89,7 +103,7 @@ export class ErrorBoundary extends Component<
               </Button>
               <Button
                 variant="destructive"
-                onClick={this.handleClearData}
+                onClick={this.handleClearDataClick}
                 className="flex-1"
               >
                 <Trash2 className="size-4" />
@@ -97,6 +111,31 @@ export class ErrorBoundary extends Component<
               </Button>
             </CardFooter>
           </Card>
+
+          <AlertDialog
+            open={this.state.showClearDialog}
+            onOpenChange={(open) =>
+              this.setState({ showClearDialog: open })
+            }
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete all your financial data. This action cannot
+                  be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={this.handleClearDataCancel}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={this.handleClearDataConfirm}>
+                  Clear data
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       );
     }

@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { TaxComponent } from '@/domain/plan/types';
 import { TaxComponentSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const taxComponentRepo = {
   async getByPlanId(planId: string): Promise<TaxComponent[]> {
@@ -13,15 +13,7 @@ export const taxComponentRepo = {
     try {
       await db.taxComponents.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Tax component with id ${component.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Tax component', component.id);
     }
     return validated;
   },
@@ -31,12 +23,7 @@ export const taxComponentRepo = {
     try {
       await db.taxComponents.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Tax component', component.id);
     }
     return validated;
   },

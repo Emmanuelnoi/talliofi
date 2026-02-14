@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import { db } from '../db';
 import type { Plan } from '@/domain/plan/types';
 import { PlanSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 /** Key for persisting active plan ID in localStorage */
 const ACTIVE_PLAN_KEY = 'talliofi-active-plan-id';
@@ -76,15 +77,7 @@ export const planRepo = {
     try {
       await db.plans.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Plan with id ${plan.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Plan', plan.id);
     }
     return validated;
   },
@@ -103,12 +96,7 @@ export const planRepo = {
     try {
       await db.plans.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Plan', plan.id);
     }
     return validated;
   },

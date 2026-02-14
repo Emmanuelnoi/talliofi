@@ -1,20 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
-import { bucketRepo } from '@/data/repos/bucket-repo';
-import { expenseRepo } from '@/data/repos/expense-repo';
-import { goalRepo } from '@/data/repos/goal-repo';
-import { assetRepo } from '@/data/repos/asset-repo';
-import { liabilityRepo } from '@/data/repos/liability-repo';
-import { netWorthSnapshotRepo } from '@/data/repos/net-worth-snapshot-repo';
-import { taxComponentRepo } from '@/data/repos/tax-component-repo';
-import { recurringTemplateRepo } from '@/data/repos/recurring-template-repo';
-import { attachmentRepo } from '@/data/repos/attachment-repo';
-import { exchangeRateRepo } from '@/data/repos/exchange-rate-repo';
+import {
+  getBucketRepo,
+  getExpenseRepo,
+  getGoalRepo,
+  getAssetRepo,
+  getLiabilityRepo,
+  getNetWorthSnapshotRepo,
+  getTaxComponentRepo,
+  getRecurringTemplateRepo,
+  getAttachmentRepo,
+  getExchangeRateRepo,
+} from '@/data/repos/repo-router';
 import { PLAN_DATA_STALE_TIME_MS } from '@/lib/constants';
 
 export function useBuckets(planId: string | undefined) {
   return useQuery({
     queryKey: ['buckets', planId],
-    queryFn: () => bucketRepo.getByPlanId(planId!),
+    queryFn: () => getBucketRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -23,8 +25,22 @@ export function useBuckets(planId: string | undefined) {
 export function useExpenses(planId: string | undefined) {
   return useQuery({
     queryKey: ['expenses', planId],
-    queryFn: () => expenseRepo.getByPlanId(planId!),
+    queryFn: () => getExpenseRepo().getByPlanId(planId!),
     enabled: !!planId,
+    staleTime: PLAN_DATA_STALE_TIME_MS,
+  });
+}
+
+export function useExpensesByDateRange(
+  planId: string | undefined,
+  startDate: string,
+  endDate: string,
+) {
+  return useQuery({
+    queryKey: ['expenses', planId, 'range', startDate, endDate],
+    queryFn: () =>
+      getExpenseRepo().getByPlanIdAndDateRange(planId!, startDate, endDate),
+    enabled: !!planId && !!startDate && !!endDate,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
 }
@@ -32,7 +48,7 @@ export function useExpenses(planId: string | undefined) {
 export function useTaxComponents(planId: string | undefined) {
   return useQuery({
     queryKey: ['tax-components', planId],
-    queryFn: () => taxComponentRepo.getByPlanId(planId!),
+    queryFn: () => getTaxComponentRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -41,7 +57,7 @@ export function useTaxComponents(planId: string | undefined) {
 export function useGoals(planId: string | undefined) {
   return useQuery({
     queryKey: ['goals', planId],
-    queryFn: () => goalRepo.getByPlanId(planId!),
+    queryFn: () => getGoalRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -50,7 +66,7 @@ export function useGoals(planId: string | undefined) {
 export function useAssets(planId: string | undefined) {
   return useQuery({
     queryKey: ['assets', planId],
-    queryFn: () => assetRepo.getByPlanId(planId!),
+    queryFn: () => getAssetRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -59,7 +75,7 @@ export function useAssets(planId: string | undefined) {
 export function useLiabilities(planId: string | undefined) {
   return useQuery({
     queryKey: ['liabilities', planId],
-    queryFn: () => liabilityRepo.getByPlanId(planId!),
+    queryFn: () => getLiabilityRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -68,7 +84,7 @@ export function useLiabilities(planId: string | undefined) {
 export function useNetWorthSnapshots(planId: string | undefined) {
   return useQuery({
     queryKey: ['net-worth-snapshots', planId],
-    queryFn: () => netWorthSnapshotRepo.getByPlanId(planId!),
+    queryFn: () => getNetWorthSnapshotRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -77,7 +93,7 @@ export function useNetWorthSnapshots(planId: string | undefined) {
 export function useRecurringTemplates(planId: string | undefined) {
   return useQuery({
     queryKey: ['recurring-templates', planId],
-    queryFn: () => recurringTemplateRepo.getByPlanId(planId!),
+    queryFn: () => getRecurringTemplateRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -86,7 +102,7 @@ export function useRecurringTemplates(planId: string | undefined) {
 export function useExpenseAttachments(expenseId: string | undefined) {
   return useQuery({
     queryKey: ['expense-attachments', expenseId],
-    queryFn: () => attachmentRepo.getByExpenseId(expenseId!),
+    queryFn: () => getAttachmentRepo().getByExpenseId(expenseId!),
     enabled: !!expenseId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -95,7 +111,7 @@ export function useExpenseAttachments(expenseId: string | undefined) {
 export function useExchangeRates(planId: string | undefined) {
   return useQuery({
     queryKey: ['exchange-rates', planId],
-    queryFn: () => exchangeRateRepo.getByPlanId(planId!),
+    queryFn: () => getExchangeRateRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });
@@ -104,7 +120,7 @@ export function useExchangeRates(planId: string | undefined) {
 export function useActiveRecurringTemplates(planId: string | undefined) {
   return useQuery({
     queryKey: ['recurring-templates-active', planId],
-    queryFn: () => recurringTemplateRepo.getActiveByPlanId(planId!),
+    queryFn: () => getRecurringTemplateRepo().getActiveByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
   });

@@ -17,11 +17,11 @@ import { SUPPORTED_CURRENCIES, type ExchangeRateRecord } from '@/domain/money';
 import {
   AssetSchema,
   BucketAllocationSchema,
-  CentsSchema,
   CurrencyCodeSchema,
   ExpenseItemSchema,
   GoalSchema,
   LiabilitySchema,
+  MonthlySnapshotSchema,
   NetWorthSnapshotSchema,
   PlanSchema,
   RecurringTemplateSchema,
@@ -85,24 +85,6 @@ const SerializableAttachmentSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-const BucketSummarySchema = z.object({
-  bucketId: z.string(),
-  bucketName: z.string(),
-  allocatedCents: CentsSchema,
-  spentCents: CentsSchema,
-  remainingCents: CentsSchema,
-});
-
-const MonthlySnapshotSchema = z.object({
-  id: z.string().uuid(),
-  planId: z.string().uuid(),
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-  grossIncomeCents: CentsSchema,
-  netIncomeCents: CentsSchema,
-  totalExpensesCents: CentsSchema,
-  bucketSummaries: z.array(BucketSummarySchema),
-  createdAt: z.string().datetime(),
-});
 
 const ChangeLogEntrySchema = z.object({
   id: z.string().uuid(),

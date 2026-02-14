@@ -1,7 +1,7 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { RecurringTemplate } from '@/domain/plan/types';
 import { RecurringTemplateSchema } from '@/domain/plan/schemas';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 /**
  * Repository for managing recurring expense templates.
@@ -99,15 +99,7 @@ export const recurringTemplateRepo = {
     try {
       await db.recurringTemplates.add(validated);
     } catch (error) {
-      if (error instanceof Dexie.ConstraintError) {
-        throw new Error(`Template with id ${template.id} already exists`);
-      }
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Template', template.id);
     }
     return validated;
   },
@@ -124,12 +116,7 @@ export const recurringTemplateRepo = {
     try {
       await db.recurringTemplates.put(validated);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Template', template.id);
     }
     return validated;
   },

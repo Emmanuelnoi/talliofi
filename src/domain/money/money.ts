@@ -12,6 +12,17 @@ export function cents(value: number): Cents {
   return value as Cents;
 }
 
+/**
+ * Creates a non-negative Cents value. Use for income/expense amounts
+ * where negative values are semantically invalid.
+ */
+export function nonNegativeCents(value: number): Cents {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`Invalid non-negative cents value: ${value}`);
+  }
+  return value as Cents;
+}
+
 export function dollarsToCents(dollars: number): Cents {
   return cents(Math.round(dollars * 100));
 }
@@ -20,15 +31,23 @@ export function centsToDollars(amount: Cents): number {
   return amount / 100;
 }
 
+const formatterCache = new Map<string, Intl.NumberFormat>();
+
 export function formatMoney(
   amount: Cents,
   options: { locale?: string; currency: CurrencyCode },
 ): string {
   const { locale = 'en-US', currency } = options;
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-  }).format(centsToDollars(amount));
+  const key = `${locale}:${currency}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+    });
+    formatterCache.set(key, formatter);
+  }
+  return formatter.format(centsToDollars(amount));
 }
 
 // Arithmetic

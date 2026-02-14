@@ -13,6 +13,8 @@ interface PercentInputProps extends Omit<
   min?: number;
   /** Maximum percentage (default 100) */
   max?: number;
+  /** ID of the error message element for aria-describedby */
+  errorId?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
       className,
       onBlur,
       onFocus,
+      errorId,
       name,
       autoComplete,
       ...props
@@ -99,9 +102,13 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
           onBlur={handleBlur}
           name={name ?? props.id}
           autoComplete={autoComplete ?? 'off'}
+          aria-describedby={errorId}
           {...props}
         />
-        <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm">
+        <span
+          aria-hidden="true"
+          className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm"
+        >
           %
         </span>
       </div>

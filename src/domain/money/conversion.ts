@@ -27,6 +27,12 @@ function resolveRate(
   return fromToBase * baseToTarget;
 }
 
+export interface ConversionResult {
+  readonly amount: Cents;
+  /** Whether the amount was actually converted using a real exchange rate */
+  readonly converted: boolean;
+}
+
 export function convertCents(
   amount: Cents,
   from: CurrencyCode,
@@ -35,6 +41,29 @@ export function convertCents(
 ): Cents {
   if (from === to) return amount;
   const rate = resolveRate(from, to, rates);
-  if (!rate) return amount;
+  if (!rate) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[convertCents] Missing exchange rate for ${from} → ${to}; returning original amount`,
+      );
+    }
+    return amount;
+  }
   return cents(Math.round((amount as number) * rate));
+}
+
+/**
+ * Converts cents between currencies and indicates whether a real rate was used.
+ * Use this when callers need to distinguish converted vs unconverted amounts.
+ */
+export function convertCentsTagged(
+  amount: Cents,
+  from: CurrencyCode,
+  to: CurrencyCode,
+  rates?: ExchangeRates,
+): ConversionResult {
+  if (from === to) return { amount, converted: true };
+  const rate = resolveRate(from, to, rates);
+  if (!rate) return { amount, converted: false };
+  return { amount: cents(Math.round((amount as number) * rate)), converted: true };
 }

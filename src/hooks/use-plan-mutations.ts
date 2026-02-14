@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { planRepo } from '@/data/repos/plan-repo';
-import { bucketRepo } from '@/data/repos/bucket-repo';
-import { expenseRepo } from '@/data/repos/expense-repo';
-import { goalRepo } from '@/data/repos/goal-repo';
-import { assetRepo } from '@/data/repos/asset-repo';
-import { liabilityRepo } from '@/data/repos/liability-repo';
-import { taxComponentRepo } from '@/data/repos/tax-component-repo';
-import { recurringTemplateRepo } from '@/data/repos/recurring-template-repo';
+import {
+  getPlanRepo,
+  getBucketRepo,
+  getExpenseRepo,
+  getGoalRepo,
+  getAssetRepo,
+  getLiabilityRepo,
+  getTaxComponentRepo,
+  getRecurringTemplateRepo,
+} from '@/data/repos/repo-router';
 import type {
   Plan,
   BucketAllocation,
@@ -47,29 +49,24 @@ export function useUpdatePlan() {
   const queryClient = useQueryClient();
   const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
-    mutationFn: (plan: Plan) => planRepo.update(plan),
+    mutationFn: (plan: Plan) => getPlanRepo().update(plan),
     onMutate: async (newPlan) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
 
-      // Snapshot previous value
       const previousPlan = queryClient.getQueryData<Plan | null>(
         ACTIVE_PLAN_QUERY_KEY,
       );
 
-      // Optimistically update
       queryClient.setQueryData<Plan | null>(ACTIVE_PLAN_QUERY_KEY, newPlan);
 
       return { previousPlan };
     },
     onError: (_err, _newPlan, context) => {
-      // Rollback on error
       if (context?.previousPlan !== undefined) {
         queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, context.previousPlan);
       }
     },
     onSettled: (_data, error, variables) => {
-      // Always refetch to ensure consistency
       void queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
       if (!error) {
@@ -92,14 +89,14 @@ export const useCreateBucket = () =>
   useCreateEntity<BucketAllocation>({
     entityType: 'bucket',
     queryKey: bucketsKey,
-    repo: bucketRepo,
+    repo: getBucketRepo(),
   });
 
 export const useUpdateBucket = () =>
   useUpdateEntity<BucketAllocation>({
     entityType: 'bucket',
     queryKey: bucketsKey,
-    repo: bucketRepo,
+    repo: getBucketRepo(),
   });
 
 export function useDeleteBucket() {
@@ -107,14 +104,13 @@ export function useDeleteBucket() {
   const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: ({ id }: { id: string; planId: string }) =>
-      bucketRepo.delete(id),
+      getBucketRepo().delete(id),
     onMutate: async ({ id, planId }) => {
       const key = bucketsKey(planId);
       await queryClient.cancelQueries({ queryKey: key });
 
       const previousBuckets = queryClient.getQueryData<BucketAllocation[]>(key);
 
-      // Optimistically remove the bucket
       queryClient.setQueryData<BucketAllocation[]>(key, (old = []) =>
         old.filter((b) => b.id !== id),
       );
@@ -134,7 +130,6 @@ export function useDeleteBucket() {
         queryKey: bucketsKey(variables.planId),
       });
       void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
-      // Expenses may have been reassigned, invalidate them too
       void queryClient.invalidateQueries({
         queryKey: expensesKey(variables.planId),
       });
@@ -152,28 +147,29 @@ export const useCreateExpense = () =>
   useCreateEntity<ExpenseItem>({
     entityType: 'expense',
     queryKey: expensesKey,
-    repo: expenseRepo,
+    repo: getExpenseRepo(),
   });
 
 export const useUpdateExpense = () =>
   useUpdateEntity<ExpenseItem>({
     entityType: 'expense',
     queryKey: expensesKey,
-    repo: expenseRepo,
+    repo: getExpenseRepo(),
   });
 
 export const useDeleteExpense = () =>
   useDeleteEntity<ExpenseItem>({
     entityType: 'expense',
     queryKey: expensesKey,
-    repo: expenseRepo,
+    repo: getExpenseRepo(),
   });
 
 export function useBulkUpdateExpenses() {
   const queryClient = useQueryClient();
   const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
-    mutationFn: (expenses: ExpenseItem[]) => expenseRepo.bulkUpdate(expenses),
+    mutationFn: (expenses: ExpenseItem[]) =>
+      getExpenseRepo().bulkUpdate(expenses),
     onMutate: async (updatedExpenses) => {
       const planId = updatedExpenses[0]?.planId;
       if (!planId) return { previousExpenses: undefined, planId: '' };
@@ -225,7 +221,7 @@ export function useBulkDeleteExpenses() {
   const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: ({ ids }: { ids: string[]; planId: string }) =>
-      expenseRepo.bulkDelete(ids),
+      getExpenseRepo().bulkDelete(ids),
     onMutate: async ({ ids, planId }) => {
       const key = expensesKey(planId);
       await queryClient.cancelQueries({ queryKey: key });
@@ -271,21 +267,21 @@ export const useCreateTaxComponent = () =>
   useCreateEntity<TaxComponent>({
     entityType: 'tax_component',
     queryKey: taxComponentsKey,
-    repo: taxComponentRepo,
+    repo: getTaxComponentRepo(),
   });
 
 export const useUpdateTaxComponent = () =>
   useUpdateEntity<TaxComponent>({
     entityType: 'tax_component',
     queryKey: taxComponentsKey,
-    repo: taxComponentRepo,
+    repo: getTaxComponentRepo(),
   });
 
 export const useDeleteTaxComponent = () =>
   useDeleteEntity<TaxComponent>({
     entityType: 'tax_component',
     queryKey: taxComponentsKey,
-    repo: taxComponentRepo,
+    repo: getTaxComponentRepo(),
   });
 
 // --- Goals ---
@@ -294,21 +290,21 @@ export const useCreateGoal = () =>
   useCreateEntity<Goal>({
     entityType: 'goal',
     queryKey: goalsKey,
-    repo: goalRepo,
+    repo: getGoalRepo(),
   });
 
 export const useUpdateGoal = () =>
   useUpdateEntity<Goal>({
     entityType: 'goal',
     queryKey: goalsKey,
-    repo: goalRepo,
+    repo: getGoalRepo(),
   });
 
 export const useDeleteGoal = () =>
   useDeleteEntity<Goal>({
     entityType: 'goal',
     queryKey: goalsKey,
-    repo: goalRepo,
+    repo: getGoalRepo(),
   });
 
 // --- Assets ---
@@ -317,21 +313,21 @@ export const useCreateAsset = () =>
   useCreateEntity<Asset>({
     entityType: 'asset',
     queryKey: assetsKey,
-    repo: assetRepo,
+    repo: getAssetRepo(),
   });
 
 export const useUpdateAsset = () =>
   useUpdateEntity<Asset>({
     entityType: 'asset',
     queryKey: assetsKey,
-    repo: assetRepo,
+    repo: getAssetRepo(),
   });
 
 export const useDeleteAsset = () =>
   useDeleteEntity<Asset>({
     entityType: 'asset',
     queryKey: assetsKey,
-    repo: assetRepo,
+    repo: getAssetRepo(),
   });
 
 // --- Liabilities ---
@@ -340,21 +336,21 @@ export const useCreateLiability = () =>
   useCreateEntity<Liability>({
     entityType: 'liability',
     queryKey: liabilitiesKey,
-    repo: liabilityRepo,
+    repo: getLiabilityRepo(),
   });
 
 export const useUpdateLiability = () =>
   useUpdateEntity<Liability>({
     entityType: 'liability',
     queryKey: liabilitiesKey,
-    repo: liabilityRepo,
+    repo: getLiabilityRepo(),
   });
 
 export const useDeleteLiability = () =>
   useDeleteEntity<Liability>({
     entityType: 'liability',
     queryKey: liabilitiesKey,
-    repo: liabilityRepo,
+    repo: getLiabilityRepo(),
   });
 
 // --- Recurring Templates ---
@@ -363,21 +359,21 @@ export const useCreateRecurringTemplate = () =>
   useCreateEntity<RecurringTemplate>({
     entityType: 'recurring_template',
     queryKey: recurringTemplatesKey,
-    repo: recurringTemplateRepo,
+    repo: getRecurringTemplateRepo(),
   });
 
 export const useUpdateRecurringTemplate = () =>
   useUpdateEntity<RecurringTemplate>({
     entityType: 'recurring_template',
     queryKey: recurringTemplatesKey,
-    repo: recurringTemplateRepo,
+    repo: getRecurringTemplateRepo(),
   });
 
 export const useDeleteRecurringTemplate = () =>
   useDeleteEntity<RecurringTemplate>({
     entityType: 'recurring_template',
     queryKey: recurringTemplatesKey,
-    repo: recurringTemplateRepo,
+    repo: getRecurringTemplateRepo(),
   });
 
 export function useToggleRecurringTemplate() {
@@ -385,7 +381,7 @@ export function useToggleRecurringTemplate() {
   const scheduleVaultSave = useVaultSaveOnSuccess();
   return useMutation({
     mutationFn: ({ id }: { id: string; planId: string }) =>
-      recurringTemplateRepo.toggleActive(id),
+      getRecurringTemplateRepo().toggleActive(id),
     onMutate: async ({ id, planId }) => {
       const key = recurringTemplatesKey(planId);
       await queryClient.cancelQueries({ queryKey: key });
@@ -393,7 +389,6 @@ export function useToggleRecurringTemplate() {
       const previousTemplates =
         queryClient.getQueryData<RecurringTemplate[]>(key);
 
-      // Optimistically toggle the template
       queryClient.setQueryData<RecurringTemplate[]>(key, (old = []) =>
         old.map((t) => (t.id === id ? { ...t, isActive: !t.isActive } : t)),
       );

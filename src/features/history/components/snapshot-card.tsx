@@ -5,6 +5,7 @@ import { useCurrencyStore } from '@/stores/currency-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatLongMonth } from '@/features/expenses/utils/date-utils';
 
 interface SnapshotCardProps {
   snapshot: MonthlySnapshot;
@@ -12,11 +13,7 @@ interface SnapshotCardProps {
 }
 
 /** Formats a yearMonth string (e.g. "2026-01") into a human-readable label. */
-function formatYearMonth(yearMonth: string): string {
-  const [year, month] = yearMonth.split('-');
-  const date = new Date(Number(year), Number(month) - 1);
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
+const formatYearMonth = formatLongMonth;
 
 /** Renders a delta badge showing the change between two values. */
 function DeltaBadge({

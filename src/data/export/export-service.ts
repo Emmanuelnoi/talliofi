@@ -6,6 +6,7 @@ import { snapshotRepo } from '@/data/repos/snapshot-repo';
 import { addMoney, cents, formatMoney, normalizeToMonthly } from '@/domain';
 import { DEFAULT_CURRENCY } from '@/domain/money';
 import { escapeCSVValue } from '@/lib/csv';
+import { formatDisplayDate } from '@/features/expenses/utils/date-utils';
 import type {
   Plan,
   BucketAllocation,
@@ -128,8 +129,8 @@ export async function exportAsCSV(planId: string): Promise<string> {
   if (plan.taxMode === 'simple' && plan.taxEffectiveRate !== undefined) {
     lines.push(`Effective Tax Rate,${plan.taxEffectiveRate}%`);
   }
-  lines.push(`Created,${new Date(plan.createdAt).toLocaleDateString()}`);
-  lines.push(`Last Updated,${new Date(plan.updatedAt).toLocaleDateString()}`);
+  lines.push(`Created,${formatDisplayDate(plan.createdAt)}`);
+  lines.push(`Last Updated,${formatDisplayDate(plan.updatedAt)}`);
   lines.push('');
 
   // Tax Components Section (if itemized)
@@ -179,7 +180,7 @@ export async function exportAsCSV(planId: string): Promise<string> {
         escapeCSVValue(bucketName),
         expense.isFixed ? 'Yes' : 'No',
         escapeCSVValue(expense.notes || ''),
-        escapeCSVValue(new Date(expense.createdAt).toLocaleDateString()),
+        escapeCSVValue(formatDisplayDate(expense.createdAt)),
       ].join(','),
     );
   }
@@ -232,7 +233,7 @@ export async function exportAsPDF(planId: string): Promise<Blob> {
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, y, {
+  doc.text(`Generated: ${formatDisplayDate(new Date())}`, pageWidth / 2, y, {
     align: 'center',
   });
   y += 15;

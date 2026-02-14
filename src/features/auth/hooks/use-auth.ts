@@ -38,14 +38,17 @@ export function useAuth(): AuthState {
     let mounted = true;
     let fallbackTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    // Fetch initial session
+    // Safety-net: if getSession() hangs beyond timeout, stop blocking the UI.
+    // Normally the .finally() below resolves first and clears this timer.
     fallbackTimeoutId = setTimeout(() => {
       if (!mounted) return;
       if (import.meta.env.DEV) {
         console.warn(
-          '[auth] Session bootstrap timeout reached; continuing without blocking UI.',
+          '[auth] Session bootstrap timeout reached; unblocking UI.',
         );
       }
+      // Only unblock if getSession() hasn't resolved yet
+      fallbackTimeoutId = null;
       setIsLoading(false);
     }, SESSION_BOOTSTRAP_TIMEOUT_MS);
 

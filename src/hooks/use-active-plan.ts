@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { planRepo } from '@/data/repos/plan-repo';
+import { getPlanRepo } from '@/data/repos/repo-router';
 import { useUIStore } from '@/stores/ui-store';
 
 export const ACTIVE_PLAN_QUERY_KEY = ['active-plan'] as const;
@@ -14,7 +14,7 @@ export function useActivePlan() {
   return useQuery({
     queryKey: ACTIVE_PLAN_QUERY_KEY,
     queryFn: async () => {
-      const planPromise = planRepo.getActive().then((plan) => plan ?? null);
+      const planPromise = getPlanRepo().getActive().then((plan) => plan ?? null);
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       let timedOut = false;
       const timeoutPromise = new Promise<null>((resolve) => {
@@ -47,7 +47,7 @@ export function useAllPlans() {
   return useQuery({
     queryKey: [...ALL_PLANS_QUERY_KEY, planListVersion],
     queryFn: async () => {
-      return planRepo.getAll();
+      return getPlanRepo().getAll();
     },
   });
 }
@@ -62,7 +62,7 @@ export function useSwitchPlan() {
 
   const switchPlan = useCallback(
     async (planId: string) => {
-      planRepo.setActivePlanId(planId);
+      getPlanRepo().setActivePlanId(planId);
       // Invalidate all plan-related queries to refresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY }),

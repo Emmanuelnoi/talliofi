@@ -4,6 +4,7 @@ import type { BudgetTemplate } from '@/lib/budget-templates';
 import { BUDGET_TEMPLATES } from '@/lib/budget-templates';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useDebounce } from '@/hooks/use-debounce';
 import { TemplateCard } from './template-card';
 
 interface TemplateSelectorProps {
@@ -28,6 +29,7 @@ export function TemplateSelector({
   additionalTemplates = [],
 }: TemplateSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedQuery = useDebounce(searchQuery, 300);
 
   const allTemplates = useMemo(
     () => [...BUDGET_TEMPLATES, ...additionalTemplates],
@@ -35,17 +37,17 @@ export function TemplateSelector({
   );
 
   const filteredTemplates = useMemo(() => {
-    if (!searchQuery.trim()) {
+    if (!debouncedQuery.trim()) {
       return allTemplates;
     }
-    const query = searchQuery.toLowerCase();
+    const query = debouncedQuery.toLowerCase();
     return allTemplates.filter(
       (template) =>
         template.name.toLowerCase().includes(query) ||
         template.description.toLowerCase().includes(query) ||
         template.buckets.some((b) => b.name.toLowerCase().includes(query)),
     );
-  }, [allTemplates, searchQuery]);
+  }, [allTemplates, debouncedQuery]);
 
   const handleSelectTemplate = (template: BudgetTemplate) => {
     // Toggle selection if clicking the same template

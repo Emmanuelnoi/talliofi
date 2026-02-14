@@ -30,25 +30,27 @@ export const changelogRepo = {
     const collection = db.changelog.where('planId').equals(planId);
 
     if (filter?.entityType || filter?.startDate || filter?.endDate) {
-      const filtered = collection.filter((entry) => {
-        if (filter.entityType && entry.entityType !== filter.entityType) {
-          return false;
-        }
-        if (filter.startDate && entry.timestamp < filter.startDate) {
-          return false;
-        }
-        if (filter.endDate && entry.timestamp > filter.endDate) {
-          return false;
-        }
-        return true;
+      // For filtered queries, cap the number of entries we load to prevent
+      // unbounded memory usage. We need offset + limit + 1 matching entries
+      // to serve the page and determine hasMore.
+      const needed = offset + limit + 1;
+      const matches: ChangeLogEntry[] = [];
+
+      // Use each() with early exit to avoid loading the entire table
+      await collection.each((entry) => {
+        if (matches.length >= needed) return;
+        if (filter.entityType && entry.entityType !== filter.entityType) return;
+        if (filter.startDate && entry.timestamp < filter.startDate) return;
+        if (filter.endDate && entry.timestamp > filter.endDate) return;
+        matches.push(entry);
       });
 
-      const entries = await filtered.sortBy('timestamp');
-      entries.reverse();
+      // Sort newest first
+      matches.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
       return {
-        entries: entries.slice(offset, offset + limit),
-        hasMore: offset + limit < entries.length,
+        entries: matches.slice(offset, offset + limit),
+        hasMore: matches.length > offset + limit,
       };
     }
 
@@ -77,5 +79,20 @@ export const changelogRepo = {
 
   async deleteByPlanId(planId: string): Promise<void> {
     await db.changelog.where('planId').equals(planId).delete();
+  },
+
+  /**
+   * Prunes changelog entries older than the specified retention period.
+   * Returns the number of deleted entries.
+   */
+  async cleanup(planId: string, retentionDays = 90): Promise<number> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+    const cutoffISO = cutoff.toISOString();
+    return db.changelog
+      .where('planId')
+      .equals(planId)
+      .and((entry) => entry.timestamp < cutoffISO)
+      .delete();
   },
 };

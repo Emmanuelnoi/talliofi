@@ -9,8 +9,8 @@ import type {
 } from '@/domain/plan/types';
 import {
   BucketAllocationSchema,
-  CentsSchema,
   ExpenseItemSchema,
+  MonthlySnapshotSchema,
   PlanSchema,
   TaxComponentSchema,
 } from '@/domain/plan/schemas';
@@ -52,24 +52,22 @@ function assertClient(): NonNullable<typeof supabase> {
   return supabase;
 }
 
-const BucketSummarySchema = z.object({
-  bucketId: z.string(),
-  bucketName: z.string(),
-  allocatedCents: CentsSchema,
-  spentCents: CentsSchema,
-  remainingCents: CentsSchema,
-});
+/**
+ * Returns the currently authenticated user's ID.
+ * Throws if no active session — callers should only reach Supabase repos
+ * after AuthGuard has verified the session.
+ */
+async function getAuthenticatedUserId(): Promise<string> {
+  const client = assertClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) {
+    throw new Error('Not authenticated. Sign in to access cloud data.');
+  }
+  return user.id;
+}
 
-const MonthlySnapshotSchema = z.object({
-  id: z.string().uuid(),
-  planId: z.string().uuid(),
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-  grossIncomeCents: CentsSchema,
-  netIncomeCents: CentsSchema,
-  totalExpensesCents: CentsSchema,
-  bucketSummaries: z.array(BucketSummarySchema),
-  createdAt: z.string().datetime(),
-});
 
 function formatZodError(error: z.ZodError): string {
   return error.issues
@@ -108,9 +106,11 @@ function parseSupabaseRows<T>(
 export const supabasePlanRepo = {
   async getActive(): Promise<Plan | undefined> {
     const client = assertClient();
+    const userId = await getAuthenticatedUserId();
     const { data, error } = await client
       .from('plans')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1)
       .single();
@@ -130,20 +130,22 @@ export const supabasePlanRepo = {
   },
 
   async create(plan: Plan): Promise<Plan> {
+    const validated = PlanSchema.parse(plan) as Plan;
     const client = assertClient();
-    const { error } = await client.from('plans').insert(toSnake(plan));
+    const { error } = await client.from('plans').insert(toSnake(validated));
     if (error) throw new Error(`Failed to create plan: ${error.message}`);
-    return plan;
+    return validated;
   },
 
   async update(plan: Plan): Promise<Plan> {
+    const validated = PlanSchema.parse(plan) as Plan;
     const client = assertClient();
     const { error } = await client
       .from('plans')
-      .update(toSnake(plan))
-      .eq('id', plan.id);
+      .update(toSnake(validated))
+      .eq('id', validated.id);
     if (error) throw new Error(`Failed to update plan: ${error.message}`);
-    return plan;
+    return validated;
   },
 
   async delete(id: string): Promise<void> {
@@ -159,9 +161,11 @@ export const supabasePlanRepo = {
 
   async getAll(): Promise<Plan[]> {
     const client = assertClient();
+    const userId = await getAuthenticatedUserId();
     const { data, error } = await client
       .from('plans')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: true });
     if (error) throw new Error(`Failed to fetch plans: ${error.message}`);
     return parseSupabaseRows<Plan>(PlanSchema, data ?? [], 'plan');
@@ -285,6 +289,26 @@ export const supabaseExpenseRepo = {
       .from('expenses')
       .select('*')
       .eq('plan_id', planId);
+    if (error) throw new Error(`Failed to fetch expenses: ${error.message}`);
+    return parseSupabaseRows<ExpenseItem>(
+      ExpenseItemSchema,
+      data ?? [],
+      'expense',
+    );
+  },
+
+  async getByPlanIdAndDateRange(
+    planId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ExpenseItem[]> {
+    const client = assertClient();
+    const { data, error } = await client
+      .from('expenses')
+      .select('*')
+      .eq('plan_id', planId)
+      .gte('transaction_date', startDate)
+      .lte('transaction_date', endDate);
     if (error) throw new Error(`Failed to fetch expenses: ${error.message}`);
     return parseSupabaseRows<ExpenseItem>(
       ExpenseItemSchema,

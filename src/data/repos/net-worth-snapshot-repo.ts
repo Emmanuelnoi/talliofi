@@ -1,6 +1,6 @@
-import Dexie from 'dexie';
 import { db } from '../db';
 import type { NetWorthSnapshot } from '@/domain/plan/types';
+import { handleDexieWriteError } from './handle-dexie-error';
 
 export const netWorthSnapshotRepo = {
   async getByPlanId(planId: string): Promise<NetWorthSnapshot[]> {
@@ -24,12 +24,7 @@ export const netWorthSnapshotRepo = {
     try {
       await db.netWorthSnapshots.put(snapshot);
     } catch (error) {
-      if (error instanceof Dexie.QuotaExceededError) {
-        throw new Error(
-          'Storage quota exceeded. Please free up space or export your data.',
-        );
-      }
-      throw error;
+      handleDexieWriteError(error, 'Net worth snapshot');
     }
   },
 

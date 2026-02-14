@@ -316,14 +316,15 @@ describe('Duplicate Detection', () => {
       expect(generateTransactionKey(tx)).toBe('2024-01-15|500|coffee shop');
     });
 
-    it('truncates long descriptions', () => {
+    it('truncates long descriptions at 50 characters', () => {
       const tx = {
         date: '2024-01-15',
         amountCents: cents(500),
-        description: 'A very long description that exceeds twenty characters',
+        description: 'A very long description that exceeds fifty characters and keeps going on and on',
       };
       const key = generateTransactionKey(tx);
-      expect(key).toBe('2024-01-15|500|a very long descript');
+      // .toLowerCase().slice(0, 50).trim()
+      expect(key).toBe('2024-01-15|500|a very long description that exceeds fifty charact');
     });
   });
 
