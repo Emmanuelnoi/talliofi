@@ -167,7 +167,7 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
         <OnboardingProgress currentStep={step} totalSteps={TOTAL_STEPS} />
 
         <div className="mt-8">
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
             <SummaryStep onBack={handleBack} onComplete={handleComplete} />
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

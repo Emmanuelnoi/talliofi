@@ -52,20 +52,20 @@ export default function DemoEntryPage() {
 
   if (isLoading) {
     return (
-      <div
+      <main
         className="flex min-h-svh items-center justify-center gap-3"
         role="status"
         aria-label="Preparing demo environment"
       >
         <Loader2 className="text-muted-foreground size-6 motion-safe:animate-spin" />
         <p className="text-muted-foreground text-sm">Preparing demo data...</p>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-svh items-center justify-center p-6">
+      <main className="flex min-h-svh items-center justify-center p-6">
         <div className="w-full max-w-lg rounded-xl border p-5">
           <p className="text-sm font-semibold">Demo setup failed</p>
           <p className="text-muted-foreground mt-2 text-sm">{error}</p>
@@ -81,7 +81,7 @@ export default function DemoEntryPage() {
             </Button>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 

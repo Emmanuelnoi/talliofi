@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase-config';
 import { useSyncStore } from '@/stores/sync-store';
 import { shouldBlockCloudAuthInCurrentBuild } from '@/lib/security-controls';
 import { useAuth } from '../hooks/use-auth';
