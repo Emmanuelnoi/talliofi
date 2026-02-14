@@ -77,7 +77,13 @@ export function ExpenseCoreFields({
           {...register('name')}
         />
         {errors.name && (
-          <p id="expense-name-error" role="alert" className="text-destructive text-sm">{errors.name.message}</p>
+          <p
+            id="expense-name-error"
+            role="alert"
+            className="text-destructive text-sm"
+          >
+            {errors.name.message}
+          </p>
         )}
       </div>
 
@@ -97,11 +103,17 @@ export function ExpenseCoreFields({
                   min={0}
                   aria-invalid={!!fieldState.error}
                   aria-required
-                  errorId={fieldState.error ? 'expense-amount-error' : undefined}
+                  errorId={
+                    fieldState.error ? 'expense-amount-error' : undefined
+                  }
                   currencyCode={watch('currencyCode') ?? defaultCurrency}
                 />
                 {fieldState.error && (
-                  <p id="expense-amount-error" role="alert" className="text-destructive text-sm">
+                  <p
+                    id="expense-amount-error"
+                    role="alert"
+                    className="text-destructive text-sm"
+                  >
                     {fieldState.error.message}
                   </p>
                 )}
@@ -216,7 +228,9 @@ export function ExpenseCoreFields({
                       id="expense-bucket"
                       aria-invalid={!!fieldState.error}
                       aria-required
-                      aria-describedby={fieldState.error ? 'expense-bucket-error' : undefined}
+                      aria-describedby={
+                        fieldState.error ? 'expense-bucket-error' : undefined
+                      }
                     >
                       <SelectValue placeholder="Select bucket" />
                     </SelectTrigger>
@@ -234,7 +248,11 @@ export function ExpenseCoreFields({
                     </SelectContent>
                   </Select>
                   {fieldState.error && (
-                    <p id="expense-bucket-error" role="alert" className="text-destructive text-sm">
+                    <p
+                      id="expense-bucket-error"
+                      role="alert"
+                      className="text-destructive text-sm"
+                    >
                       {fieldState.error.message}
                     </p>
                   )}

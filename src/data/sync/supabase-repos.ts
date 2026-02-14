@@ -68,7 +68,6 @@ async function getAuthenticatedUserId(): Promise<string> {
   return user.id;
 }
 
-
 function formatZodError(error: z.ZodError): string {
   return error.issues
     .slice(0, 4)

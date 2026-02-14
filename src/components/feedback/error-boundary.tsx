@@ -114,9 +114,7 @@ export class ErrorBoundary extends Component<
 
           <AlertDialog
             open={this.state.showClearDialog}
-            onOpenChange={(open) =>
-              this.setState({ showClearDialog: open })
-            }
+            onOpenChange={(open) => this.setState({ showClearDialog: open })}
           >
             <AlertDialogContent>
               <AlertDialogHeader>

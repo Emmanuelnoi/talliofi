@@ -320,11 +320,14 @@ describe('Duplicate Detection', () => {
       const tx = {
         date: '2024-01-15',
         amountCents: cents(500),
-        description: 'A very long description that exceeds fifty characters and keeps going on and on',
+        description:
+          'A very long description that exceeds fifty characters and keeps going on and on',
       };
       const key = generateTransactionKey(tx);
       // .toLowerCase().slice(0, 50).trim()
-      expect(key).toBe('2024-01-15|500|a very long description that exceeds fifty charact');
+      expect(key).toBe(
+        '2024-01-15|500|a very long description that exceeds fifty charact',
+      );
     });
   });
 

@@ -241,7 +241,11 @@ export function ExpenseSplitSection({
       </div>
 
       {errors.splits && (
-        <p id="expense-splits-error" role="alert" className="text-destructive text-sm">
+        <p
+          id="expense-splits-error"
+          role="alert"
+          className="text-destructive text-sm"
+        >
           {typeof errors.splits === 'object' && 'message' in errors.splits
             ? errors.splits.message
             : 'Split amounts must sum to the total'}

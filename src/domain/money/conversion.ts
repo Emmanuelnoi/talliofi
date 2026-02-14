@@ -65,5 +65,8 @@ export function convertCentsTagged(
   if (from === to) return { amount, converted: true };
   const rate = resolveRate(from, to, rates);
   if (!rate) return { amount, converted: false };
-  return { amount: cents(Math.round((amount as number) * rate)), converted: true };
+  return {
+    amount: cents(Math.round((amount as number) * rate)),
+    converted: true,
+  };
 }

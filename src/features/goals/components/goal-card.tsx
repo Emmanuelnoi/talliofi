@@ -3,7 +3,10 @@ import { MoreHorizontal, Pencil, Trash2, Target, Check } from 'lucide-react';
 import type { Goal } from '@/domain/plan';
 import { formatMoney, cents } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
-import { formatMonthYear, formatDisplayDate } from '@/features/expenses/utils/date-utils';
+import {
+  formatMonthYear,
+  formatDisplayDate,
+} from '@/features/expenses/utils/date-utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -184,9 +187,7 @@ export function GoalCard({
               {goal.targetDate && (
                 <>
                   <span aria-hidden="true">&middot;</span>
-                  <span>
-                    Target: {formatDisplayDate(goal.targetDate!)}
-                  </span>
+                  <span>Target: {formatDisplayDate(goal.targetDate!)}</span>
                 </>
               )}
               {projectedDate && !goal.targetDate && (

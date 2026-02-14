@@ -7,10 +7,7 @@ import {
 import { changelogRepo } from '@/data/repos/changelog-repo';
 import { encrypt, decrypt, type EncryptedPayload } from './encryption';
 import { db } from '@/data/db';
-import {
-  safeGetLocalStorage,
-  safeSetLocalStorage,
-} from '@/lib/safe-storage';
+import { safeGetLocalStorage, safeSetLocalStorage } from '@/lib/safe-storage';
 import type { ChangeLogEntry } from '@/domain/plan/types';
 import type { Table } from 'dexie';
 
@@ -172,7 +169,9 @@ export function createSyncEngine(options: SyncEngineOptions) {
         'Encryption password is required for encrypted sync mode',
       );
     }
-    const encryptedData: EncryptedPayload = JSON.parse(payload) as EncryptedPayload;
+    const encryptedData: EncryptedPayload = JSON.parse(
+      payload,
+    ) as EncryptedPayload;
     return decrypt(encryptedData, password);
   }
 

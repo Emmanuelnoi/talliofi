@@ -10,9 +10,7 @@ export function handleDexieWriteError(
   id?: string,
 ): never {
   if (error instanceof Dexie.ConstraintError) {
-    throw new Error(
-      `${entityName} with id ${id ?? 'unknown'} already exists`,
-    );
+    throw new Error(`${entityName} with id ${id ?? 'unknown'} already exists`);
   }
   if (error instanceof Dexie.QuotaExceededError) {
     throw new Error(

@@ -14,7 +14,9 @@ export function useActivePlan() {
   return useQuery({
     queryKey: ACTIVE_PLAN_QUERY_KEY,
     queryFn: async () => {
-      const planPromise = getPlanRepo().getActive().then((plan) => plan ?? null);
+      const planPromise = getPlanRepo()
+        .getActive()
+        .then((plan) => plan ?? null);
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       let timedOut = false;
       const timeoutPromise = new Promise<null>((resolve) => {

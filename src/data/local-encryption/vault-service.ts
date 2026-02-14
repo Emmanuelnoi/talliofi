@@ -85,7 +85,6 @@ const SerializableAttachmentSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-
 const ChangeLogEntrySchema = z.object({
   id: z.string().uuid(),
   planId: z.string().uuid(),

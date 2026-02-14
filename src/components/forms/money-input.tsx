@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { useCurrencyStore } from '@/stores/currency-store';
-import { getCurrencySymbol, getCurrencyLocale, type CurrencyCode } from '@/domain/money';
+import {
+  getCurrencySymbol,
+  getCurrencyLocale,
+  type CurrencyCode,
+} from '@/domain/money';
 
 interface MoneyInputProps extends Omit<
   React.ComponentProps<'input'>,
