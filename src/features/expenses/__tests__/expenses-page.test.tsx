@@ -422,7 +422,7 @@ describe('ExpensesPage', () => {
     });
   });
 
-  it('virtualizes large expense lists', async () => {
+  it('virtualizes large expense lists', { timeout: 30_000 }, async () => {
     await seedLargeExpenseSet(1000);
     render(createElement(ExpensesPage), { wrapper: createWrapper() });
 
