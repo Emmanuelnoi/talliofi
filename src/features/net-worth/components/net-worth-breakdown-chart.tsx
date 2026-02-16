@@ -34,7 +34,7 @@ interface ChartDatum {
   formatted: string;
 }
 
-export function NetWorthBreakdownChart({
+export default function NetWorthBreakdownChart({
   assetsByCategory,
   liabilitiesByCategory,
 }: NetWorthBreakdownChartProps) {

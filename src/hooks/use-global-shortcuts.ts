@@ -61,7 +61,7 @@ export function useGlobalShortcuts(): UseGlobalShortcutsReturn {
     key: 'd',
     modifiers: ['meta'],
     onTrigger: useCallback(() => {
-      void navigate('/dashboard');
+      void navigate('/');
     }, [navigate]),
   });
 

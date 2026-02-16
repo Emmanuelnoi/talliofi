@@ -10,6 +10,7 @@ import { db } from '@/data/db';
 import { safeGetLocalStorage, safeSetLocalStorage } from '@/lib/safe-storage';
 import type { ChangeLogEntry } from '@/domain/plan/types';
 import type { Table } from 'dexie';
+import { logger } from '@/lib/logger';
 
 export type SyncState =
   | 'idle'
@@ -83,6 +84,14 @@ interface SyncEngineOptions {
   getEncryptionPassword?: () => string | null;
   /** Called after pull completes with the number of applied entries */
   onPullComplete?: (count: number) => void;
+  /** Called when a conflict is resolved during pull */
+  onConflict?: (conflict: {
+    entityType: string;
+    entityId: string;
+    reason: 'local_newer' | 'remote_delete_wins';
+    localTimestamp: string;
+    remoteTimestamp: string;
+  }) => void;
 }
 
 /**
@@ -172,7 +181,14 @@ export function createSyncEngine(options: SyncEngineOptions) {
     const encryptedData: EncryptedPayload = JSON.parse(
       payload,
     ) as EncryptedPayload;
-    return decrypt(encryptedData, password);
+    try {
+      return await decrypt(encryptedData, password);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'OperationError') {
+        throw new Error('Decryption failed: wrong password or corrupted data');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -284,10 +300,40 @@ export function createSyncEngine(options: SyncEngineOptions) {
       const conflictKey = `${row.entity_type}:${row.entity_id}`;
       const localEntry = localEntryMap.get(conflictKey);
 
-      // Conflict resolution: delete always wins, otherwise last-writer-wins
-      if (row.operation !== 'delete' && localEntry) {
+      // Conflict resolution strategy:
+      // - Delete operations always win regardless of timestamp (tombstone semantics)
+      // - For create/update: last-writer-wins based on timestamp comparison
+      // - Conflicts are logged via onConflict callback for observability
+      if (row.operation === 'delete' && localEntry) {
+        logger.warn(
+          'sync',
+          'Conflict resolved: remote delete wins',
+          row.entity_type,
+          row.entity_id,
+        );
+        options.onConflict?.({
+          entityType: row.entity_type,
+          entityId: row.entity_id,
+          reason: 'remote_delete_wins',
+          localTimestamp: localEntry.timestamp,
+          remoteTimestamp: row.timestamp,
+        });
+      } else if (row.operation !== 'delete' && localEntry) {
         if (localEntry.timestamp >= row.timestamp) {
           // Local entry is newer or equal, skip this remote entry
+          logger.warn(
+            'sync',
+            'Conflict resolved: local wins',
+            row.entity_type,
+            row.entity_id,
+          );
+          options.onConflict?.({
+            entityType: row.entity_type,
+            entityId: row.entity_id,
+            reason: 'local_newer',
+            localTimestamp: localEntry.timestamp,
+            remoteTimestamp: row.timestamp,
+          });
           continue;
         }
       }
@@ -345,9 +391,24 @@ export function createSyncEngine(options: SyncEngineOptions) {
       // Upsert: works for both create and update
       await table.put(entity);
       return true;
-    } catch {
-      // Individual entry failures should not abort the entire pull.
+    } catch (error) {
+      // Decryption errors should propagate — they indicate a password mismatch
+      // that affects ALL entries, not just this one
+      if (
+        error instanceof Error &&
+        error.message.startsWith('Decryption failed:')
+      ) {
+        throw error;
+      }
+      // Individual entry failures (parse, schema, db) should not abort the pull.
       // The entry will be retried on the next sync cycle.
+      logger.warn(
+        'sync',
+        'Failed to apply entry',
+        row.entity_type,
+        row.entity_id,
+        error,
+      );
       return false;
     }
   }

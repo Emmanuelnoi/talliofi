@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/hooks/query-keys';
 import { toast } from 'sonner';
 import { DEFAULT_CURRENCY, dollarsToCents } from '@/domain/money';
 import type {
@@ -184,7 +185,7 @@ export function useExpenseActions({
         }
 
         await queryClient.invalidateQueries({
-          queryKey: ['expense-attachments', expenseId],
+          queryKey: queryKeys.expenseAttachments(expenseId),
         });
 
         scheduleVaultSave();

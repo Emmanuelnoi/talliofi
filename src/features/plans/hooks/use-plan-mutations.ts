@@ -5,10 +5,7 @@ import { planRepo } from '@/data/repos/plan-repo';
 import { bucketRepo } from '@/data/repos/bucket-repo';
 import { dollarsToCents } from '@/domain/money';
 import { DEFAULT_CURRENCY } from '@/domain/money';
-import {
-  ACTIVE_PLAN_QUERY_KEY,
-  ALL_PLANS_QUERY_KEY,
-} from '@/hooks/use-active-plan';
+import { queryKeys } from '@/hooks/query-keys';
 import { useUIStore } from '@/stores/ui-store';
 import { getTemplateById } from '@/lib/budget-templates';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
@@ -33,8 +30,8 @@ export function usePlanMutations() {
   const { scheduleVaultSave } = useLocalEncryption();
 
   const invalidateQueries = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
-    await queryClient.invalidateQueries({ queryKey: ALL_PLANS_QUERY_KEY });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.activePlan });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.allPlans });
     incrementVersion();
   }, [queryClient, incrementVersion]);
 

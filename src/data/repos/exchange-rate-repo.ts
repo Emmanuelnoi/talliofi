@@ -5,6 +5,7 @@ import type {
   CurrencyCode,
 } from '@/domain/money';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { ReadRepository } from './types';
 
 const DEFAULT_ID = 'default';
 
@@ -40,4 +41,12 @@ export const exchangeRateRepo = {
     };
     return this.upsert(record);
   },
+} satisfies Omit<ReadRepository<ExchangeRateRecord>, 'getByPlanId'> & {
+  getByPlanId(planId: string): Promise<ExchangeRateRecord | null>;
+  upsert(record: ExchangeRateRecord): Promise<ExchangeRateRecord>;
+  upsertForPlan(
+    planId: string,
+    baseCurrency: CurrencyCode,
+    rates: ExchangeRates['rates'],
+  ): Promise<ExchangeRateRecord>;
 };

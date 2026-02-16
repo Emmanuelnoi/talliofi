@@ -1,7 +1,8 @@
-import { useCallback } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { Landmark } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useActivePlan } from '@/hooks/use-active-plan';
 import {
   useAssets,
@@ -20,10 +21,15 @@ import type { Asset, Liability } from '@/domain/plan';
 import { useNetWorthSummary } from '../hooks/use-net-worth';
 import { NetWorthSkeleton } from '../components/net-worth-skeleton';
 import { NetWorthSummaryCard } from '../components/net-worth-summary-card';
-import { NetWorthBreakdownChart } from '../components/net-worth-breakdown-chart';
-import { NetWorthTrendChart } from '../components/net-worth-trend-chart';
 import { AssetList } from '../components/asset-list';
 import { LiabilityList } from '../components/liability-list';
+
+const NetWorthBreakdownChart = lazy(
+  () => import('../components/net-worth-breakdown-chart'),
+);
+const NetWorthTrendChart = lazy(
+  () => import('../components/net-worth-trend-chart'),
+);
 
 export default function NetWorthPage() {
   const { data: plan, isLoading: planLoading } = useActivePlan();
@@ -133,10 +139,14 @@ export default function NetWorthPage() {
               totalLiabilities={summary.totalLiabilities}
               netWorth={summary.netWorth}
             />
-            <NetWorthBreakdownChart
-              assetsByCategory={summary.assetsByCategory}
-              liabilitiesByCategory={summary.liabilitiesByCategory}
-            />
+            <Suspense
+              fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}
+            >
+              <NetWorthBreakdownChart
+                assetsByCategory={summary.assetsByCategory}
+                liabilitiesByCategory={summary.liabilitiesByCategory}
+              />
+            </Suspense>
           </div>
         </>
       )}
@@ -160,7 +170,9 @@ export default function NetWorthPage() {
       </div>
 
       {/* Trend Chart */}
-      <NetWorthTrendChart snapshots={snapshots} />
+      <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
+        <NetWorthTrendChart snapshots={snapshots} />
+      </Suspense>
     </div>
   );
 }

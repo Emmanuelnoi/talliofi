@@ -14,6 +14,7 @@ import {
 interface ExpensesBulkDeleteDialogProps {
   open: boolean;
   selectedCount: number;
+  attachmentCount: number;
   isDeleting: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -22,6 +23,7 @@ interface ExpensesBulkDeleteDialogProps {
 export function ExpensesBulkDeleteDialog({
   open,
   selectedCount,
+  attachmentCount,
   isDeleting,
   onOpenChange,
   onConfirm,
@@ -31,9 +33,20 @@ export function ExpensesBulkDeleteDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete selected expenses?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete {selectedCount} expense
-            {selectedCount !== 1 && 's'}. This action cannot be undone.
+          <AlertDialogDescription asChild>
+            <div>
+              <p>
+                This will permanently delete {selectedCount} expense
+                {selectedCount !== 1 && 's'}. This action cannot be undone.
+              </p>
+              {attachmentCount > 0 && (
+                <p className="text-destructive mt-2 font-medium">
+                  {attachmentCount} attached file
+                  {attachmentCount !== 1 && 's'} will also be permanently
+                  deleted.
+                </p>
+              )}
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { Goal } from '@/domain/plan/types';
 import { GoalSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const goalRepo = {
   async getByPlanId(planId: string): Promise<Goal[]> {
@@ -72,4 +73,10 @@ export const goalRepo = {
     await db.goals.put(updated);
     return updated;
   },
+} satisfies CrudRepository<Goal> & {
+  getById(id: string): Promise<Goal | undefined>;
+  getActiveGoals(planId: string): Promise<Goal[]>;
+  getCompletedGoals(planId: string): Promise<Goal[]>;
+  deleteByPlanId(planId: string): Promise<void>;
+  markCompleted(id: string): Promise<Goal | undefined>;
 };

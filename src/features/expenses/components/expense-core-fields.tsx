@@ -71,6 +71,7 @@ export function ExpenseCoreFields({
         <Input
           id="expense-name"
           placeholder="e.g., Rent"
+          autoFocus
           aria-invalid={!!errors.name}
           aria-required
           aria-describedby={errors.name ? 'expense-name-error' : undefined}

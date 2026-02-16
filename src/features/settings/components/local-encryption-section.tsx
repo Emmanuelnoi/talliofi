@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Lock, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 import {
   Card,
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
+import { PasswordStrengthIndicator } from './password-strength-indicator';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -31,6 +33,24 @@ export function LocalEncryptionSection() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [unlockPassword, setUnlockPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [storageMB, setStorageMB] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setStorageMB(null); // eslint-disable-line react-hooks/set-state-in-effect -- reset on disable
+      return;
+    }
+    navigator.storage
+      ?.estimate()
+      .then((estimate) => {
+        if (estimate.usage) {
+          setStorageMB(Math.round(estimate.usage / (1024 * 1024)));
+        }
+      })
+      .catch(() => {
+        // Storage API not available
+      });
+  }, [enabled]);
 
   async function handleEnable() {
     setFormError(null);
@@ -51,7 +71,7 @@ export function LocalEncryptionSection() {
       setPassword('');
       setConfirmPassword('');
     } catch (err) {
-      console.error('[encryption]', err);
+      logger.error('encryption', err);
     }
   }
 
@@ -66,7 +86,7 @@ export function LocalEncryptionSection() {
       toast.success('Vault unlocked.');
       setUnlockPassword('');
     } catch (err) {
-      console.error('[encryption]', err);
+      logger.error('encryption', err);
     }
   }
 
@@ -75,7 +95,7 @@ export function LocalEncryptionSection() {
       await lock();
       toast.success('Vault locked.');
     } catch (err) {
-      console.error('[encryption]', err);
+      logger.error('encryption', err);
     }
   }
 
@@ -84,7 +104,7 @@ export function LocalEncryptionSection() {
       await disableEncryption();
       toast.success('Local encryption disabled.');
     } catch (err) {
-      console.error('[encryption]', err);
+      logger.error('encryption', err);
     }
   }
 
@@ -115,6 +135,7 @@ export function LocalEncryptionSection() {
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="new-password"
               />
+              <PasswordStrengthIndicator password={password} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="encryption-confirm">Confirm passphrase</Label>
@@ -167,6 +188,13 @@ export function LocalEncryptionSection() {
               <ShieldCheck className="size-4" />
               Vault unlocked. Data is encrypted when you lock the vault.
             </div>
+            {storageMB !== null && storageMB > 50 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                Your local data is using approximately {storageMB}MB. Large
+                vaults may take longer to encrypt/decrypt. Consider exporting
+                and clearing old data periodically.
+              </div>
+            )}
             {(error || formError) && (
               <p className="text-destructive text-sm">{formError ?? error}</p>
             )}

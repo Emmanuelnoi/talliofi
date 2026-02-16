@@ -36,128 +36,72 @@ export class TalliofiDatabase extends Dexie {
   constructor() {
     super('TalliofiDB');
 
-    this.version(1).stores({
+    // Build schema incrementally — each version only specifies what changed
+    let schema: Record<string, string> = {
       plans: 'id, name, createdAt, updatedAt',
       buckets: 'id, planId, sortOrder',
       taxComponents: 'id, planId, sortOrder',
       expenses: 'id, planId, bucketId, category, frequency, createdAt',
       snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
       changelog: 'id, planId, timestamp, entityType',
-    });
+    };
 
-    // Version 2: Add goals table
-    this.version(2).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
-      expenses: 'id, planId, bucketId, category, frequency, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
-    });
+    this.version(1).stores(schema);
 
-    // Version 3: Add assets, liabilities, and net worth snapshots tables
-    this.version(3).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
-      expenses: 'id, planId, bucketId, category, frequency, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
+    // V2: Add goals table
+    schema = { ...schema, goals: 'id, planId, type, isCompleted, createdAt' };
+    this.version(2).stores(schema);
+
+    // V3: Add assets, liabilities, and net worth snapshots tables
+    schema = {
+      ...schema,
       assets: 'id, planId, category, createdAt',
       liabilities: 'id, planId, category, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
       netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
-    });
+    };
+    this.version(3).stores(schema);
 
-    // Version 4: Add transactionDate index to expenses for date filtering/sorting
-    this.version(4).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
+    // V4: Add transactionDate index to expenses for date filtering/sorting
+    schema = {
+      ...schema,
       expenses:
         'id, planId, bucketId, category, frequency, transactionDate, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
-      assets: 'id, planId, category, createdAt',
-      liabilities: 'id, planId, category, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
-    });
+    };
+    this.version(4).stores(schema);
 
-    // Version 5: Add recurring templates table
-    this.version(5).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
-      expenses:
-        'id, planId, bucketId, category, frequency, transactionDate, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
-      assets: 'id, planId, category, createdAt',
-      liabilities: 'id, planId, category, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
+    // V5: Add recurring templates table
+    schema = {
+      ...schema,
       recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
-    });
+    };
+    this.version(5).stores(schema);
 
-    // Version 6: Add encrypted vault table for local encryption
-    this.version(6).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
-      expenses:
-        'id, planId, bucketId, category, frequency, transactionDate, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
-      assets: 'id, planId, category, createdAt',
-      liabilities: 'id, planId, category, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
-      recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
-      vault: 'id, updatedAt',
-    });
+    // V6: Add encrypted vault table for local encryption
+    schema = { ...schema, vault: 'id, updatedAt' };
+    this.version(6).stores(schema);
 
-    // Version 7: Add expense attachments table
-    this.version(7).stores({
-      plans: 'id, name, createdAt, updatedAt',
-      buckets: 'id, planId, sortOrder',
-      taxComponents: 'id, planId, sortOrder',
-      expenses:
-        'id, planId, bucketId, category, frequency, transactionDate, createdAt',
-      goals: 'id, planId, type, isCompleted, createdAt',
-      assets: 'id, planId, category, createdAt',
-      liabilities: 'id, planId, category, createdAt',
-      snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-      changelog: 'id, planId, timestamp, entityType',
-      recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
-      attachments: 'id, planId, expenseId, createdAt',
-      vault: 'id, updatedAt',
-    });
+    // V7: Add expense attachments table
+    schema = { ...schema, attachments: 'id, planId, expenseId, createdAt' };
+    this.version(7).stores(schema);
 
-    // Version 8: Add exchange rates table for multi-currency support
+    // V8: Add exchange rates table for multi-currency support
+    schema = {
+      ...schema,
+      exchangeRates: 'id, planId, baseCurrency, updatedAt',
+    };
     this.version(8)
-      .stores({
-        plans: 'id, name, createdAt, updatedAt',
-        buckets: 'id, planId, sortOrder',
-        taxComponents: 'id, planId, sortOrder',
-        expenses:
-          'id, planId, bucketId, category, frequency, transactionDate, createdAt',
-        goals: 'id, planId, type, isCompleted, createdAt',
-        assets: 'id, planId, category, createdAt',
-        liabilities: 'id, planId, category, createdAt',
-        snapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-        netWorthSnapshots: 'id, planId, yearMonth, [planId+yearMonth]',
-        changelog: 'id, planId, timestamp, entityType',
-        recurringTemplates: 'id, planId, isActive, dayOfMonth, createdAt',
-        attachments: 'id, planId, expenseId, createdAt',
-        exchangeRates: 'id, planId, baseCurrency, updatedAt',
-        vault: 'id, updatedAt',
-      })
+      .stores(schema)
       .upgrade(async () => {
         // Template for future data migrations.
       });
+
+    // V9: Add compound [planId+transactionDate] index to expenses for efficient date range queries
+    schema = {
+      ...schema,
+      expenses:
+        'id, planId, bucketId, category, frequency, transactionDate, [planId+transactionDate], createdAt',
+    };
+    this.version(9).stores(schema);
   }
 }
 

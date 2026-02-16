@@ -49,7 +49,9 @@ const STATUS_LABELS = {
   over: 'Over Budget',
 };
 
-export function BudgetAdherenceReport({ report }: BudgetAdherenceReportProps) {
+export default function BudgetAdherenceReport({
+  report,
+}: BudgetAdherenceReportProps) {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const currencyCode = useCurrencyStore((s) => s.currencyCode);

@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { ExpenseItem } from '@/domain/plan/types';
 import { ExpenseItemSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const expenseRepo = {
   async getByPlanId(planId: string): Promise<ExpenseItem[]> {
@@ -14,14 +15,8 @@ export const expenseRepo = {
     endDate: string,
   ): Promise<ExpenseItem[]> {
     return db.expenses
-      .where('planId')
-      .equals(planId)
-      .and(
-        (e) =>
-          e.transactionDate != null &&
-          e.transactionDate >= startDate &&
-          e.transactionDate <= endDate,
-      )
+      .where('[planId+transactionDate]')
+      .between([planId, startDate], [planId, endDate], true, true)
       .toArray();
   },
 
@@ -86,4 +81,14 @@ export const expenseRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.expenses.where('planId').equals(planId).delete();
   },
+} satisfies CrudRepository<ExpenseItem> & {
+  getByPlanIdAndDateRange(
+    planId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ExpenseItem[]>;
+  getByBucketId(bucketId: string): Promise<ExpenseItem[]>;
+  bulkUpdate(expenses: ExpenseItem[]): Promise<ExpenseItem[]>;
+  bulkDelete(ids: string[]): Promise<void>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

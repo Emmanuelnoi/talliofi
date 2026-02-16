@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { Liability } from '@/domain/plan/types';
 import { LiabilitySchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const liabilityRepo = {
   async getByPlanId(planId: string): Promise<Liability[]> {
@@ -49,4 +50,10 @@ export const liabilityRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.liabilities.where('planId').equals(planId).delete();
   },
+} satisfies CrudRepository<Liability> & {
+  getByCategory(
+    planId: string,
+    category: Liability['category'],
+  ): Promise<Liability[]>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

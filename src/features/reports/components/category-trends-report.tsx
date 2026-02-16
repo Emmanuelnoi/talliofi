@@ -44,7 +44,9 @@ interface CategoryTrendsReportProps {
 /** Maximum number of categories to show in the chart to avoid clutter */
 const MAX_CHART_CATEGORIES = 6;
 
-export function CategoryTrendsReport({ report }: CategoryTrendsReportProps) {
+export default function CategoryTrendsReport({
+  report,
+}: CategoryTrendsReportProps) {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const currencyCode = useCurrencyStore((s) => s.currencyCode);

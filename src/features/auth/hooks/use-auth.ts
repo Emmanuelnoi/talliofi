@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import { extractFactors, type MfaFactor } from '@/lib/mfa-utils';
 import { mapSupabaseAuthError } from '@/lib/auth-errors';
+import { logger } from '@/lib/logger';
 
 const SESSION_BOOTSTRAP_TIMEOUT_MS = 8_000;
 
@@ -42,11 +43,7 @@ export function useAuth(): AuthState {
     // Normally the .finally() below resolves first and clears this timer.
     fallbackTimeoutId = setTimeout(() => {
       if (!mounted) return;
-      if (import.meta.env.DEV) {
-        console.warn(
-          '[auth] Session bootstrap timeout reached; unblocking UI.',
-        );
-      }
+      logger.warn('auth', 'Session bootstrap timeout reached; unblocking UI.');
       // Only unblock if getSession() hasn't resolved yet
       fallbackTimeoutId = null;
       setIsLoading(false);
@@ -60,9 +57,7 @@ export function useAuth(): AuthState {
         setUser(data.session?.user ?? null);
       })
       .catch((error) => {
-        if (import.meta.env.DEV) {
-          console.warn('[auth] Failed to bootstrap session', error);
-        }
+        logger.warn('auth', 'Failed to bootstrap session', error);
       })
       .finally(() => {
         if (fallbackTimeoutId) {

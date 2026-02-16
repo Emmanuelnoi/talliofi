@@ -42,5 +42,5 @@ export async function completeOnboarding(page: Page): Promise<void> {
   await page.getByRole('button', { name: /create plan/i }).click();
 
   // Wait for dashboard
-  await page.waitForURL('**/dashboard');
+  await page.waitForURL(/\/$/);
 }

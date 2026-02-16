@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -47,7 +48,7 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('[ErrorBoundary] Uncaught error:', error, errorInfo);
+    logger.error('ErrorBoundary', 'Uncaught error:', error, errorInfo);
   }
 
   private handleRefresh = () => {

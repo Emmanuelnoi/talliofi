@@ -17,6 +17,8 @@ import { useSnapshots } from './use-snapshots';
 import { useLocalEncryption } from './use-local-encryption';
 import { convertExpensesToBase } from '@/lib/currency-conversion';
 import { DEFAULT_CURRENCY } from '@/domain/money';
+import { queryKeys } from './query-keys';
+import { logger } from '@/lib/logger';
 
 /**
  * Auto-creates a monthly snapshot on app load if one doesn't exist for
@@ -82,14 +84,12 @@ export function useAutoSnapshot(): { isCreating: boolean } {
         await snapshotRepo.upsert(snapshot);
 
         await queryClient.invalidateQueries({
-          queryKey: ['snapshots', currentPlan.id],
+          queryKey: queryKeys.snapshots(currentPlan.id),
         });
         scheduleVaultSave();
       } catch (error) {
         // Snapshot creation is best-effort; do not crash the app
-        if (import.meta.env.DEV) {
-          console.warn('[auto-snapshot] Failed to create snapshot', error);
-        }
+        logger.warn('auto-snapshot', 'Failed to create snapshot', error);
       } finally {
         setIsCreating(false);
       }

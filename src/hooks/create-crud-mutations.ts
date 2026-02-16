@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { changelogRepo } from '@/data/repos/changelog-repo';
 import type { ChangeLogEntry } from '@/domain/plan';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
-
-export const CHANGELOG_QUERY_KEY = ['changelog'] as const;
+import { queryKeys } from './query-keys';
+import { logger } from '@/lib/logger';
 
 interface EntityWithPlanId {
   id: string;
@@ -47,7 +47,7 @@ export function recordChange(
     payload: entityName ? JSON.stringify({ name: entityName }) : undefined,
   };
   changelogRepo.create(entry).catch((err: unknown) => {
-    console.error('[changelog] Failed to record change:', err);
+    logger.error('changelog', 'Failed to record change:', err);
   });
 }
 
@@ -67,7 +67,7 @@ export function recordBulkChange(
     payload: item.name ? JSON.stringify({ name: item.name }) : undefined,
   }));
   changelogRepo.bulkCreate(entries).catch((err: unknown) => {
-    console.error('[changelog] Failed to record bulk change:', err);
+    logger.error('changelog', 'Failed to record bulk change:', err);
   });
 }
 
@@ -97,7 +97,7 @@ export function useCreateEntity<T extends EntityWithPlanId>(
       void queryClient.invalidateQueries({
         queryKey: config.queryKey(variables.planId),
       });
-      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.changelog });
       if (!error) {
         scheduleVaultSave();
         recordChange(
@@ -140,7 +140,7 @@ export function useUpdateEntity<T extends EntityWithPlanId>(
       void queryClient.invalidateQueries({
         queryKey: config.queryKey(variables.planId),
       });
-      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.changelog });
       if (!error) {
         scheduleVaultSave();
         recordChange(
@@ -184,7 +184,7 @@ export function useDeleteEntity<T extends EntityWithPlanId>(
       void queryClient.invalidateQueries({
         queryKey: config.queryKey(variables.planId),
       });
-      void queryClient.invalidateQueries({ queryKey: CHANGELOG_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.changelog });
       if (!error) {
         scheduleVaultSave();
         recordChange(

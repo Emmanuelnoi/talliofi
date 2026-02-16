@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 function getRawAuthMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message.trim();
@@ -21,8 +23,8 @@ export function mapSupabaseAuthError(
   const raw = getRawAuthMessage(error);
   const normalized = raw.toLowerCase();
 
-  if (import.meta.env.DEV && raw) {
-    console.warn('[auth] provider error:', raw);
+  if (raw) {
+    logger.warn('auth', 'provider error:', raw);
   }
 
   if (

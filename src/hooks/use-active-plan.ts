@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { getPlanRepo } from '@/data/repos/repo-router';
 import { useUIStore } from '@/stores/ui-store';
+import { queryKeys } from './query-keys';
+import { logger } from '@/lib/logger';
 
-export const ACTIVE_PLAN_QUERY_KEY = ['active-plan'] as const;
-export const ALL_PLANS_QUERY_KEY = ['all-plans'] as const;
 const ACTIVE_PLAN_LOAD_TIMEOUT_MS = 8_000;
 
 /**
@@ -12,7 +12,7 @@ const ACTIVE_PLAN_LOAD_TIMEOUT_MS = 8_000;
  */
 export function useActivePlan() {
   return useQuery({
-    queryKey: ACTIVE_PLAN_QUERY_KEY,
+    queryKey: queryKeys.activePlan,
     queryFn: async () => {
       const planPromise = getPlanRepo()
         .getActive()
@@ -30,9 +30,10 @@ export function useActivePlan() {
       if (timeoutId !== null) {
         clearTimeout(timeoutId);
       }
-      if (timedOut && import.meta.env.DEV) {
-        console.warn(
-          '[useActivePlan] Plan lookup timed out. Falling back to onboarding.',
+      if (timedOut) {
+        logger.warn(
+          'useActivePlan',
+          'Plan lookup timed out. Falling back to onboarding.',
         );
       }
       return plan;
@@ -47,7 +48,7 @@ export function useAllPlans() {
   const planListVersion = useUIStore((s) => s.planListVersion);
 
   return useQuery({
-    queryKey: [...ALL_PLANS_QUERY_KEY, planListVersion],
+    queryKey: [...queryKeys.allPlans, planListVersion],
     queryFn: async () => {
       return getPlanRepo().getAll();
     },
@@ -67,7 +68,7 @@ export function useSwitchPlan() {
       getPlanRepo().setActivePlanId(planId);
       // Invalidate all plan-related queries to refresh data
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.activePlan }),
         queryClient.invalidateQueries({ queryKey: ['buckets'] }),
         queryClient.invalidateQueries({ queryKey: ['expenses'] }),
         queryClient.invalidateQueries({ queryKey: ['tax-components'] }),
@@ -76,7 +77,9 @@ export function useSwitchPlan() {
         queryClient.invalidateQueries({ queryKey: ['liabilities'] }),
         queryClient.invalidateQueries({ queryKey: ['snapshots'] }),
         queryClient.invalidateQueries({ queryKey: ['net-worth-snapshots'] }),
-        queryClient.invalidateQueries({ queryKey: ['recurring-templates'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['recurring-templates'],
+        }),
         queryClient.invalidateQueries({
           queryKey: ['recurring-templates-active'],
         }),

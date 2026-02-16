@@ -3,11 +3,8 @@ import { Database, RotateCcw, Trash2, WandSparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  useActivePlan,
-  useAllPlans,
-  ACTIVE_PLAN_QUERY_KEY,
-} from '@/hooks/use-active-plan';
+import { useActivePlan, useAllPlans } from '@/hooks/use-active-plan';
+import { queryKeys } from '@/hooks/query-keys';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { planRepo } from '@/data/repos/plan-repo';
 import {
@@ -62,14 +59,14 @@ export function DemoToolsSection() {
 
   async function refreshAllQueries() {
     await queryClient.invalidateQueries();
-    await queryClient.invalidateQueries({ queryKey: ACTIVE_PLAN_QUERY_KEY });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.activePlan });
   }
 
   async function handleResetDemoData() {
     setIsResetting(true);
     try {
       const plan = await ensureDemoPlan({ preset });
-      queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, plan);
+      queryClient.setQueryData(queryKeys.activePlan, plan);
       await refreshAllQueries();
       scheduleVaultSave();
       toast.success(`Demo data reset with "${preset}" preset.`);

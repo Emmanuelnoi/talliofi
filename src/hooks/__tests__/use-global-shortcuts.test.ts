@@ -57,14 +57,14 @@ describe('useGlobalShortcuts', () => {
     expect(result.current.isShortcutsDialogOpen).toBe(false);
   });
 
-  it('navigates to /dashboard on Meta+D', () => {
+  it('navigates to / on Meta+D', () => {
     renderHook(() => useGlobalShortcuts(), { wrapper });
 
     act(() => {
       fireKey('d', { metaKey: true });
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 
   it('navigates to /expenses on Meta+E', () => {

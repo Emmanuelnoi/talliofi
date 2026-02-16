@@ -44,7 +44,7 @@ const CHART_CONFIG: ChartConfig = {
   },
 };
 
-export function ExpenseTrendChart({
+export default function ExpenseTrendChart({
   expensesByCategory,
 }: ExpenseTrendChartProps) {
   const currencyCode = useCurrencyStore((s) => s.currencyCode);

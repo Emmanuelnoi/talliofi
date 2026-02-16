@@ -34,5 +34,45 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    files: ['src/domain/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*'],
+              message: 'Domain layer must not import from features.',
+            },
+            {
+              group: ['@/data/*'],
+              message: 'Domain layer must not import from data layer.',
+            },
+            {
+              group: ['@/hooks/*'],
+              message: 'Domain layer must not import from hooks.',
+            },
+            {
+              group: ['@/stores/*'],
+              message: 'Domain layer must not import from stores.',
+            },
+            {
+              group: ['@/components/*'],
+              message: 'Domain layer must not import from components.',
+            },
+            {
+              group: ['@/app/*'],
+              message: 'Domain layer must not import from app layer.',
+            },
+            {
+              group: ['react', 'react-dom'],
+              message: 'Domain layer must not depend on React.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   eslintConfigPrettier,
 ]);

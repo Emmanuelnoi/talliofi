@@ -78,7 +78,7 @@ function useElementSize<T extends HTMLElement>() {
   return { ref, size };
 }
 
-export function ExpenseDonutChart({
+export default function ExpenseDonutChart({
   data,
   title = 'Yearly Expense',
   subtitle = 'Breakdown by Category',

@@ -37,7 +37,7 @@ const chartConfig = {
 /** Formats a yearMonth string (e.g. "2026-01") into a short label. */
 const formatShortMonth = formatMonthOnly;
 
-export function TrendChart({ snapshots }: TrendChartProps) {
+export default function TrendChart({ snapshots }: TrendChartProps) {
   const navigate = useNavigate();
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const chartData = useMemo(() => {

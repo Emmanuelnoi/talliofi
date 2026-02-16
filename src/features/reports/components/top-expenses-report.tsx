@@ -34,7 +34,7 @@ interface TopExpensesReportProps {
   report: ReportData | null;
 }
 
-export function TopExpensesReport({ report }: TopExpensesReportProps) {
+export default function TopExpensesReport({ report }: TopExpensesReportProps) {
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
 

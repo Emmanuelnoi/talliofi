@@ -1,0 +1,19 @@
+#app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+  font-family: system-ui, sans-serif;
+  color: #888;
+  transition: opacity 0.15s;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#app-loading svg {
+  animation: spin 1s linear infinite;
+}

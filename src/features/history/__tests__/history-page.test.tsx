@@ -106,8 +106,13 @@ describe('HistoryPage', () => {
     expect(screen.getByText('January 2026')).toBeInTheDocument();
     expect(screen.getByText('February 2026')).toBeInTheDocument();
 
-    // Trend chart title should appear
-    expect(screen.getByText('Income vs. Expenses')).toBeInTheDocument();
+    // Trend chart title should appear (lazy-loaded via Suspense)
+    await waitFor(
+      () => {
+        expect(screen.getByText('Income vs. Expenses')).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
 
     // Monthly snapshots section header
     expect(screen.getByText('Monthly Snapshots')).toBeInTheDocument();

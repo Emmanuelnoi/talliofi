@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { ExpenseDonutChart } from '../ExpenseDonutChart';
+import ExpenseDonutChart from '../ExpenseDonutChart';
 import { cents, formatMoney, DEFAULT_CURRENCY } from '@/domain/money';
 import { useCurrencyStore } from '@/stores/currency-store';
 

@@ -35,9 +35,9 @@ export {
 
 // Components
 export { DateRangeSelector } from './components/date-range-selector';
-export { SpendingByCategoryReport } from './components/spending-by-category-report';
-export { IncomeVsExpensesReport } from './components/income-vs-expenses-report';
-export { BudgetAdherenceReport } from './components/budget-adherence-report';
-export { CategoryTrendsReport } from './components/category-trends-report';
-export { TopExpensesReport } from './components/top-expenses-report';
+export { default as SpendingByCategoryReport } from './components/spending-by-category-report';
+export { default as IncomeVsExpensesReport } from './components/income-vs-expenses-report';
+export { default as BudgetAdherenceReport } from './components/budget-adherence-report';
+export { default as CategoryTrendsReport } from './components/category-trends-report';
+export { default as TopExpensesReport } from './components/top-expenses-report';
 export { ReportsSkeleton } from './components/reports-skeleton';

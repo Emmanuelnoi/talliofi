@@ -24,7 +24,8 @@ test.describe('Responsive layout (mobile)', () => {
     await completeOnboarding(page);
 
     // Should be on dashboard
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/$/);
+
     // Check page title (h1) specifically
     await expect(
       page.getByRole('heading', { level: 1, name: 'Dashboard' }),
@@ -78,7 +79,7 @@ test.describe('Responsive layout (mobile)', () => {
 
     // Navigate back to Dashboard
     await mobileNav.getByText('Dashboard').click();
-    await page.waitForURL('**/dashboard');
+    await page.waitForURL(/\/$/);
     await expect(
       page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible();

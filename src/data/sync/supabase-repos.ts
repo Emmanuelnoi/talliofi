@@ -23,7 +23,15 @@ import {
 
 // --- Generic helpers ---
 
-function toSnake(obj: object): Record<string, unknown> {
+/**
+ * Converts top-level object keys from camelCase to snake_case.
+ *
+ * Intentionally shallow: nested objects (e.g., ExpenseItem.splits,
+ * MonthlySnapshot.bucketSummaries, NetWorthSnapshot.assetBreakdown/
+ * liabilityBreakdown) are stored as JSONB in Supabase, so their internal
+ * camelCase keys are preserved as-is through the round-trip.
+ */
+export function toSnake(obj: object): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = key.replace(/[A-Z]/g, (ch) => `_${ch.toLowerCase()}`);
@@ -32,7 +40,12 @@ function toSnake(obj: object): Record<string, unknown> {
   return result;
 }
 
-function toCamel(obj: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Converts top-level object keys from snake_case to camelCase.
+ *
+ * Intentionally shallow — see toSnake JSDoc for rationale.
+ */
+export function toCamel(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     const camelKey = key.replace(/_([a-z])/g, (_, ch: string) =>

@@ -7,7 +7,7 @@ import type {
 } from '@/data/repos/changelog-repo';
 import type { ChangeLogEntry } from '@/domain/plan';
 import { useActivePlan } from '@/hooks/use-active-plan';
-import { CHANGELOG_QUERY_KEY } from '@/hooks/use-plan-mutations';
+import { queryKeys } from '@/hooks/query-keys';
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -43,7 +43,7 @@ export function useChangelog(
 
   const queryKey = useMemo(() => {
     return [
-      ...CHANGELOG_QUERY_KEY,
+      ...queryKeys.changelog,
       planId,
       pageSize,
       filter?.entityType ?? 'all',

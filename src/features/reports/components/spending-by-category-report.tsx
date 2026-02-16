@@ -55,7 +55,7 @@ const CATEGORY_COLORS: string[] = [
   '#E67E22',
 ];
 
-export function SpendingByCategoryReport({
+export default function SpendingByCategoryReport({
   report,
 }: SpendingByCategoryReportProps) {
   const navigate = useNavigate();

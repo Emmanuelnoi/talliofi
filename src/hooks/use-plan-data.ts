@@ -12,10 +12,11 @@ import {
   getExchangeRateRepo,
 } from '@/data/repos/repo-router';
 import { PLAN_DATA_STALE_TIME_MS } from '@/lib/constants';
+import { queryKeys } from './query-keys';
 
 export function useBuckets(planId: string | undefined) {
   return useQuery({
-    queryKey: ['buckets', planId],
+    queryKey: queryKeys.buckets(planId!),
     queryFn: () => getBucketRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -24,7 +25,7 @@ export function useBuckets(planId: string | undefined) {
 
 export function useExpenses(planId: string | undefined) {
   return useQuery({
-    queryKey: ['expenses', planId],
+    queryKey: queryKeys.expenses(planId!),
     queryFn: () => getExpenseRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -37,7 +38,7 @@ export function useExpensesByDateRange(
   endDate: string,
 ) {
   return useQuery({
-    queryKey: ['expenses', planId, 'range', startDate, endDate],
+    queryKey: queryKeys.expensesRange(planId!, startDate, endDate),
     queryFn: () =>
       getExpenseRepo().getByPlanIdAndDateRange(planId!, startDate, endDate),
     enabled: !!planId && !!startDate && !!endDate,
@@ -47,7 +48,7 @@ export function useExpensesByDateRange(
 
 export function useTaxComponents(planId: string | undefined) {
   return useQuery({
-    queryKey: ['tax-components', planId],
+    queryKey: queryKeys.taxComponents(planId!),
     queryFn: () => getTaxComponentRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -56,7 +57,7 @@ export function useTaxComponents(planId: string | undefined) {
 
 export function useGoals(planId: string | undefined) {
   return useQuery({
-    queryKey: ['goals', planId],
+    queryKey: queryKeys.goals(planId!),
     queryFn: () => getGoalRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -65,7 +66,7 @@ export function useGoals(planId: string | undefined) {
 
 export function useAssets(planId: string | undefined) {
   return useQuery({
-    queryKey: ['assets', planId],
+    queryKey: queryKeys.assets(planId!),
     queryFn: () => getAssetRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -74,7 +75,7 @@ export function useAssets(planId: string | undefined) {
 
 export function useLiabilities(planId: string | undefined) {
   return useQuery({
-    queryKey: ['liabilities', planId],
+    queryKey: queryKeys.liabilities(planId!),
     queryFn: () => getLiabilityRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -83,7 +84,7 @@ export function useLiabilities(planId: string | undefined) {
 
 export function useNetWorthSnapshots(planId: string | undefined) {
   return useQuery({
-    queryKey: ['net-worth-snapshots', planId],
+    queryKey: queryKeys.netWorthSnapshots(planId!),
     queryFn: () => getNetWorthSnapshotRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -92,7 +93,7 @@ export function useNetWorthSnapshots(planId: string | undefined) {
 
 export function useRecurringTemplates(planId: string | undefined) {
   return useQuery({
-    queryKey: ['recurring-templates', planId],
+    queryKey: queryKeys.recurringTemplates(planId!),
     queryFn: () => getRecurringTemplateRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -101,7 +102,7 @@ export function useRecurringTemplates(planId: string | undefined) {
 
 export function useExpenseAttachments(expenseId: string | undefined) {
   return useQuery({
-    queryKey: ['expense-attachments', expenseId],
+    queryKey: queryKeys.expenseAttachments(expenseId!),
     queryFn: () => getAttachmentRepo().getByExpenseId(expenseId!),
     enabled: !!expenseId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -110,7 +111,7 @@ export function useExpenseAttachments(expenseId: string | undefined) {
 
 export function useExchangeRates(planId: string | undefined) {
   return useQuery({
-    queryKey: ['exchange-rates', planId],
+    queryKey: queryKeys.exchangeRates(planId!),
     queryFn: () => getExchangeRateRepo().getByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,
@@ -119,7 +120,7 @@ export function useExchangeRates(planId: string | undefined) {
 
 export function useActiveRecurringTemplates(planId: string | undefined) {
   return useQuery({
-    queryKey: ['recurring-templates-active', planId],
+    queryKey: queryKeys.recurringTemplatesActive(planId!),
     queryFn: () => getRecurringTemplateRepo().getActiveByPlanId(planId!),
     enabled: !!planId,
     staleTime: PLAN_DATA_STALE_TIME_MS,

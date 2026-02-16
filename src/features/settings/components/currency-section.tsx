@@ -26,6 +26,7 @@ import { useExchangeRates } from '@/hooks/use-plan-data';
 import { useUpdatePlan } from '@/hooks/use-plan-mutations';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { exchangeRateRepo } from '@/data/repos/exchange-rate-repo';
+import { queryKeys } from '@/hooks/query-keys';
 import {
   DEFAULT_CURRENCY,
   SUPPORTED_CURRENCIES,
@@ -95,7 +96,7 @@ export function CurrencySection() {
         await updatePlan.mutateAsync({ ...plan, currencyCode: next });
         await exchangeRateRepo.upsertForPlan(plan.id, next, {});
         await queryClient.invalidateQueries({
-          queryKey: ['exchange-rates', plan.id],
+          queryKey: queryKeys.exchangeRates(plan.id),
         });
         scheduleVaultSave();
         toast.success(`Base currency updated to ${next}.`);
@@ -144,7 +145,7 @@ export function CurrencySection() {
     try {
       await exchangeRateRepo.upsertForPlan(plan.id, baseCurrency, cleanedRates);
       await queryClient.invalidateQueries({
-        queryKey: ['exchange-rates', plan.id],
+        queryKey: queryKeys.exchangeRates(plan.id),
       });
       scheduleVaultSave();
       toast.success('Exchange rates saved.');

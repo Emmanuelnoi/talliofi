@@ -1,6 +1,7 @@
 import type { Cents } from './money';
 import { cents } from './money';
 import type { CurrencyCode, ExchangeRates } from './currency';
+import { logger } from '@/lib/logger';
 
 function resolveRate(
   from: CurrencyCode,
@@ -42,11 +43,10 @@ export function convertCents(
   if (from === to) return amount;
   const rate = resolveRate(from, to, rates);
   if (!rate) {
-    if (import.meta.env.DEV) {
-      console.warn(
-        `[convertCents] Missing exchange rate for ${from} → ${to}; returning original amount`,
-      );
-    }
+    logger.warn(
+      'convertCents',
+      `Missing exchange rate for ${from} → ${to}; returning original amount`,
+    );
     return amount;
   }
   return cents(Math.round((amount as number) * rate));

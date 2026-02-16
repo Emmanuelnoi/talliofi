@@ -52,7 +52,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function IncomeVsExpensesReport({
+export default function IncomeVsExpensesReport({
   report,
 }: IncomeVsExpensesReportProps) {
   const navigate = useNavigate();

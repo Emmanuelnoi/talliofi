@@ -5,7 +5,7 @@ test.describe('Demo mode', () => {
     page,
   }) => {
     await page.goto('/demo?preset=heavy');
-    await page.waitForURL('**/dashboard');
+    await page.waitForURL(/\/$/);
 
     await expect(
       page.getByRole('heading', { level: 1, name: 'Dashboard' }),

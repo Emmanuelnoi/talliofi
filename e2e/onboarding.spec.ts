@@ -127,8 +127,9 @@ test.describe('Onboarding wizard', () => {
 
     await page.getByRole('button', { name: /create plan/i }).click();
 
-    await page.waitForURL('**/dashboard');
-    await expect(page).toHaveURL(/\/dashboard/);
+    await page.waitForURL(/\/$/);
+    await expect(page).toHaveURL(/\/$/);
+
     await expect(
       page.getByRole('heading', { level: 1, name: 'Dashboard' }),
     ).toBeVisible({ timeout: 15000 });

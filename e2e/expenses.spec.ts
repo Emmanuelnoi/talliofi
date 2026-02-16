@@ -154,7 +154,7 @@ test.describe('Expenses page', () => {
 
     // Navigate to dashboard
     await page.getByRole('link', { name: 'Dashboard' }).click();
-    await page.waitForURL('**/dashboard');
+    await page.waitForURL(/\/$/);
 
     // Dashboard should reflect the expense data
     await expect(

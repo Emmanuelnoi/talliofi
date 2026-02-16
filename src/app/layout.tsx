@@ -56,7 +56,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
   { label: 'Income', to: '/income', icon: DollarSign },
   { label: 'Taxes', to: '/taxes', icon: Receipt },
   { label: 'Buckets', to: '/buckets', icon: PieChart },
@@ -71,7 +71,7 @@ const NAV_ITEMS: readonly NavItem[] = [
 
 /** Bottom tab items for mobile -- 5 most important */
 const BOTTOM_NAV_ITEMS: readonly NavItem[] = [
-  { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
   { label: 'Expenses', to: '/expenses', icon: CreditCard },
   { label: 'Goals', to: '/goals', icon: Target },
   { label: 'History', to: '/history', icon: Clock },

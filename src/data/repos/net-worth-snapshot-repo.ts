@@ -1,6 +1,7 @@
 import { db } from '../db';
 import type { NetWorthSnapshot } from '@/domain/plan/types';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { ReadRepository } from './types';
 
 export const netWorthSnapshotRepo = {
   async getByPlanId(planId: string): Promise<NetWorthSnapshot[]> {
@@ -31,4 +32,11 @@ export const netWorthSnapshotRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.netWorthSnapshots.where('planId').equals(planId).delete();
   },
+} satisfies ReadRepository<NetWorthSnapshot> & {
+  getByPlanAndMonth(
+    planId: string,
+    yearMonth: string,
+  ): Promise<NetWorthSnapshot | undefined>;
+  upsert(snapshot: NetWorthSnapshot): Promise<void>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

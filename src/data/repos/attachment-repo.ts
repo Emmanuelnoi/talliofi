@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { ExpenseAttachment } from '@/domain/plan/types';
 import { ExpenseAttachmentSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { ReadRepository } from './types';
 
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -78,6 +79,21 @@ function matchesMagicSignature(mimeType: string, bytes: Uint8Array): boolean {
   return false;
 }
 
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\x00-\x1f\x7f]/g;
+const PATH_SEPARATORS = /[/\\]/g;
+const CONSECUTIVE_DOTS = /\.{2,}/g;
+const MAX_FILENAME_LENGTH = 255;
+
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(PATH_SEPARATORS, '_')
+    .replace(CONTROL_CHARS, '')
+    .replace(CONSECUTIVE_DOTS, '.')
+    .trim()
+    .slice(0, MAX_FILENAME_LENGTH);
+}
+
 async function validateAttachmentConstraints(
   attachment: ExpenseAttachment,
 ): Promise<void> {
@@ -118,8 +134,12 @@ export const attachmentRepo = {
   },
 
   async create(attachment: ExpenseAttachment): Promise<ExpenseAttachment> {
+    const sanitized = {
+      ...attachment,
+      fileName: sanitizeFilename(attachment.fileName),
+    };
     const validated = ExpenseAttachmentSchema.parse(
-      attachment,
+      sanitized,
     ) as ExpenseAttachment;
     await validateAttachmentConstraints(validated);
     try {
@@ -134,9 +154,13 @@ export const attachmentRepo = {
     attachments: ExpenseAttachment[],
   ): Promise<ExpenseAttachment[]> {
     if (attachments.length === 0) return [];
-    const validated = attachments.map((attachment) =>
-      ExpenseAttachmentSchema.parse(attachment),
-    ) as ExpenseAttachment[];
+    const validated = attachments.map((attachment) => {
+      const sanitized = {
+        ...attachment,
+        fileName: sanitizeFilename(attachment.fileName),
+      };
+      return ExpenseAttachmentSchema.parse(sanitized);
+    }) as ExpenseAttachment[];
     for (const attachment of validated) {
       await validateAttachmentConstraints(attachment);
     }
@@ -156,6 +180,11 @@ export const attachmentRepo = {
     await db.attachments.where('expenseId').equals(expenseId).delete();
   },
 
+  async countByExpenseIds(expenseIds: string[]): Promise<number> {
+    if (expenseIds.length === 0) return 0;
+    return db.attachments.where('expenseId').anyOf(expenseIds).count();
+  },
+
   async deleteByExpenseIds(expenseIds: string[]): Promise<void> {
     if (expenseIds.length === 0) return;
     await db.attachments.where('expenseId').anyOf(expenseIds).delete();
@@ -164,4 +193,13 @@ export const attachmentRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.attachments.where('planId').equals(planId).delete();
   },
+} satisfies Omit<ReadRepository<ExpenseAttachment>, 'getByPlanId'> & {
+  getByExpenseId(expenseId: string): Promise<ExpenseAttachment[]>;
+  create(attachment: ExpenseAttachment): Promise<ExpenseAttachment>;
+  bulkCreate(attachments: ExpenseAttachment[]): Promise<ExpenseAttachment[]>;
+  delete(id: string): Promise<void>;
+  deleteByExpenseId(expenseId: string): Promise<void>;
+  countByExpenseIds(expenseIds: string[]): Promise<number>;
+  deleteByExpenseIds(expenseIds: string[]): Promise<void>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

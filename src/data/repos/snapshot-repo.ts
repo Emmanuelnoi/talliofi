@@ -1,6 +1,7 @@
 import { db } from '../db';
 import type { MonthlySnapshot } from '@/domain/plan/types';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { ReadRepository } from './types';
 
 export const snapshotRepo = {
   async getByPlanId(planId: string): Promise<MonthlySnapshot[]> {
@@ -28,4 +29,11 @@ export const snapshotRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.snapshots.where('planId').equals(planId).delete();
   },
+} satisfies ReadRepository<MonthlySnapshot> & {
+  getByPlanAndMonth(
+    planId: string,
+    yearMonth: string,
+  ): Promise<MonthlySnapshot | undefined>;
+  upsert(snapshot: MonthlySnapshot): Promise<void>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

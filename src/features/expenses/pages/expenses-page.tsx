@@ -14,7 +14,6 @@ import {
 import { PageHeader } from '@/components/layout/page-header';
 import { DEFAULT_CURRENCY, addMoney, cents, formatMoney } from '@/domain/money';
 import { normalizeToMonthly } from '@/domain/plan';
-import type { ExpenseItem } from '@/domain/plan';
 import { useActivePlan } from '@/hooks/use-active-plan';
 import {
   useBuckets,
@@ -33,6 +32,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { convertExpenseToBase } from '@/lib/currency-conversion';
 import { TemplatesSection } from '@/features/recurring-templates';
+import { attachmentRepo } from '@/data/repos/attachment-repo';
 import { useCurrencyStore } from '@/stores/currency-store';
 import { DEFAULT_BULK_EDIT_VALUES, SORT_OPTIONS } from '../constants';
 import { ExpensesBulkEditDialog } from '../components/expenses-bulk-edit-dialog';
@@ -45,9 +45,9 @@ import { ExpensesFilterPanel } from '../components/expenses-filter-panel';
 import { ExpensesList } from '../components/expenses-list';
 import { ExpensesSelectionToolbar } from '../components/expenses-selection-toolbar';
 import { useExpenseActions } from '../hooks/use-expense-actions';
+import { useExpenseDialogState } from '../hooks/use-expense-dialog-state';
 import { useExpenseFilters } from '../hooks/use-expense-filters';
 import { useExpenseSelection } from '../hooks/use-expense-selection';
-import type { BulkEditValues } from '../types';
 
 export default function ExpensesPage() {
   const queryClient = useQueryClient();
@@ -70,19 +70,24 @@ export default function ExpensesPage() {
   const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(
-    null,
-  );
-  const [deletingExpense, setDeletingExpense] = useState<ExpenseItem | null>(
-    null,
-  );
-  const [activeTab, setActiveTab] = useState<string>('expenses');
-  const [bulkEditOpen, setBulkEditOpen] = useState(false);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [bulkEditValues, setBulkEditValues] = useState<BulkEditValues>(
-    DEFAULT_BULK_EDIT_VALUES,
-  );
+  const {
+    sheetOpen,
+    setSheetOpen,
+    editingExpense,
+    setEditingExpense,
+    deletingExpense,
+    setDeletingExpense,
+    activeTab,
+    setActiveTab,
+    bulkEditOpen,
+    setBulkEditOpen,
+    bulkDeleteOpen,
+    setBulkDeleteOpen,
+    bulkEditValues,
+    setBulkEditValues,
+    openAdd,
+    openEdit,
+  } = useExpenseDialogState();
 
   useEffect(() => {
     const handleFocusSearch = () => {
@@ -129,6 +134,24 @@ export default function ExpensesPage() {
     handleClearSelection,
   } = useExpenseSelection({ expenses, filteredExpenses });
 
+  const [bulkDeleteAttachmentCount, setBulkDeleteAttachmentCount] = useState(0);
+  useEffect(() => {
+    if (!bulkDeleteOpen) {
+      setBulkDeleteAttachmentCount(0); // eslint-disable-line react-hooks/set-state-in-effect -- reset on close
+      return;
+    }
+    const ids = Array.from(validSelectedIds);
+    if (ids.length === 0) return;
+
+    let cancelled = false;
+    attachmentRepo.countByExpenseIds(ids).then((count) => {
+      if (!cancelled) setBulkDeleteAttachmentCount(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [bulkDeleteOpen, validSelectedIds]);
+
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
@@ -136,7 +159,7 @@ export default function ExpensesPage() {
         setSelectedIds(new Set());
       }
     },
-    [setSelectedIds],
+    [setActiveTab, setSelectedIds],
   );
 
   const {
@@ -170,16 +193,6 @@ export default function ExpensesPage() {
     bulkUpdateExpenses,
     bulkDeleteExpenses,
   });
-
-  const handleOpenAdd = useCallback(() => {
-    setEditingExpense(null);
-    setSheetOpen(true);
-  }, []);
-
-  const handleOpenEdit = useCallback((expense: ExpenseItem) => {
-    setEditingExpense(expense);
-    setSheetOpen(true);
-  }, []);
 
   const totalMonthly = useMemo(() => {
     const baseCurrency = plan?.currencyCode ?? DEFAULT_CURRENCY;
@@ -226,7 +239,7 @@ export default function ExpensesPage() {
         eyebrow="Transactions"
         action={
           activeTab === 'expenses' ? (
-            <Button size="sm" onClick={handleOpenAdd}>
+            <Button size="sm" onClick={openAdd}>
               <Plus className="size-4" />
               Add Expense
             </Button>
@@ -317,8 +330,8 @@ export default function ExpensesPage() {
             searchQuery={debouncedSearch}
             activeFilterCount={activeFilterCount}
             selectedIds={validSelectedIds}
-            onOpenAdd={handleOpenAdd}
-            onOpenEdit={handleOpenEdit}
+            onOpenAdd={openAdd}
+            onOpenEdit={openEdit}
             onDelete={setDeletingExpense}
             onSaveAsTemplate={handleSaveAsTemplate}
             onToggleSelect={handleToggleSelect}
@@ -374,6 +387,7 @@ export default function ExpensesPage() {
       <ExpensesBulkDeleteDialog
         open={bulkDeleteOpen}
         selectedCount={selectedCount}
+        attachmentCount={bulkDeleteAttachmentCount}
         isDeleting={bulkDeleteExpenses.isPending}
         onOpenChange={setBulkDeleteOpen}
         onConfirm={handleBulkDelete}

@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { ACTIVE_PLAN_QUERY_KEY } from '@/hooks/use-active-plan';
+import { queryKeys } from '@/hooks/query-keys';
 import { ensureDemoPlan, normalizeDemoPreset } from '../lib/ensure-demo-plan';
 
 export default function DemoEntryPage() {
@@ -24,11 +24,11 @@ export default function DemoEntryPage() {
       try {
         const plan = await ensureDemoPlan({ preset });
         if (isCancelled) return;
-        queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, plan);
+        queryClient.setQueryData(queryKeys.activePlan, plan);
         await queryClient.invalidateQueries({
-          queryKey: ACTIVE_PLAN_QUERY_KEY,
+          queryKey: queryKeys.activePlan,
         });
-        navigate('/dashboard', { replace: true });
+        navigate('/', { replace: true });
       } catch (err) {
         if (isCancelled) return;
         const message =

@@ -3,14 +3,14 @@ import { db } from '../db';
 import type { Plan } from '@/domain/plan/types';
 import { PlanSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
+import { logger } from '@/lib/logger';
 
 /** Key for persisting active plan ID in localStorage */
 const ACTIVE_PLAN_KEY = 'talliofi-active-plan-id';
 
 function logLocalStorageError(action: string, error: unknown): void {
-  if (import.meta.env.DEV) {
-    console.warn(`[planRepo] Failed to ${action} localStorage`, error);
-  }
+  logger.warn('planRepo', `Failed to ${action} localStorage`, error);
 }
 
 function safeGetLocalStorage(key: string): string | null {
@@ -295,4 +295,10 @@ export const planRepo = {
 
     return newPlan;
   },
+} satisfies Omit<CrudRepository<Plan>, 'getByPlanId'> & {
+  getActive(): Promise<Plan | undefined>;
+  setActivePlanId(planId: string): void;
+  getAll(): Promise<Plan[]>;
+  getById(id: string): Promise<Plan | undefined>;
+  duplicate(planId: string, newName: string): Promise<Plan>;
 };

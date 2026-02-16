@@ -111,10 +111,6 @@ export const router = createBrowserRouter([
         element: wrapPage(<DashboardPage />),
       },
       {
-        path: 'dashboard',
-        element: wrapPage(<DashboardPage />),
-      },
-      {
         path: 'income',
         element: wrapPage(<IncomePage />),
       },

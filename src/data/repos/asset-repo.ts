@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { Asset } from '@/domain/plan/types';
 import { AssetSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const assetRepo = {
   async getByPlanId(planId: string): Promise<Asset[]> {
@@ -49,4 +50,7 @@ export const assetRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.assets.where('planId').equals(planId).delete();
   },
+} satisfies CrudRepository<Asset> & {
+  getByCategory(planId: string, category: Asset['category']): Promise<Asset[]>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

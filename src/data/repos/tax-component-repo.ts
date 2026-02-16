@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { TaxComponent } from '@/domain/plan/types';
 import { TaxComponentSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const taxComponentRepo = {
   async getByPlanId(planId: string): Promise<TaxComponent[]> {
@@ -31,4 +32,4 @@ export const taxComponentRepo = {
   async delete(id: string): Promise<void> {
     await db.taxComponents.delete(id);
   },
-};
+} satisfies CrudRepository<TaxComponent>;

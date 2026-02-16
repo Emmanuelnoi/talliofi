@@ -2,6 +2,7 @@ import { db } from '../db';
 import type { RecurringTemplate } from '@/domain/plan/types';
 import { RecurringTemplateSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 /**
  * Repository for managing recurring expense templates.
@@ -162,4 +163,11 @@ export const recurringTemplateRepo = {
   async deleteByPlanId(planId: string): Promise<void> {
     await db.recurringTemplates.where('planId').equals(planId).delete();
   },
+} satisfies CrudRepository<RecurringTemplate> & {
+  getActiveByPlanId(planId: string): Promise<RecurringTemplate[]>;
+  getById(id: string): Promise<RecurringTemplate | undefined>;
+  getTemplatesForToday(planId: string): Promise<RecurringTemplate[]>;
+  updateLastGenerated(id: string, lastGeneratedDate: string): Promise<void>;
+  toggleActive(id: string): Promise<RecurringTemplate | undefined>;
+  deleteByPlanId(planId: string): Promise<void>;
 };

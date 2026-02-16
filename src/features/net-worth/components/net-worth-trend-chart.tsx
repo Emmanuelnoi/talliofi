@@ -35,7 +35,9 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function NetWorthTrendChart({ snapshots }: NetWorthTrendChartProps) {
+export default function NetWorthTrendChart({
+  snapshots,
+}: NetWorthTrendChartProps) {
   const currencyCode = useCurrencyStore((s) => s.currencyCode);
   const chartData = useMemo(() => {
     const sorted = [...snapshots].sort((a, b) =>

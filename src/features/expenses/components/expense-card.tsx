@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { MoreHorizontal, Pencil, Repeat, Split, Trash2 } from 'lucide-react';
 import type { Cents } from '@/domain/money';
 import { DEFAULT_CURRENCY, formatMoney } from '@/domain/money';
@@ -33,7 +33,7 @@ interface ExpenseCardProps {
   onToggleSelected: (checked: boolean) => void;
 }
 
-export function ExpenseCard({
+export const ExpenseCard = memo(function ExpenseCard({
   expense,
   bucket,
   bucketMap,
@@ -274,4 +274,4 @@ export function ExpenseCard({
       </CardContent>
     </Card>
   );
-}
+});

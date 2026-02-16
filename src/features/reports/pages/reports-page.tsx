@@ -1,10 +1,11 @@
-import { useMemo, useCallback } from 'react';
+import { lazy, Suspense, useMemo, useCallback } from 'react';
 import { useQueryStates, parseAsString } from 'nuqs';
 import { format, parseISO } from 'date-fns';
 import { formatDisplayDate } from '@/features/expenses/utils/date-utils';
 import { FileBarChart, Printer } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -22,11 +23,22 @@ import { useReportData } from '../hooks/use-report-data';
 import { getDateRangeFromPreset } from '../utils/report-calculations';
 import { DateRangeSelector } from '../components/date-range-selector';
 import { ReportsSkeleton } from '../components/reports-skeleton';
-import { SpendingByCategoryReport } from '../components/spending-by-category-report';
-import { IncomeVsExpensesReport } from '../components/income-vs-expenses-report';
-import { BudgetAdherenceReport } from '../components/budget-adherence-report';
-import { CategoryTrendsReport } from '../components/category-trends-report';
-import { TopExpensesReport } from '../components/top-expenses-report';
+
+const SpendingByCategoryReport = lazy(
+  () => import('../components/spending-by-category-report'),
+);
+const IncomeVsExpensesReport = lazy(
+  () => import('../components/income-vs-expenses-report'),
+);
+const BudgetAdherenceReport = lazy(
+  () => import('../components/budget-adherence-report'),
+);
+const CategoryTrendsReport = lazy(
+  () => import('../components/category-trends-report'),
+);
+const TopExpensesReport = lazy(
+  () => import('../components/top-expenses-report'),
+);
 
 /**
  * Reports page with custom date ranges and multiple report types.
@@ -236,7 +248,9 @@ export default function ReportsPage() {
 
       {/* Reports Grid */}
       {hasExpenses && (
-        <>
+        <Suspense
+          fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}
+        >
           {/* Row 1: Spending by Category + Budget Adherence */}
           <div className="grid gap-6 lg:grid-cols-2">
             <SpendingByCategoryReport report={reportData.spendingByCategory} />
@@ -251,7 +265,7 @@ export default function ReportsPage() {
 
           {/* Row 4: Top Expenses (full width) */}
           <TopExpensesReport report={reportData.topExpenses} />
-        </>
+        </Suspense>
       )}
     </div>
   );

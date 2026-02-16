@@ -1,5 +1,6 @@
 import { db } from '../db';
 import type { ChangeLogEntry } from '@/domain/plan/types';
+import type { ReadRepository } from './types';
 
 export interface ChangelogFilter {
   readonly entityType?: ChangeLogEntry['entityType'];
@@ -95,4 +96,15 @@ export const changelogRepo = {
       .and((entry) => entry.timestamp < cutoffISO)
       .delete();
   },
+} satisfies ReadRepository<ChangeLogEntry> & {
+  getByPlanIdPaginated(
+    planId: string,
+    limit: number,
+    offset: number,
+    filter?: ChangelogFilter,
+  ): Promise<PaginatedChangelog>;
+  create(entry: ChangeLogEntry): Promise<void>;
+  bulkCreate(entries: ChangeLogEntry[]): Promise<void>;
+  deleteByPlanId(planId: string): Promise<void>;
+  cleanup(planId: string, retentionDays?: number): Promise<number>;
 };

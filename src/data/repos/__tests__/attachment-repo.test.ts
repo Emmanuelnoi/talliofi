@@ -216,6 +216,31 @@ describe('attachmentRepo', () => {
     });
   });
 
+  describe('countByExpenseIds()', () => {
+    it('counts attachments across multiple expenses', async () => {
+      const e1 = crypto.randomUUID();
+      const e2 = crypto.randomUUID();
+      await attachmentRepo.create(makeValidAttachment({ expenseId: e1 }));
+      await attachmentRepo.create(makeValidAttachment({ expenseId: e1 }));
+      await attachmentRepo.create(makeValidAttachment({ expenseId: e2 }));
+
+      const count = await attachmentRepo.countByExpenseIds([e1, e2]);
+      expect(count).toBe(3);
+    });
+
+    it('returns 0 for empty array', async () => {
+      const count = await attachmentRepo.countByExpenseIds([]);
+      expect(count).toBe(0);
+    });
+
+    it('returns 0 for non-matching expense IDs', async () => {
+      const count = await attachmentRepo.countByExpenseIds([
+        crypto.randomUUID(),
+      ]);
+      expect(count).toBe(0);
+    });
+  });
+
   describe('deleteByExpenseIds()', () => {
     it('removes attachments for multiple expenses', async () => {
       const expenseId1 = crypto.randomUUID();
@@ -237,6 +262,60 @@ describe('attachmentRepo', () => {
       await expect(
         attachmentRepo.deleteByExpenseIds([]),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('filename sanitization', () => {
+    it('strips path separators from filename', async () => {
+      const attachment = makeValidAttachment({
+        fileName: '../../etc/passwd.png',
+      });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName).toBe('._._etc_passwd.png');
+    });
+
+    it('strips backslash path separators', async () => {
+      const attachment = makeValidAttachment({
+        fileName: '..\\..\\etc\\passwd.png',
+      });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName).toBe('._._etc_passwd.png');
+    });
+
+    it('removes control characters', async () => {
+      const attachment = makeValidAttachment({
+        fileName: 'receipt\x00\x1f.png',
+      });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName).toBe('receipt.png');
+    });
+
+    it('collapses consecutive dots', async () => {
+      const attachment = makeValidAttachment({
+        fileName: 'receipt...png',
+      });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName).toBe('receipt.png');
+    });
+
+    it('truncates filenames longer than 255 characters', async () => {
+      // Build a name that is 260 chars total but still ends in .png after truncation
+      const longName = 'a'.repeat(251) + '.png'; // 251 + 4 = 255, exactly at limit
+      const tooLong = 'a'.repeat(260) + '.png'; // 264 chars, will be truncated to 255
+      const attachment = makeValidAttachment({ fileName: longName });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName.length).toBeLessThanOrEqual(255);
+      // Verify a truly long name gets truncated (loses extension, so validation rejects)
+      const attachment2 = makeValidAttachment({ fileName: tooLong });
+      await expect(attachmentRepo.create(attachment2)).rejects.toThrow();
+    });
+
+    it('trims whitespace from filename', async () => {
+      const attachment = makeValidAttachment({
+        fileName: '  receipt.png  ',
+      });
+      const created = await attachmentRepo.create(attachment);
+      expect(created.fileName).toBe('receipt.png');
     });
   });
 

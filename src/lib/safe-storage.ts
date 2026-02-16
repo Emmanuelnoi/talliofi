@@ -1,7 +1,7 @@
+import { logger } from '@/lib/logger';
+
 function logStorageWarning(action: string, key: string, error: unknown): void {
-  if (import.meta.env.DEV) {
-    console.warn(`[storage] Failed to ${action} "${key}"`, error);
-  }
+  logger.warn('storage', `Failed to ${action} "${key}"`, error);
 }
 
 export function safeGetLocalStorage(key: string): string | null {

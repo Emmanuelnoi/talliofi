@@ -27,7 +27,7 @@ function renderOnboarding() {
         <Routes>
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route
-            path="/dashboard"
+            path="/"
             element={<div data-testid="dashboard">Dashboard</div>}
           />
         </Routes>

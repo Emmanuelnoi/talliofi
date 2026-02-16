@@ -1,18 +1,24 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { LayoutDashboard } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/feedback/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAssets, useLiabilities } from '@/hooks/use-plan-data';
 import { usePlanSummary } from '../hooks/use-plan-summary';
 import { DashboardSkeleton } from '../components/dashboard-skeleton';
 import { IncomeSummaryCard } from '../components/income-summary-card';
 import { KeyNumbersGrid } from '../components/key-numbers-grid';
-import { ExpenseTrendChart } from '../components/expense-trend-chart';
 import { AlertsPanel } from '../components/alerts-panel';
 import { NetWorthCard } from '../components/net-worth-card';
 import { useNetWorthSummary } from '@/features/net-worth/hooks/use-net-worth';
-import { ExpenseDonutChart } from '@/components/charts/ExpenseDonutChart';
 import { CATEGORY_LABELS } from '@/lib/constants';
+
+const ExpenseDonutChart = lazy(
+  () => import('@/components/charts/ExpenseDonutChart'),
+);
+const ExpenseTrendChart = lazy(
+  () => import('../components/expense-trend-chart'),
+);
 
 export default function DashboardPage() {
   const { summary, plan, isLoading } = usePlanSummary();
@@ -61,13 +67,19 @@ export default function DashboardPage() {
       />
       <div className="grid gap-6 xl:grid-cols-12">
         <IncomeSummaryCard summary={summary} className="xl:col-span-7" />
-        <ExpenseDonutChart
-          data={expenseCategoryData}
-          className="xl:col-span-5"
-        />
+        <Suspense
+          fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}
+        >
+          <ExpenseDonutChart
+            data={expenseCategoryData}
+            className="xl:col-span-5"
+          />
+        </Suspense>
       </div>
       <KeyNumbersGrid summary={summary} />
-      <ExpenseTrendChart expensesByCategory={summary.expensesByCategory} />
+      <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-xl" />}>
+        <ExpenseTrendChart expensesByCategory={summary.expensesByCategory} />
+      </Suspense>
       <div className="grid gap-6 lg:grid-cols-2">
         <NetWorthCard
           totalAssets={netWorthSummary.totalAssets}

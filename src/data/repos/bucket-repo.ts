@@ -3,6 +3,7 @@ import { db } from '../db';
 import type { BucketAllocation } from '@/domain/plan/types';
 import { BucketAllocationSchema } from '@/domain/plan/schemas';
 import { handleDexieWriteError } from './handle-dexie-error';
+import type { CrudRepository } from './types';
 
 export const bucketRepo = {
   async getByPlanId(planId: string): Promise<BucketAllocation[]> {
@@ -42,4 +43,4 @@ export const bucketRepo = {
       throw error;
     }
   },
-};
+} satisfies CrudRepository<BucketAllocation>;

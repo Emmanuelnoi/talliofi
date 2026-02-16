@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui-store';
-import { ACTIVE_PLAN_QUERY_KEY } from '@/hooks/use-active-plan';
+import { queryKeys } from '@/hooks/query-keys';
 import { planRepo } from '@/data/repos/plan-repo';
 import { bucketRepo } from '@/data/repos/bucket-repo';
 import { expenseRepo } from '@/data/repos/expense-repo';
@@ -126,12 +126,12 @@ export default function OnboardingPage() {
 
       // Update the query cache directly so AppLayout sees the plan
       // before we navigate (avoids race with invalidateQueries refetch)
-      queryClient.setQueryData(ACTIVE_PLAN_QUERY_KEY, plan);
+      queryClient.setQueryData(queryKeys.activePlan, plan);
 
       scheduleVaultSave();
       useOnboardingDataStore.getState().reset();
       setStep(0);
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     },
     [navigate, queryClient, setStep, scheduleVaultSave],
   );
