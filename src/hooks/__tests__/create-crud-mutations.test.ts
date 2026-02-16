@@ -8,7 +8,6 @@ vi.mock('@/data/repos/changelog-repo', () => ({
   },
 }));
 
- 
 const { changelogRepo } = await import('@/data/repos/changelog-repo');
 
 describe('recordChange', () => {
