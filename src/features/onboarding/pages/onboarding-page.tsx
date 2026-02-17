@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUIStore } from '@/stores/ui-store';
 import { queryKeys } from '@/hooks/query-keys';
-import { planRepo } from '@/data/repos/plan-repo';
-import { bucketRepo } from '@/data/repos/bucket-repo';
-import { expenseRepo } from '@/data/repos/expense-repo';
+import {
+  getPlanRepo,
+  getBucketRepo,
+  getExpenseRepo,
+} from '@/data/repos/repo-router';
 import { useLocalEncryption } from '@/hooks/use-local-encryption';
 import { dollarsToCents, DEFAULT_CURRENCY } from '@/domain/money';
 import type { Plan, BucketAllocation, ExpenseItem } from '@/domain/plan';
@@ -50,6 +52,9 @@ export default function OnboardingPage() {
     async (data: OnboardingData) => {
       const now = new Date().toISOString();
       const planId = crypto.randomUUID();
+      const planRepo = getPlanRepo();
+      const bucketRepo = getBucketRepo();
+      const expenseRepo = getExpenseRepo();
 
       const plan: Plan = {
         id: planId,

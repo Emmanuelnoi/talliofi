@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, Navigate } from 'react-router';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import AppLayout from '@/app/layout';
 import { ErrorBoundary } from '@/components/feedback/error-boundary';
@@ -78,7 +78,7 @@ function wrapPage(page: ReactNode) {
 export const router = createBrowserRouter([
   {
     path: '/onboarding',
-    element: wrapPage(<OnboardingPage />),
+    element: <AuthGuard>{wrapPage(<OnboardingPage />)}</AuthGuard>,
   },
   {
     path: '/demo',
@@ -97,6 +97,10 @@ export const router = createBrowserRouter([
         element: wrapPage(<HelpPage />),
       },
     ],
+  },
+  {
+    path: '/app/*',
+    element: <Navigate to="/" replace />,
   },
   {
     path: '/',
@@ -151,5 +155,9 @@ export const router = createBrowserRouter([
         element: wrapPage(<PlansPage />),
       },
     ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ]);

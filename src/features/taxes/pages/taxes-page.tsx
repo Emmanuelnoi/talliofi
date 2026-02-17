@@ -115,7 +115,7 @@ export default function TaxesPage() {
     const component: TaxComponent = {
       id: crypto.randomUUID(),
       planId: plan.id,
-      name: '',
+      name: `Tax ${taxComponents.length + 1}`,
       ratePercent: 0,
       sortOrder: taxComponents.length,
     };

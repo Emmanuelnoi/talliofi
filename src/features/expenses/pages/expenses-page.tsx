@@ -345,7 +345,7 @@ export default function ExpensesPage() {
       </Tabs>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-hidden">
           <SheetHeader>
             <SheetTitle>
               {editingExpense ? 'Edit Expense' : 'New Expense'}
@@ -356,13 +356,15 @@ export default function ExpensesPage() {
                 : 'Add a new recurring expense to your budget.'}
             </SheetDescription>
           </SheetHeader>
-          <ExpenseForm
-            key={editingExpense?.id ?? 'new'}
-            expense={editingExpense}
-            buckets={buckets}
-            onSave={handleSave}
-            onCancel={() => setSheetOpen(false)}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ExpenseForm
+              key={editingExpense?.id ?? 'new'}
+              expense={editingExpense}
+              buckets={buckets}
+              onSave={handleSave}
+              onCancel={() => setSheetOpen(false)}
+            />
+          </div>
         </SheetContent>
       </Sheet>
 
