@@ -6,6 +6,8 @@ Your financial life, on your terms. Local-first planning without the account ove
 ![Tests](https://img.shields.io/badge/tests-760%2B-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+![Talliofi demo](public/gif/Talliofi.gif)
+
 ---
 
 ## Why Talliofi
