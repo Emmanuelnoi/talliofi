@@ -14,6 +14,8 @@ import {
   Loader2,
   Layers,
   BookOpen,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivePlan } from '@/hooks/use-active-plan';
@@ -48,6 +50,8 @@ import { EncryptionLockScreen } from '@/components/feedback/encryption-lock-scre
 import { KeyboardShortcutsDialog } from '@/components/feedback/keyboard-shortcuts-dialog';
 import { QuickAddFab } from '@/components/quick-add';
 import { DEMO_PLAN_ID } from '@/features/demo/lib/ensure-demo-plan';
+import { useTheme } from '@/features/settings/hooks/use-theme';
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   label: string;
@@ -193,6 +197,30 @@ function MobileBottomNav() {
   );
 }
 
+function ThemeToggleButton() {
+  const { theme, setTheme } = useTheme();
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+    >
+      {isDark ? (
+        <Sun className="size-4" aria-hidden="true" />
+      ) : (
+        <Moon className="size-4" aria-hidden="true" />
+      )}
+    </Button>
+  );
+}
+
 export default function AppLayout() {
   const { enabled, isLocked, unlock, isBusy, error } = useLocalEncryption();
   const { data: plan, isLoading } = useActivePlan();
@@ -269,12 +297,15 @@ export default function AppLayout() {
                 </div>
               </div>
             </div>
-            <NavLink to="/plans" className="shrink-0">
-              <span className="text-muted-foreground inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]">
-                <Layers className="size-4" aria-hidden="true" />
-                Plans
-              </span>
-            </NavLink>
+            <div className="flex items-center gap-2">
+              <ThemeToggleButton />
+              <NavLink to="/plans" className="shrink-0">
+                <span className="text-muted-foreground inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em]">
+                  <Layers className="size-4" aria-hidden="true" />
+                  Plans
+                </span>
+              </NavLink>
+            </div>
           </header>
           <div className="flex flex-1 flex-col overflow-hidden">
             <main

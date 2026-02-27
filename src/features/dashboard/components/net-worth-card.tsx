@@ -59,21 +59,21 @@ export function NetWorthCard({
           <div
             className={cn(
               'text-2xl font-semibold tabular-nums tracking-tight',
-              isPositive && 'text-emerald-600 dark:text-emerald-400',
-              isNegative && 'text-red-600 dark:text-red-400',
+              isPositive && 'text-surplus',
+              isNegative && 'text-deficit',
             )}
           >
             {formatMoney(netWorth, { currency: currencyCode })}
           </div>
           {isPositive && (
             <TrendingUp
-              className="size-4 text-emerald-500"
+              className="size-4 text-surplus"
               aria-label="Positive net worth"
             />
           )}
           {isNegative && (
             <TrendingDown
-              className="size-4 text-red-500"
+              className="size-4 text-deficit"
               aria-label="Negative net worth"
             />
           )}
@@ -89,7 +89,7 @@ export function NetWorthCard({
             <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
               Assets
             </p>
-            <p className="mt-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+            <p className="mt-2 text-sm font-semibold text-surplus">
               {formatMoney(totalAssets, { currency: currencyCode })}
             </p>
           </div>
@@ -97,7 +97,7 @@ export function NetWorthCard({
             <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-[0.2em]">
               Liabilities
             </p>
-            <p className="mt-2 text-sm font-semibold text-red-600 dark:text-red-400">
+            <p className="mt-2 text-sm font-semibold text-deficit">
               {formatMoney(totalLiabilities, { currency: currencyCode })}
             </p>
           </div>

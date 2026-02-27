@@ -88,10 +88,10 @@
   --sidebar-ring: oklch(0.75 0.02 255);
 
   /* Financial semantic colors */
-  --surplus: oklch(0.59 0.17 149);
+  --surplus: oklch(0.46 0.16 149);
   --deficit: oklch(0.577 0.245 27.325);
   --neutral: oklch(0.556 0 0);
-  --warning: oklch(0.75 0.18 75);
+  --warning: oklch(0.54 0.16 75);
   --bucket-1: oklch(0.646 0.222 41.116);
   --bucket-2: oklch(0.6 0.118 184.704);
   --bucket-3: oklch(0.398 0.07 227.392);
@@ -150,7 +150,7 @@
   --sidebar-ring: oklch(0.6 0.02 255);
 
   /* Financial semantic colors */
-  --surplus: oklch(0.55 0.15 155);
+  --surplus: oklch(0.6 0.17 155);
   --deficit: oklch(0.704 0.191 22.216);
   --neutral: oklch(0.708 0 0);
   --warning: oklch(0.8 0.16 80);
