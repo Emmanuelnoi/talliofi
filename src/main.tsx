@@ -5,6 +5,13 @@ import { Providers } from '@/app/providers';
 import { router } from '@/app/router';
 import './index.css';
 
+// Stale chunk guard: if a lazy-loaded chunk 404s after a new deployment
+// (service worker is serving old index.html with old chunk hashes), reload
+// the page so the user gets the fresh bundle.
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload();
+});
+
 // Listen for service worker updates and notify the user
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then((registration) => {
