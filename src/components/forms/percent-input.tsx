@@ -54,7 +54,9 @@ const PercentInput = React.forwardRef<HTMLInputElement, PercentInputProps>(
     function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
       setIsFocused(true);
       setDisplayValue(
-        value != null && !Number.isNaN(value) ? String(value) : '',
+        value != null && !Number.isNaN(value) && value !== 0
+          ? String(value)
+          : '',
       );
       onFocus?.(e);
     }

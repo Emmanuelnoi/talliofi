@@ -69,9 +69,12 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
 
     function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
       setIsFocused(true);
-      // Show raw number while editing
+      // Clear the field when value is 0 so user can type immediately without
+      // having to delete the zero first. Non-zero values are shown for editing.
       setDisplayValue(
-        value != null && !Number.isNaN(value) ? String(value) : '',
+        value != null && !Number.isNaN(value) && value !== 0
+          ? String(value)
+          : '',
       );
       onFocus?.(e);
     }
