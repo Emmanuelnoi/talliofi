@@ -126,6 +126,9 @@ export default defineConfig({
       workbox: {
         // Immediately remove caches from previous SW versions on activation.
         cleanupOutdatedCaches: true,
+        // Always serve fresh index.html for navigation (fixes Safari stale SW).
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         // Cache all static assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Keep heavy optional/reporting assets out of first-load precache.
