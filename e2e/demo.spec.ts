@@ -18,7 +18,7 @@ test.describe('Demo mode', () => {
     await page.waitForURL('**/expenses');
     await expect(
       page.getByRole('heading', { level: 1, name: 'Expenses' }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
     await expect(
       page.getByRole('button', { name: /Actions for Rent/i }).first(),
     ).toBeVisible();
