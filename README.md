@@ -6,9 +6,15 @@ Your financial life, on your terms. Local-first planning without the account ove
 ![Tests](https://img.shields.io/badge/tests-760%2B-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+[**Live Demo**](https://talliofi.vercel.app) • [**Case Study**](https://www.emmanuelnoi.dev/case-study/talliofi)
+
 ![Talliofi demo](public/gif/Talliofi.gif)
 
 ---
+
+## Role & Ownership
+
+Built as a solo product engineering project. I owned product architecture, the local-first data model, sync strategy, typed financial domain logic, test automation approach, and delivery workflow.
 
 ## Why Talliofi
 
@@ -17,6 +23,13 @@ Most financial apps ask you to hand over your data and hope they keep it safe. T
 If you want cloud sync, bring your own Supabase instance. The app works perfectly offline. No login required. No telemetry. No ads.
 
 Built for people who plan seriously and prefer privacy as a default, not a premium feature.
+
+## Impact
+
+- 100% offline-capable by default with IndexedDB as the source of truth
+- 760+ automated tests across unit, integration, and end-to-end flows
+- Optional encrypted sync path without forcing account-first onboarding
+- Route-level code splitting and typed domain logic for maintainable growth
 
 ---
 
@@ -73,6 +86,17 @@ Open [http://localhost:5173](http://localhost:5173). Your data lives in your bro
 - **No tracking**: No analytics, no telemetry, no ads.
 - **Open source**: Review the code yourself. MIT licensed.
 
+## Architecture Decisions
+
+| Area | Decision |
+| --- | --- |
+| Data source of truth | IndexedDB via Dexie |
+| Sync model | Optional Supabase-backed sync rather than mandatory cloud storage |
+| Domain logic | Pure typed financial calculations in `src/domain/` |
+| UI state | Zustand for ephemeral UI only |
+| Read/write flow | TanStack Query for reads, Dexie-backed writes |
+| Validation | React Hook Form + Zod |
+
 ---
 
 ## For Developers
@@ -105,6 +129,13 @@ src/
 ```
 
 All financial values use integer cents via a branded `Cents` type. Computations are pure functions in `domain/`. IndexedDB is the single source of truth — TanStack Query caches reads, mutations write back to Dexie.
+
+## What This Repo Shows
+
+- Local-first product architecture with privacy as a default
+- Frontend engineering for state-heavy workflows and typed domain rules
+- Practical separation between domain logic, persistence, and UI state
+- Quality-first delivery with automated testing and CI on a non-trivial React product
 
 ### Scripts
 
