@@ -90,14 +90,14 @@ Production deployment is available at [https://www.talliofi.it.com/](https://www
 
 ## Architecture Decisions
 
-| Area | Decision |
-| --- | --- |
-| Data source of truth | IndexedDB via Dexie |
-| Sync model | Optional Supabase-backed sync rather than mandatory cloud storage |
-| Domain logic | Pure typed financial calculations in `src/domain/` |
-| UI state | Zustand for ephemeral UI only |
-| Read/write flow | TanStack Query for reads, Dexie-backed writes |
-| Validation | React Hook Form + Zod |
+| Area                 | Decision                                                          |
+| -------------------- | ----------------------------------------------------------------- |
+| Data source of truth | IndexedDB via Dexie                                               |
+| Sync model           | Optional Supabase-backed sync rather than mandatory cloud storage |
+| Domain logic         | Pure typed financial calculations in `src/domain/`                |
+| UI state             | Zustand for ephemeral UI only                                     |
+| Read/write flow      | TanStack Query for reads, Dexie-backed writes                     |
+| Validation           | React Hook Form + Zod                                             |
 
 ---
 
