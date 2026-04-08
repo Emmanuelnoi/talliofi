@@ -5,6 +5,7 @@ import { clearAllData } from '@/data/db';
 import { Blob as NodeBlob } from 'node:buffer';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
+import { useSyncStore } from '@/stores/sync-store';
 
 // Recharts' ResponsiveContainer relies on ResizeObserver, which jsdom lacks
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -73,5 +74,11 @@ vi.mock('recharts', async () => {
 });
 
 beforeEach(async () => {
+  window.localStorage.clear();
+  useSyncStore.setState({
+    storageMode: 'local',
+    syncStatus: 'idle',
+    lastSyncedAt: null,
+  });
   await clearAllData();
 });

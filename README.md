@@ -6,7 +6,7 @@ Your financial life, on your terms. Local-first planning without the account ove
 ![Tests](https://img.shields.io/badge/tests-760%2B-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-[**Live Demo**](https://talliofi.vercel.app) • [**Case Study**](https://www.emmanuelnoi.dev/case-study/talliofi)
+[**Live Demo**](https://www.talliofi.it.com/) • [**Case Study**](https://www.emmanuelnoi.dev/case-study/talliofi)
 
 ![Talliofi demo](public/gif/Talliofi.gif)
 
@@ -75,6 +75,8 @@ pnpm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173). Your data lives in your browser — close the tab, come back later, everything's there.
+
+Production deployment is available at [https://www.talliofi.it.com/](https://www.talliofi.it.com/).
 
 ---
 
