@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
+import { Analytics } from '@vercel/analytics/react';
 import { NuqsAdapter } from 'nuqs/adapters/react';
 import { queryClient } from '@/lib/query-client';
 import { Toaster } from '@/components/ui/sonner';
@@ -11,6 +12,7 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <NuqsAdapter>{children}</NuqsAdapter>
+      <Analytics />
       <Toaster />
     </QueryClientProvider>
   );
